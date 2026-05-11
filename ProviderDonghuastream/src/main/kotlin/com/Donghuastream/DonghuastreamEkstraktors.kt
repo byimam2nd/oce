@@ -297,6 +297,10 @@ class Ultrahd : ExtractorApi() { override var name = "Ultrahd"; override var mai
 class Vtbe : ExtractorApi() { override var name = "Vtbe"; override var mainUrl = "https://vtbe.com"; override val requiresReferer = true }
 class wishfast : ExtractorApi() { override var name = "wishfast"; override var mainUrl = "https://wishfast.to"; override val requiresReferer = true }
 
+class Minochinos : ExtractorApi() { override var name = "Minochinos"; override var mainUrl = "https://minochinos.com"; override val requiresReferer = true }
+class Vidhide : ExtractorApi() { override var name = "Vidhide"; override var mainUrl = "https://vidhide.com"; override val requiresReferer = true }
+class ShortIcu : ExtractorApi() { override var name = "ShortIcu"; override var mainUrl = "https://short.icu"; override val requiresReferer = true }
+
 // ============================================
 // REGION 5: EXTRACTORS REGISTRY
 // ============================================
@@ -305,6 +309,7 @@ object DonghuastreamEkstraktors {
     val list = listOf(
         Dailymotion(), Odnoklassniki(), Rumble(), StreamRuby(), Svanila(), Svilla(), 
         ByseSX(), Hownetwork(), Cloudhownetwork(),
-        PlayStreamplay(), Ultrahd(), Vtbe(), wishfast()
+        PlayStreamplay(), Ultrahd(), Vtbe(), wishfast(),
+        Minochinos(), Vidhide(), ShortIcu()
     )
 }
