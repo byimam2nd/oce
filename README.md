@@ -53,26 +53,15 @@ Metode ini memastikan Anda selalu mendapatkan pembaruan otomatis saat kami meril
 
 ---
 
-## 📺 Katalog Ekstensi
+## 📺 Cakupan Konten
 
-Koleksi kami mencakup berbagai kategori konten populer dengan status yang selalu dipantau.
+Koleksi kami mencakup berbagai kategori konten populer yang dikelola secara terpusat untuk memastikan stabilitas dan kualitas terbaik:
 
-### 🇯🇵 Anime & Donghua
-| Sumber | Konten | Status |
-| :--- | :--- | :---: |
-| **Anichin** | Donghua / Anime | ![Live](https://img.shields.io/badge/-Live-success) |
-| **Animasu** | Anime Terlengkap | ![Live](https://img.shields.io/badge/-Live-success) |
-| **Samehadaku** | Anime Populer | ![Live](https://img.shields.io/badge/-Live-success) |
-| **Donghuastream** | Spesialis Donghua | ![Live](https://img.shields.io/badge/-Live-success) |
+- **🇯🇵 Anime & Donghua:** Koleksi terlengkap dari berbagai sumber populer dengan dukungan subtitle bahasa Indonesia.
+- **🎬 Movies & TV Series:** Akses cepat ke film-film terbaru dan serial TV populer dari berbagai wilayah.
+- **🌍 Global Content:** Berbagai sumber konten internasional untuk pengalaman menonton yang lebih luas.
 
-### 🎬 Movies & TV Series
-| Sumber | Konten | Status |
-| :--- | :--- | :---: |
-| **LayarKaca21** | Film & Series Populer | ![Live](https://img.shields.io/badge/-Live-success) |
-| **Idlix** | Koleksi Film Terupdate | ![Live](https://img.shields.io/badge/-Live-success) |
-| **Pencurimovie** | Movie & TV Shows | ![Live](https://img.shields.io/badge/-Live-success) |
-| **Melolo** | Global Content | ![Live](https://img.shields.io/badge/-Live-success) |
-| **Dramabox** | Mini Drama Series | ![Live](https://img.shields.io/badge/-Live-success) |
+*Semua ekstensi dalam katalog ini dipantau secara otomatis oleh sistem audit kami untuk menjamin ketersediaan layanan.*
 
 ---
 
