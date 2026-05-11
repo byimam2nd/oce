@@ -1,0 +1,72 @@
+name: CI/CD - Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  # ========================================
+  # BUILD ALL PROVIDERS FOR RELEASE
+  # ========================================
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: adopt
+          cache: gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build Plugins
+        run: |
+          chmod +x ./gradlew
+          # Generate .cs3 files
+          ./gradlew make --no-daemon --stacktrace
+          # Generate plugins.json
+          ./gradlew makePluginsJson --no-daemon --stacktrace
+          
+      - name: Patch plugins.json for Release
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          # If triggered manually and no tag, use 'latest' or a dummy tag
+          if [[ $TAG_NAME == refs/heads/* ]]; then
+            TAG_NAME="latest"
+          fi
+          echo "Using Tag: $TAG_NAME"
+          
+          # Replace raw.githubusercontent.com URLs with release download URLs
+          # Original: https://raw.githubusercontent.com/byimam2nd/oce/builds/ProviderName.cs3
+          # Target: https://github.com/byimam2nd/oce/releases/download/$TAG_NAME/ProviderName.cs3
+          sed -i "s|https://raw.githubusercontent.com/byimam2nd/oce/builds/|https://github.com/byimam2nd/oce/releases/download/$TAG_NAME/|g" build/plugins.json
+          
+          # Move artifacts to a staging directory
+          mkdir -p release-artifacts
+          cp **/build/*.cs3 release-artifacts/ 2>/dev/null || true
+          cp build/plugins.json release-artifacts/ 2>/dev/null || true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release-artifacts/*.cs3
+            release-artifacts/plugins.json
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

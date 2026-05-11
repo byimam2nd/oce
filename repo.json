@@ -4,6 +4,6 @@
     "description": "byimam2nd Repository - CloudStream Extensions",
     "manifestVersion": 1,
     "pluginLists": [
-      "https://raw.githubusercontent.com/byimam2nd/oce/refs/heads/builds/plugins.json"
+      "https://github.com/byimam2nd/oce/releases/latest/download/plugins.json"
     ]
 }
