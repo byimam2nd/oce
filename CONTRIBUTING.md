@@ -13,6 +13,27 @@ Kami mengutamakan **kualitas di atas kuantitas**. Setiap kontribusi yang masuk h
 
 ---
 
+## 🏛️ Hukum Sentralisasi (The Law of Centralization)
+
+Proyek OCE dibangun di atas filosofi **"Single Source of Truth"**. Tidak seperti repository ekstensi konvensional, OCE menggunakan arsitektur tersentralisasi di mana logika inti dipisahkan dari data spesifik situs.
+
+### 1. Pengembangan Berbasis Blueprint (The Blueprint Rule)
+Seluruh logika ekstraksi, penanganan network, dan pemrosesan data utama berada di dalam direktori `BaseHtmlProvider/`. 
+- **Aturan:** Anda **DILARANG** melakukan modifikasi logika langsung pada folder modul provider (misal: `ProviderAnichin/`). Perubahan pada folder tersebut akan terhapus secara otomatis oleh sistem sinkronisasi kami.
+- **Tindakan:** Setiap peningkatan fitur atau perbaikan bug pada mesin ekstraksi harus dilakukan di dalam **Base Blueprint**.
+
+### 2. Abstraksi Data Melalui Constants
+Mesin kami dirancang untuk menjadi "Buta Terhadap Situs" (Site-Agnostic). Artinya, logika di dalam blueprint tidak boleh mengetahui nama domain atau struktur spesifik sebuah situs secara hardcoded.
+- **Aturan:** Semua selektor CSS, pola Regex, dan konfigurasi unik situs harus didefinisikan di dalam `ProviderConstants.kt` melalui pemetaan variabel.
+- **Tindakan:** Jika Anda menemukan kasus unik pada sebuah situs, jangan ubah logikanya agar spesifik untuk situs tersebut. Alih-alih, buatlah sebuah konstanta baru atau flag konfigurasi di blueprint yang nilainya dapat disesuaikan melalui file konstanta masing-masing provider.
+
+### 3. Skalabilitas Global
+Setiap baris kode yang Anda tambahkan ke blueprint harus mampu menangani puluhan hingga ratusan situs secara bersamaan.
+- **Aturan:** Hindari solusi "Quick Fix" yang hanya bekerja untuk satu situs namun berisiko merusak stabilitas provider lain.
+- **Tindakan:** Selalu uji perubahan blueprint Anda terhadap berbagai target melalui skrip audit kami untuk memastikan tidak ada regresi global.
+
+---
+
 ## 🚀 Alur Kontribusi (Workflow)
 
 Untuk menjaga integritas proyek, kami menggunakan alur kerja yang terstruktur:
