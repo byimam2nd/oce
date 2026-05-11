@@ -1,0 +1,130 @@
+# ========================================
+# Dynamic Configuration Template
+# ========================================
+# Copy this file to local.properties and customize as needed
+# DO NOT commit local.properties to git (it's in .gitignore)
+# ========================================
+
+# ========================================
+# REPOSITORY CONFIGURATION
+# ========================================
+# Repository URL (for extension metadata)
+REPO_URL=https://github.com/byimam2nd/oce
+
+# Authors (comma-separated list)
+AUTHORS=imam2nd
+
+# ========================================
+# SDK VERSIONS
+# ========================================
+# Minimum supported Android version (21 = Android 5.0)
+MIN_SDK=21
+
+# Compile SDK (should match latest stable)
+COMPILE_SDK=35
+
+# Target SDK (should match compile SDK)
+TARGET_SDK=35
+
+# ========================================
+# JAVA CONFIGURATION
+# ========================================
+# Java version for compilation
+JAVA_VERSION=1_8
+
+# ========================================
+# DEPENDENCY VERSIONS
+# ========================================
+# CloudStream base version (use 'pre-release' for latest)
+CLOUDSTREAM_VERSION=pre-release
+
+# Kotlin standard library
+KOTLIN_VERSION=stdlib
+
+# HTTP client
+NICEHTTP_VERSION=0.4.16
+
+# HTML parser
+JSOUP_VERSION=1.22.1
+
+# Android annotations
+ANNOTATION_VERSION=1.9.1
+
+# JSON parser (Kotlin)
+JACKSON_VERSION=2.20.1
+
+# Kotlin coroutines
+COROUTINES_VERSION=1.10.2
+
+# JavaScript engine
+RHINO_VERSION=1.9.0
+
+# Fuzzy string matching
+FUZZYWUPPY_VERSION=1.4.0
+
+# JSON parser (Google)
+GSON_VERSION=2.13.2
+
+# Kotlin serialization
+SERIALIZATION_VERSION=1.9.0
+
+# ADB over network
+JADB_VERSION=v1.2.1
+
+# Bouncy Castle (cryptography)
+BC_VERSION=1.70
+
+# ========================================
+# API KEYS (FOR LOCAL DEVELOPMENT ONLY)
+# ========================================
+# CI/CD uses GitHub Secrets - these are for local testing
+# Uncomment and add your keys as needed:
+
+# TMDB_API=your_tmdb_api_key
+# DUMP_API=your_dump_api_key
+# ANICHI_API=your_anichi_api_key
+# ANICHI_SERVER=your_anichi_server
+# ANICHI_ENDPOINT=your_anichi_endpoint
+# ANICHI_APP=your_anichi_app
+# ZSHOW_API=your_zshow_api_key
+# SFMOVIES_API=your_sfmovies_api_key
+# CINEMATV_API=your_cinematv_api_key
+# GHOSTX_API=your_ghostx_api_key
+# SUPERSTREAM_FIRST_API=your_superstream_first_api
+# SUPERSTREAM_SECOND_API=your_superstream_second_api
+# SUPERSTREAM_THIRD_API=your_superstream_third_api
+# SUPERSTREAM_FOURTH_API=your_superstream_fourth_api
+# AsianDrama_API=your_asian_drama_api
+# FanCode_API=your_fancode_api
+# Whvx_API=your_whvx_api
+# Su_sports=your_su_sports_api
+# PirateIPTV=your_pirate_iptv
+# SonyIPTV=your_sony_iptv
+# JapanIPTV=your_japan_iptv
+# CatflixAPI=your_catflix_api
+# ConsumetAPI=your_consumet_api
+# FlixHQAPI=your_flixhq_api
+# WhvxAPI=your_whvx_api_full
+# WhvxT=your_whvx_token
+# SharmaflixApi=your_sharmaflix_api
+# SharmaflixApikey=your_sharmaflix_key
+# HianimeAPI=your_hianime_api
+# Vidsrccc=your_vidsrccc_api
+# WASMAPI=your_wasm_api
+# KissKh=your_kisskh_api
+# KisskhSub=your_kisskh_subtitle
+# StreamPlayAPI=your_streamplay_api
+# PROXYAPI=your_proxy_api
+# KAISVA=your_kaisva_api
+# MAL_API=your_mal_api
+# MOVIEBOX_SECRET_KEY_DEFAULT=your_moviebox_default_key
+# MOVIEBOX_SECRET_KEY_ALT=your_moviebox_alt_key
+# SuperToken=your_super_token
+# KAIDEC=your_kaidec_key
+# KAIENC=your_kaienc_key
+# KAIMEG=your_kaimeg_key
+# NuvioStreams=your_nuvio_streams
+# YFXDEC=your_yfxdec_key
+# YFXENC=your_yfxenc_key
+# VideasyDEC=your_videasydec_key
+# NuvFeb=your_nuv_feb_key
