@@ -16,12 +16,12 @@ object ProviderConstants {
 
     val CONFIG_NAMES = listOf(
         "Anichin:::Anichin",
-        "Animasu:::Animasu🐰",
+        "Animasu:::Animasu",
         "Donghuastream:::Donghuastream",
         "LayarKaca21:::LayarKaca",
         "IndoDrama21:::IndoDrama21",
         "Pencurimovie:::Pencurimovie",
-        "Samehadaku:::Samehadaku⛩️",
+        "Samehadaku:::Samehadaku",
         "GLOBAL:::Base HTML Provider"
     )
 
