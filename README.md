@@ -116,6 +116,15 @@ Jika Anda merasa proyek ini bermanfaat dan ingin memberikan dukungan lebih:
 
 ---
 
+## 🎖️ Credits & Special Thanks
+
+Proyek ini tidak akan menjadi seperti sekarang tanpa inspirasi dan referensi dari proyek-proyek hebat lainnya. Terima kasih khusus kepada:
+
+- **[Phisher](https://github.com/Phisher98)** - Untuk inspirasi struktur dan logika penyedia konten yang luar biasa.
+- **[ExtCloud](https://github.com/recloudstream/cloudstream-extensions)** - Sebagai referensi utama dalam pengembangan ekstensi CloudStream.
+
+---
+
 ## ⚖️ Lisensi & Disclaimer
 
 Proyek ini berlisensi di bawah **GNU GPLv3**.
