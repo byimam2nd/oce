@@ -1,0 +1,148 @@
+name: CI/CD - Build
+
+concurrency:
+  group: "ci-cd"
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - '*/src/**'
+      - '*/build.gradle.kts'
+      - 'build.gradle.kts'
+      - 'settings.gradle.kts'
+      - 'gradle.properties'
+      - 'gradle/**'
+
+jobs:
+  # ========================================
+  # BUILD ALL PROVIDERS
+  # ========================================
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v5
+        with:
+          path: "src"
+          fetch-depth: 0
+
+      - name: Checkout builds
+        uses: actions/checkout@v5
+        with:
+          ref: "builds"
+          path: "builds"
+
+      - name: Clean old builds
+        run: |
+          rm $GITHUB_WORKSPACE/builds/*.cs3 || true
+          rm $GITHUB_WORKSPACE/builds/*.jar || true
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: adopt
+          cache: gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Access Secrets
+        env:
+          TMDB_API: ${{ secrets.TMDB_API }}
+          DUMP_API: ${{ secrets.DUMP_API }}
+          DUMP_KEY: ${{ secrets.DUMP_KEY }}
+          ANICHI_API: ${{ secrets.ANICHI_API }}
+          ANICHI_SERVER: ${{ secrets.ANICHI_SERVER }}
+          ANICHI_ENDPOINT: ${{ secrets.ANICHI_ENDPOINT }}
+          ANICHI_APP: ${{ secrets.ANICHI_APP }}
+          ZSHOW_API: ${{ secrets.ZSHOW_API }}
+          SFMOVIES_API: ${{ secrets.SFMOVIES_API }}
+          CINEMATV_API: ${{ secrets.CINEMATV_API }}
+          GHOSTX_API: ${{ secrets.GHOSTX_API }}
+          SUPERSTREAM_FIRST_API: ${{ secrets.SUPERSTREAM_FIRST_API }}
+          SUPERSTREAM_SECOND_API: ${{ secrets.SUPERSTREAM_SECOND_API }}
+          SUPERSTREAM_THIRD_API: ${{ secrets.SUPERSTREAM_THIRD_API }}
+          SUPERSTREAM_FOURTH_API: ${{ secrets.SUPERSTREAM_FOURTH_API }}
+          AsianDrama_API: ${{ secrets.AsianDrama_API }}
+          FanCode_API: ${{ secrets.FanCode_API }}
+          Whvx_API: ${{ secrets.Whvx_API }}
+          JapanIPTV: ${{ secrets.JapanIPTV }}
+          SonyIPTV: ${{ secrets.SonyIPTV }}
+          PirateIPTV: ${{ secrets.PirateIPTV }}
+          Su_sports: ${{ secrets.Su_sports }}
+          CatflixAPI: ${{ secrets.CatflixAPI }}
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          MAL_API: ${{ secrets.MAL_API }}
+          ANILIST_API: ${{ secrets.ANILIST_API }}
+          BDK_API: ${{ secrets.BDK_API }}
+          KISS_API: ${{ secrets.KISS_API }}
+          SHOWAPI_API: ${{ secrets.SHOWAPI_API }}
+          MOVIEBOX_SECRET_KEY_1: ${{ secrets.MOVIEBOX_SECRET_KEY_1 }}
+          MOVIEBOX_SECRET_KEY_2: ${{ secrets.MOVIEBOX_SECRET_KEY_2 }}
+          MOVIEBOX_SECRET_KEY_3: ${{ secrets.MOVIEBOX_SECRET_KEY_3 }}
+          KAIDEC: ${{ secrets.KAIDEC }}
+          KAIENC: ${{ secrets.KAIENC }}
+          KAISUB: ${{ secrets.KAISUB }}
+        run: |
+          echo "✅ Secrets loaded"
+
+      - name: Code Quality Check (Linting)
+        run: |
+          cd $GITHUB_WORKSPACE/src
+          chmod +x ./gradlew
+          # Run ktlint to ensure code style consistency
+          ./gradlew ktlintCheck --no-daemon
+          # Run detekt for static code analysis
+          ./gradlew detekt --no-daemon
+
+      - name: Build Plugins
+        run: |
+          cd $GITHUB_WORKSPACE/src
+          chmod +x ./gradlew
+          # Generate .cs3 files
+          ./gradlew make --no-daemon --stacktrace
+          # Generate plugins.json
+          ./gradlew makePluginsJson --no-daemon --stacktrace
+          # Ensure jar compatibility
+          ./gradlew ensureJarCompatibility --no-daemon --stacktrace || true
+          
+          # Copy .cs3 and .jar files to builds folder
+          cp **/build/*.cs3 $GITHUB_WORKSPACE/builds/ 2>/dev/null || true
+          cp **/build/*.jar $GITHUB_WORKSPACE/builds/ 2>/dev/null || true
+          cp build/plugins.json $GITHUB_WORKSPACE/builds/ 2>/dev/null || true
+
+      - name: Push builds
+        run: |
+          cd $GITHUB_WORKSPACE/builds
+
+          # List files before commit
+          echo "📋 Files in builds folder:"
+          ls -la *.cs3 *.jar plugins.json 2>/dev/null || echo "Some files may be missing"
+
+          # Check if .cs3 files exist (primary artifacts)
+          if ls *.cs3 1> /dev/null 2>&1; then
+            # Configure git user
+            git config --local user.email "actions@github.com"
+            git config --local user.name "GitHub Actions"
+            
+            # Add all build artifacts
+            git add *.cs3 2>/dev/null || true
+            git add *.jar 2>/dev/null || true
+            git add plugins.json 2>/dev/null || true
+            
+            if ! git diff --cached --quiet; then
+              git commit -m "Build artifacts from $(date +'%Y-%m-%d %H:%M:%S')"
+              git push
+              echo "✅ Build artifacts pushed successfully"
+            else
+              echo "ℹ️ No new build artifacts to push"
+            fi
+          else
+            echo "❌ No .cs3 build artifacts found"
+            exit 1
+          fi
