@@ -100,6 +100,18 @@ Proyek ini adalah hasil kolaborasi dan inspirasi dari para pionir di bidangnya. 
 
 ---
 
+## 📈 Perkembangan Proyek (Star History)
+
+Dukungan Anda melalui **Star** bukan sekadar angka bagi kami; itu adalah bahan bakar yang memotivasi kami untuk terus berinovasi dan menjaga resiliensi ekosistem ini.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=byimam2nd/oce&type=Date&theme=dark" />
+  <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=byimam2nd/oce&type=Date" />
+  <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=byimam2nd/oce&type=Date" />
+</picture>
+
+---
+
 ## 🤝 Bergabung & Berkontribusi
 
 Kami selalu terbuka untuk pikiran-pikiran cerdas. Anda dapat berkontribusi melalui:
