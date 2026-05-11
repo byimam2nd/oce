@@ -128,7 +128,7 @@ object IndoDrama21Constants {
         "Animasu:::urutan=update|Baru diupdate;status=&tipe=&urutan=publikasi|Baru ditambahkan;status=&tipe=&urutan=populer|Terpopuler;status=&tipe=&urutan=rating|Rating Tertinggi;status=&tipe=Movie&urutan=update|Movie Terbaru;status=&tipe=Movie&urutan=populer|Movie Terpopuler",
         "Donghuastream:::anime/?status=&type=&order=update&page=|Recently Updated;anime/?status=completed&type=&order=update|Completed;anime/?status=&type=special&sub=&order=update|Special Anime",
         "LayarKaca21:::https://lk21.de/populer/page/|Film Terpopuler;https://lk21.de/rating/page/|Film Berdasarkan IMDb Rating;https://lk21.de/most-commented/page/|Film Dengan Komentar Terbanyak;https://series.lk21.de/latest-series/page/|Series Terbaru;https://series.lk21.de/series/asian/page/|Film Asian Terbaru;https://lk21.de/latest/page/|Film Upload Terbaru",
-        "IndoDrama21:::populer|Populer;rating|Rating;box-office|Box Office;terbaru|Terbaru",
+        "IndoDrama21:::populer|Terpopuler;rating|Rating Terbaik;terbaru|Film Terbaru;box-office|Box Office;category/action|Action;category/drama|Drama;category/science-fiction|Sci-Fi",
         "Pencurimovie:::movies|Latest Movies;series|TV Series;most-rating|Most Rating Movies;top-imdb|Top IMDB Movies",
         "Samehadaku:::page/|Episode Terbaru;daftar-anime-2/?title=&status=&type=TV&order=popular&page=|TV Populer;daftar-anime-2/?title=&status=&type=OVA&order=title&page=|OVA;daftar-anime-2/?title=&status=&type=Movie&order=title&page=|Movie",
         "GLOBAL:::trending/page/|Sedang Tren;terbaru/page/|Update Terbaru"
@@ -139,7 +139,8 @@ object IndoDrama21Constants {
     // ========================================================================
 
     val SEARCH_ITEMS = listOf(
-        "LayarKaca21,IndoDrama21:::article, div.content-main article, div#gmr-main-load article",
+        "LayarKaca21:::article, div.content-main article, div#gmr-main-load article",
+        "IndoDrama21:::article.item, div#gmr-main-load article",
         "Anichin,Donghuastream:::div.listupd > article",
         "Samehadaku:::div.animposx, div.post-show ul li",
         "Animasu:::div.listupd div.bs",
@@ -148,7 +149,7 @@ object IndoDrama21Constants {
     )
 
     val SEARCH_TITLE = listOf(
-        "LayarKaca21,IndoDrama21:::h3, h2, a[title]", 
+        "LayarKaca21,IndoDrama21:::h2.entry-title a, h3, a[title]", 
         "Samehadaku:::h2.entry-title a, .title", 
         "Anichin,Donghuastream:::div.bsx > a, a", 
         "Animasu:::div.tt", 
@@ -171,7 +172,7 @@ object IndoDrama21Constants {
     val SEARCH_RATING = listOf("Samehadaku:::.rtng, .score", "LayarKaca21,IndoDrama21:::span.rating, .gmr-rating-item", "GLOBAL:::.rating, .score")
     val SEARCH_EP_TEXT = listOf("Samehadaku:::.eps span, .epx", "LayarKaca21,IndoDrama21:::span.episode strong, .gmr-duration-item", "Anichin:::div.bsx span.epx", "Animasu:::span.epx", "GLOBAL:::.ep, .episode")
 
-    val LOAD_TITLE = listOf("LayarKaca21,IndoDrama21:::div.movie-info h1, h1.entry-title", "Animasu:::h1[itemprop=headline], div.infox h1", "Pencurimovie:::div.mvic-desc h3", "Anichin,Donghuastream,Samehadaku:::h1.entry-title, h1.title", "GLOBAL:::h1")
+    val LOAD_TITLE = listOf("LayarKaca21,IndoDrama21:::h1.entry-title, div.movie-info h1", "Animasu:::h1[itemprop=headline], div.infox h1", "Pencurimovie:::div.mvic-desc h3", "Anichin,Donghuastream,Samehadaku:::h1.entry-title, h1.title", "GLOBAL:::h1")
     val LOAD_POSTER = listOf("LayarKaca21,IndoDrama21:::div.movie-info div.poster img[itemprop=image], div#movie-poster img, div.poster img", "Pencurimovie:::div.mvic-thumb img", "Donghuastream:::div.thumb > img, img.ts-post-image", "Anichin:::div.thumb img, .ts-post-image, .wp-post-image", "Animasu,Samehadaku:::div.thumb img", "Animasu:::div.bigcontent img", "GLOBAL:::.thumb img, .poster img")
     val LOAD_BANNER = listOf("GLOBAL:::.banner img, .backdrop img")
     
@@ -190,7 +191,7 @@ object IndoDrama21Constants {
     val LOAD_STATUS = listOf("Samehadaku:::div.spe span:contains(Status)", "Animasu:::span:contains(Status:) font", "GLOBAL:::.status")
     val LOAD_QUALITY = listOf("GLOBAL:::.quality")
     val LOAD_TRAILER = listOf("LayarKaca21,IndoDrama21:::ul.action-left > li:nth-child(3) > a, .gmr-trailer-popup", "Samehadaku:::iframe[src*=\"youtube\"]", "GLOBAL:::div.trailer iframe")
-    val LOAD_RECOMMEND = listOf("LayarKaca21,IndoDrama21:::div#gmr-related-load article, div.related-post article, .idmuvi-core article", "Samehadaku:::div.relat ul li, .relat article", "Anichin,Donghuastream,Animasu:::.listupd article, .related-post article, .relat article", "Pencurimovie:::.mlw-related .ml-item, #related-items .ml-item", "GLOBAL:::div.related article, .recommendations article")
+    val LOAD_RECOMMEND = listOf("LayarKaca21,IndoDrama21:::div#gmr-related-load article, div.related-post article, .idmuvi-core article, .gmr-related-title + .row article", "Samehadaku:::div.relat ul li, .relat article", "Anichin,Donghuastream,Animasu:::.listupd article, .related-post article, .relat article", "Pencurimovie:::.mlw-related .ml-item, #related-items .ml-item", "GLOBAL:::div.related article, .recommendations article")
 
     val EPISODE_ITEMS = listOf("Animasu:::ul#daftarepisode > li", "Samehadaku:::div.lstepsiode ul li", "Pencurimovie:::div.tvseason div.les-content a", "Anichin,Donghuastream:::.eplister li", "GLOBAL:::.ep-list li")
     val EPISODE_HREF = listOf("Samehadaku:::a", "LayarKaca21,IndoDrama21:::a", "Pencurimovie:::a", "Anichin,Donghuastream:::.eplister li > a", "GLOBAL:::a")
