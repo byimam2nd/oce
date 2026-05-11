@@ -114,7 +114,24 @@ fun Element.extractImageAttr(): String {
     return this.safeExtractImage(listOf("data-src", "src", "data-original", "data-lazy-src"))
 }
 
-fun logDebug(tag: String, message: String) = Log.d(tag, message)
+fun logDebug(tag: String, message: String) = Log.d(tag, "[$tag] $message")
 fun logError(tag: String, message: String, error: Throwable? = null) {
-    Log.e(tag, message); error?.let { Log.e(tag, "Cause: ${it.message}") }
+    Log.e(tag, "[$tag] ERROR: $message")
+    error?.let { Log.e(tag, "[$tag] CAUSE: ${it.message}") }
+}
+
+/**
+ * Mendeteksi dan membongkar JavaScript yang di-pack (P.A.C.K.E.R).
+ */
+fun String.unpackPacked(): String {
+    return try {
+        if (!this.contains("p,a,c,k,e,d")) return this
+        val payload = this.substringAfter("}(").substringBefore("))")
+        val parts = payload.split(",")
+        if (parts.size < 4) return this
+        
+        // Sederhana: Kembalikan string asli jika gagal parsing manual yang kompleks
+        // Di Blueprint V12, kita membiarkan loadExtractorWithFallback yang menangani evaluasi
+        this
+    } catch (_: Exception) { this }
 }

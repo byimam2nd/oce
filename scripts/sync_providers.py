@@ -39,11 +39,11 @@ def safe_replace(content, mapping):
 def apply_change(target_path, new_content):
     """Menerapkan perubahan secara otomatis."""
     if os.path.exists(target_path):
-        with open(target_path, 'r') as f: old_content = f.read()
+        with open(target_path, 'r', encoding="utf-8") as f: old_content = f.read()
         if old_content == new_content:
             return False
             
-    with open(target_path, 'w') as f: f.write(new_content)
+    with open(target_path, 'w', encoding="utf-8") as f: f.write(new_content)
     return True
 
 def sync_provider(name):
@@ -65,7 +65,7 @@ def sync_provider(name):
         
         if not os.path.exists(src_path): continue
         
-        with open(src_path, 'r') as f: content = f.read()
+        with open(src_path, 'r', encoding="utf-8") as f: content = f.read()
         
         # Apply name mapping and common tags
         content = safe_replace(content, mapping)

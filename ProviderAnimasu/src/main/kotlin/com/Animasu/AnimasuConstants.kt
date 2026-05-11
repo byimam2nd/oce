@@ -222,11 +222,11 @@ object AnimasuConstants {
     const val VAL_USER_AGENT = "User-Agent"
     const val DEFAULT_TIMEOUT = 15000L
 
-    // UI Keywords
-    const val STR_DUB = "dub"
-    const val STR_ONGOING = "Ongoing"
-    const val STR_EPISODE = "Episode"
-    const val STR_SERIES = "Series"
+    // UI Keywords & Semantic Mapping
+    val STR_DUB = listOf("GLOBAL:::dub")
+    val STR_ONGOING = listOf("GLOBAL:::Ongoing")
+    val STR_EPISODE = listOf("GLOBAL:::Episode")
+    val STR_SERIES = listOf("GLOBAL:::Series")
 
     // --- Attributes ---
     val ATTR_TITLE = listOf("GLOBAL:::title")
