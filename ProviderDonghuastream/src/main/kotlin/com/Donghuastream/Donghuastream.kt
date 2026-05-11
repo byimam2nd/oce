@@ -356,6 +356,10 @@ open class Donghuastream : MainAPI() {
         return configCache.getOrPut(list.hashCode()) { resolveConfig(list, default) }
     }
 
+    private fun getCachedList(list: List<String>): List<String> {
+        return configListCache.getOrPut(list.hashCode()) { resolveConfigList(list) }
+    }
+
     private fun resolveConfig(list: List<String>, default: String): String {
         for (item in list) { if (item.contains(":::")) { val owners = item.substringBefore(":::").split(","); if (owners.contains(providerId)) { val v = item.substringAfter(":::"); if (v.isBlank()) break; return v } } }
         for (item in list) { if (item.startsWith("GLOBAL:::")) return item.substringAfter(":::"); if (!item.contains(":::")) return item }
