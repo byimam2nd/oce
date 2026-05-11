@@ -5,7 +5,7 @@ import sys
 # List of HTML-based providers
 HTML_PROVIDERS = [
     "Anichin", "Animasu", "Donghuastream", 
-    "LayarKaca21", "Pencurimovie", "Samehadaku"
+    "LayarKaca21", "IndoDrama21", "Pencurimovie", "Samehadaku"
 ]
 
 TEMPLATE_DIR = "BaseHtmlProvider"
