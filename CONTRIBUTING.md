@@ -52,11 +52,13 @@ Proyek ini menggunakan arsitektur unik berbasis blueprint. Jika Anda mengerjakan
 - Perhatikan apakah perubahan Anda bersifat umum (berlaku untuk semua) atau spesifik.
 - Gunakan skrip internal kami (`scripts/`) untuk memvalidasi perubahan Anda sebelum dikirimkan.
 
-### 4. Standar Kode & Kualitas
-Kami sangat menjunjung tinggi standar kode yang bersih:
-- Gunakan penamaan yang deskriptif dan konsisten.
-- Pastikan penanganan error (error handling) dilakukan secara elegan tanpa mengganggu stabilitas aplikasi.
-- Gunakan sistem logging CloudStream secara tepat sesuai standar proyek.
+### 5. Prosedur Rilis (Release Process)
+OCE menggunakan sistem rilis yang terproteksi:
+- **Push ke Master:** Akan memperbarui branch `builds` secara otomatis. Gunakan ini untuk pengujian fungsional.
+- **Rilis Resmi (Production):** Dilakukan dengan membuat **Git Tag**. 
+    - Gunakan format `vX.Y.Z` (contoh: `git tag v1.0.0`).
+    - Jalankan `git push origin v1.0.0` untuk memicu workflow rilis resmi.
+    - Sistem akan otomatis membangun aset, membuat halaman rilis di GitHub, dan memperbarui `repo.json` untuk pengguna stabil.
 
 ---
 

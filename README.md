@@ -60,14 +60,18 @@ Menggunakan sistem sinkronisasi terpusat, setiap peningkatan fitur pada satu eks
 Hanya perlu tiga langkah sederhana untuk membuka pintu menuju dunia hiburan baru.
 
 ### **Pemasangan Repository (Otomatis)**
-Sangat disarankan untuk mendapatkan perbaikan bug dan fitur baru secara *real-time*.
+Sangat disarankan untuk mendapatkan rilis stabil terbaru secara otomatis.
 
-1.  **Salin Tautan Resmi:**
+1.  **Salin Tautan Resmi (Stable):**
     ```text
-    https://raw.githubusercontent.com/byimam2nd/oce/builds/plugins.json
+    https://github.com/byimam2nd/oce/releases/latest/download/plugins.json
     ```
+    *(Tautan ini akan selalu mengarahkan Anda ke rilis stabil terbaru kami)*
+
 2.  Buka **CloudStream** ➡️ **Settings** ➡️ **Extensions**.
 3.  Pilih **Add Repository**, beri nama `OCE`, dan tempelkan tautan di atas.
+
+> **💡 Catatan:** Jika Anda ingin mencoba fitur terbaru sebelum rilis resmi (Beta), Anda dapat menggunakan tautan branch builds: `https://raw.githubusercontent.com/byimam2nd/oce/builds/plugins.json`.
 
 ---
 
@@ -75,14 +79,17 @@ Sangat disarankan untuk mendapatkan perbaikan bug dan fitur baru secara *real-ti
 
 Dibalik tampilan yang sederhana, OCE ditenagai oleh mesin yang sangat terorganisir. Kami memisahkan logika utama (Blueprint) dari implementasi akhir untuk efisiensi maksimal.
 
-### **1. Sync Engine Architecture**
-Sistem sinkronisasi kami memastikan bahwa peningkatan kualitas pada satu modul akan berdampak pada seluruh modul lainnya tanpa adanya redundansi kode.
+### **1. Dual-Workflow Distribution**
+Kami menggunakan sistem distribusi dua jalur untuk menjamin stabilitas pengguna:
+- **Jalur Stable (Production):** Didistribusikan melalui GitHub Releases. File `.cs3` diproteksi dan di-versioning secara ketat.
+- **Jalur Beta (Development):** Diperbarui secara otomatis setiap kali ada perubahan kode di branch master.
+
 ```mermaid
-graph LR
-    A[Base Blueprint] --> B{Sync Engine}
-    B --> C[Anime Extensions]
-    B --> D[Movie Extensions]
-    B --> E[Global Modules]
+graph TD
+    A[Master Code] --> B{GitHub Actions}
+    B -->|Automatic| C[Branch Builds - BETA]
+    B -->|Manual Tag / Release| D[GitHub Releases - STABLE]
+    D --> E[End Users]
 ```
 *(Diagram konseptual alur distribusi kode kami)*
 
