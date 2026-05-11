@@ -120,6 +120,7 @@ Jika Anda merasa proyek ini bermanfaat dan ingin memberikan dukungan lebih:
 
 Proyek ini tidak akan menjadi seperti sekarang tanpa inspirasi dan referensi dari proyek-proyek hebat lainnya. Terima kasih khusus kepada:
 
+- **[CloudStream Team & Contributors](https://github.com/recloudstream)** - Untuk aplikasi luar biasa dan ekosistem yang memungkinkan proyek ini ada.
 - **[Phisher](https://github.com/Phisher98)** - Untuk inspirasi struktur dan logika penyedia konten yang luar biasa.
 - **[ExtCloud](https://github.com/recloudstream/cloudstream-extensions)** - Sebagai referensi utama dalam pengembangan ekstensi CloudStream.
 
@@ -128,6 +129,8 @@ Proyek ini tidak akan menjadi seperti sekarang tanpa inspirasi dan referensi dar
 ## ⚖️ Lisensi & Disclaimer
 
 Proyek ini berlisensi di bawah **GNU GPLv3**.
+
+**OCE (Open Cloudstream Extensions)** adalah proyek independen dan tidak berafiliasi secara resmi dengan tim CloudStream. 
 
 **Penting:** Repository ini tidak menyimpan file video apa pun di server kami. Semua konten disediakan oleh pihak ketiga yang tidak berafiliasi dengan kami. Kami tidak bertanggung jawab atas bagaimana pengguna menggunakan ekstensi ini. Harap gunakan dengan bijak dan hormati hak cipta.
 
