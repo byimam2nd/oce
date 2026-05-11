@@ -1,124 +1,127 @@
 <div align="center">
 
-# 🌊 OCE - Open Cloudstream Extensions
-**High-Quality Extensions for Your Ultimate Streaming Experience**
+<img src="https://avatars.githubusercontent.com/u/52017796?v=4&size=128" width="128" height="128" alt="OCE Logo" style="border-radius: 50%; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+
+# 🌊 Open Cloudstream Extensions (OCE)
+**The Ultimate Power-House for Your CloudStream Experience**
 
 [![Build & Deploy](https://github.com/byimam2nd/oce/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/byimam2nd/oce/actions)
 [![CloudStream](https://img.shields.io/badge/Platform-CloudStream-blueviolet?style=for-the-badge&logo=android)](https://cloudstream.cf)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0)
 [![Maintained](https://img.shields.io/badge/Maintained%3F-yes-green.svg?style=for-the-badge)](https://github.com/byimam2nd/oce/graphs/commit-activity)
+[![Uptime](https://img.shields.io/badge/Service_Status-Online-success?style=for-the-badge)](https://github.com/byimam2nd/oce/actions)
 
 <p align="center">
-  <a href="#-features">Features</a> •
-  <a href="#-installation">Installation</a> •
-  <a href="#-available-extensions">Extensions</a> •
-  <a href="#-architecture">Architecture</a> •
-  <a href="#-support">Support</a>
+  <b>Nikmati streaming tanpa batas dengan ekstensi berkualitas tinggi, stabil, dan selalu terbarui.</b>
+  <br>
+  <a href="#-fitur-unggulan">Fitur</a> •
+  <a href="#-instalasi-instan">Instalasi</a> •
+  <a href="#-katalog-ekstensi">Katalog</a> •
+  <a href="#-ekosistem-teknis">Teknologi</a> •
+  <a href="#-apresiasi">Credits</a>
 </p>
 
 ---
 
 </div>
 
-## ✨ Kenapa Memilih OCE?
+## ✨ Fitur Unggulan
 
-**OCE** (Open Cloudstream Extensions) adalah koleksi ekstensi pihak ketiga untuk aplikasi [CloudStream](https://github.com/recloudstream/cloudstream). Kami berfokus pada penyediaan akses yang stabil, cepat, dan berkualitas ke berbagai sumber konten favorit Anda, mulai dari Anime hingga Film populer.
+**OCE** bukan sekadar repository biasa. Kami membangun ekosistem yang memastikan setiap ekstensi bekerja dengan performa maksimal.
 
-- **🚀 Optimasi Kecepatan:** Ekstensi dirancang ringan dan efisien.
-- **🛡️ Teruji secara Berkala:** Skrip validasi otomatis memastikan selektor selalu *up-to-date*.
-- **🇮🇩 Berfokus pada Komunitas:** Prioritas utama pada konten dengan dukungan bahasa Indonesia.
-- **💎 Kualitas Premium:** Dukungan multi-kualitas (360p - 1080p) tergantung ketersediaan sumber.
-
----
-
-## 📥 Panduan Instalasi
-
-Menambahkan repository OCE ke CloudStream sangatlah mudah. Gunakan salah satu metode di bawah ini:
-
-### **Cara Tercepat (Otomatis)**
-1. Salin URL berikut:
-   ```text
-   https://raw.githubusercontent.com/byimam2nd/oce/builds/plugins.json
-   ```
-   *(Gunakan branch `builds` untuk stabilitas maksimal)*
-2. Buka aplikasi **CloudStream**.
-3. Masuk ke **Settings** ➡️ **Extensions**.
-4. Klik **Add Repository**.
-5. Masukkan nama (misal: `OCE`) dan tempelkan URL yang sudah disalin.
-
-### **Cara Manual**
-Anda juga bisa mengunduh file `.cs3` langsung dari [GitHub Releases](https://github.com/byimam2nd/oce/releases) dan memasangnya melalui menu **Install .cs3 file** di dalam aplikasi.
+*   **🚀 Ultra-Fast Loading:** Kode yang dioptimalkan untuk kecepatan pemuatan data yang instan.
+*   **🛡️ Automated Integrity Check:** Sistem kami melakukan audit otomatis harian untuk memastikan semua selektor website sumber tetap aktif.
+*   **🇮🇩 Localized Content:** Fokus utama pada sumber-sumber terbaik untuk komunitas Indonesia.
+*   **💎 Multi-Source Extractors:** Mendukung berbagai kualitas video dengan sistem extractor yang cerdas.
 
 ---
 
-## 📺 Koleksi Ekstensi Saat Ini
+## 📥 Instalasi Instan
 
-Kami terus memperluas daftar ini. Berikut adalah yang tersedia saat ini:
+Tambahkan OCE ke aplikasi CloudStream Anda dalam hitungan detik.
+
+### **Metode Repository (Sangat Direkomendasikan)**
+Metode ini memastikan Anda selalu mendapatkan pembaruan otomatis saat kami merilis fitur baru atau perbaikan bug.
+
+1.  **Salin URL ini:**
+    ```text
+    https://raw.githubusercontent.com/byimam2nd/oce/builds/plugins.json
+    ```
+2.  Buka **CloudStream** ➡️ **Settings** ➡️ **Extensions**.
+3.  Pilih **Add Repository**.
+4.  Masukkan nama `OCE` dan tempelkan URL tersebut.
+
+---
+
+## 📺 Katalog Ekstensi
+
+Koleksi kami mencakup berbagai kategori konten populer dengan status yang selalu dipantau.
 
 ### 🇯🇵 Anime & Donghua
-| Sumber | Wilayah | Status |
-| :--- | :---: | :---: |
-| **Anichin** | 🇮🇩 ID | ![Active](https://img.shields.io/badge/-Online-success) |
-| **Animasu** | 🇮🇩 ID | ![Active](https://img.shields.io/badge/-Online-success) |
-| **Samehadaku** | 🇮🇩 ID | ![Active](https://img.shields.io/badge/-Online-success) |
-| **Donghuastream** | 🇮🇩 ID | ![Active](https://img.shields.io/badge/-Online-success) |
+| Sumber | Konten | Status |
+| :--- | :--- | :---: |
+| **Anichin** | Donghua / Anime | ![Live](https://img.shields.io/badge/-Live-success) |
+| **Animasu** | Anime Terlengkap | ![Live](https://img.shields.io/badge/-Live-success) |
+| **Samehadaku** | Anime Populer | ![Live](https://img.shields.io/badge/-Live-success) |
+| **Donghuastream** | Spesialis Donghua | ![Live](https://img.shields.io/badge/-Live-success) |
 
 ### 🎬 Movies & TV Series
-| Sumber | Wilayah | Status |
-| :--- | :---: | :---: |
-| **LayarKaca21** | 🇮🇩 ID | ![Active](https://img.shields.io/badge/-Online-success) |
-| **Idlix** | 🇮🇩 ID | ![Active](https://img.shields.io/badge/-Online-success) |
-| **Pencurimovie** | 🇲🇾 MY/ID | ![Active](https://img.shields.io/badge/-Online-success) |
-| **Melolo** | 🌍 Global | ![Active](https://img.shields.io/badge/-Online-success) |
-| **Dramabox** | 🌍 Global | ![Active](https://img.shields.io/badge/-Online-success) |
+| Sumber | Konten | Status |
+| :--- | :--- | :---: |
+| **LayarKaca21** | Film & Series Populer | ![Live](https://img.shields.io/badge/-Live-success) |
+| **Idlix** | Koleksi Film Terupdate | ![Live](https://img.shields.io/badge/-Live-success) |
+| **Pencurimovie** | Movie & TV Shows | ![Live](https://img.shields.io/badge/-Live-success) |
+| **Melolo** | Global Content | ![Live](https://img.shields.io/badge/-Live-success) |
+| **Dramabox** | Mini Drama Series | ![Live](https://img.shields.io/badge/-Live-success) |
 
 ---
 
-## 🏗️ Arsitektur & Otomatisasi
+## ⚙️ Ekosistem Teknis (Behind the Scenes)
 
-Proyek ini menggunakan sistem **Base HTML Provider Sync** yang canggih untuk memastikan konsistensi kode di seluruh penyedia layanan.
+OCE ditenagai oleh mesin otomatisasi yang unik untuk menjaga kualitas ribuan baris kode secara efisien.
 
-- **`BaseHtmlProvider/`**: Blueprint utama untuk semua provider berbasis HTML. Perubahan di sini akan disinkronkan ke seluruh provider terkait.
-- **`scripts/sync_providers.py`**: Mesin sinkronisasi yang secara otomatis menerapkan perubahan dari blueprint ke masing-masing modul provider.
-- **`scripts/validate_selectors_pro.py`**: Alat validasi selektor untuk mendeteksi perubahan struktur pada website sumber secara dini.
-- **CI/CD Pipeline**: Build otomatis yang menangani kompilasi, pembuatan file `.cs3`, dan pembaruan `plugins.json` pada branch `builds`.
+### **1. Sync Engine Core**
+Kami menggunakan sistem `BaseHtmlProvider` sebagai blueprint tunggal. Saat kami meningkatkan satu fitur, mesin sinkronisasi kami secara otomatis mendistribusikan peningkatan tersebut ke seluruh provider terkait.
+```text
+[ Base Blueprint ] ──▶ [ Sync Engine ] ──┬──▶ [ Provider A ]
+                                        ├──▶ [ Provider B ]
+                                        └──▶ [ Provider C ]
+```
 
-Untuk detail lebih lanjut mengenai struktur dan standar pengembangan, silakan merujuk ke folder [docs/](docs/).
+### **2. Selector Audit System**
+Skrip **"Nuclear Audit"** kami secara proaktif mensimulasikan pencarian dan pemuatan konten setiap hari. Jika website sumber mengubah strukturnya, sistem kami akan segera mendeteksinya sebelum pengguna merasakannya.
+
+### **3. Continuous Deployment**
+Setiap perubahan pada branch `master` akan divalidasi dan dikompilasi secara otomatis oleh GitHub Actions, lalu dikirimkan langsung ke branch `builds` dalam bentuk file `.cs3` yang siap digunakan.
 
 ---
 
-## 🤝 Kontribusi & Dukungan
+## 🎖️ Apresiasi & Terima Kasih
 
-Proyek ini sepenuhnya open-source. Anda dapat membantu kami dengan:
-- Memberikan **Star** ⭐ pada repository ini.
-- Melaporkan bug melalui **Issues**.
-- Mengirimkan **Pull Request** untuk perbaikan atau fitur baru.
+Proyek ini berdiri di atas bahu raksasa. Kami sangat berterima kasih kepada:
 
-Jika Anda merasa proyek ini bermanfaat dan ingin memberikan dukungan lebih:
+- **[CloudStream Team](https://github.com/recloudstream)** - Untuk platform streaming open-source terbaik.
+- **[Phisher](https://github.com/Phisher98)** - Inspirasi utama untuk arsitektur penyedia konten yang solid.
+- **[ExtCloud](https://github.com/recloudstream/cloudstream-extensions)** - Referensi standar industri dalam pengembangan ekstensi.
+- **Seluruh Kontributor & Komunitas** - Yang terus memberikan feedback dan dukungan.
+
+---
+
+## 🤝 Dukung Proyek Ini
+
+Jika OCE membuat pengalaman streaming Anda lebih menyenangkan, dukung kami untuk tetap aktif menjaga kualitas layanan ini:
+
 - ☕ [Buy Me A Coffee](https://buymeacoffee.com/imam2nd)
 - 💖 [SociaBuzz (Local Indonesia)](https://sociabuzz.com/imam2nd/tribe)
-
----
-
-## 🎖️ Credits & Special Thanks
-
-Terima kasih khusus kepada:
-
-- **[CloudStream Team & Contributors](https://github.com/recloudstream)** - Untuk ekosistem luar biasa yang memungkinkan proyek ini ada.
-- **[Phisher](https://github.com/Phisher98)** - Untuk inspirasi struktur dan logika penyedia konten.
-- **[ExtCloud](https://github.com/recloudstream/cloudstream-extensions)** - Sebagai referensi utama pengembangan ekstensi.
+- ⭐ **Berikan Star** pada repository ini sebagai bentuk apresiasi moral!
 
 ---
 
 ## ⚖️ Lisensi & Disclaimer
 
-Proyek ini berlisensi di bawah **GNU GPLv3**.
-
-**OCE (Open Cloudstream Extensions)** adalah proyek independen dan tidak berafiliasi secara resmi dengan tim CloudStream. 
-
-**Penting:** Repository ini tidak menyimpan file video apa pun di server kami. Semua konten disediakan oleh pihak ketiga. Kami tidak bertanggung jawab atas penggunaan ekstensi ini oleh pengguna. Harap gunakan dengan bijak dan hormati hak cipta.
+Berlisensi di bawah **GNU GPLv3**. Proyek ini adalah karya independen dan tidak berafiliasi resmi dengan tim CloudStream. Kami tidak menyimpan file video; kami hanya menyediakan alat untuk mengakses konten publik dari pihak ketiga secara lebih mudah. Harap patuhi hukum hak cipta yang berlaku di wilayah Anda.
 
 ---
 <div align="center">
-  Dibuat dengan ❤️ oleh <a href="https://github.com/byimam2nd">imam2nd</a>
+  <b>Managed with passion by <a href="https://github.com/byimam2nd">imam2nd</a></b>
 </div>
