@@ -156,7 +156,7 @@ object SamehadakuConstants {
         "Donghuastream:::div.bsx a img", 
         "Animasu:::div.limit img, img[data-src], .thumb img", 
         "LayarKaca21:::div.poster img, img[data-src], img[src]", 
-        "Anichin:::div.bsx img, img.ts-post-image", 
+        "Anichin:::div.bsx img, .ts-post-image, .wp-post-image", 
         "GLOBAL:::img"
     )
     
@@ -164,7 +164,7 @@ object SamehadakuConstants {
     val SEARCH_EP_TEXT = listOf("Samehadaku:::.eps span, .epx", "LayarKaca21:::span.episode strong", "Anichin:::div.bsx span.epx", "Animasu:::span.epx", "GLOBAL:::.ep, .episode")
 
     val LOAD_TITLE = listOf("LayarKaca21:::div.movie-info h1, h1.entry-title", "Animasu:::h1[itemprop=headline], div.infox h1", "Pencurimovie:::div.mvic-desc h3", "Anichin,Donghuastream,Samehadaku:::h1.entry-title, h1.title", "GLOBAL:::h1")
-    val LOAD_POSTER = listOf("LayarKaca21:::div.poster img, img[data-src]", "Pencurimovie:::div.mvic-thumb img", "Donghuastream:::div.thumb > img, img.ts-post-image", "Anichin:::div.thumb img, img.ts-post-image", "Animasu,Samehadaku:::div.thumb img", "Animasu:::div.bigcontent img", "GLOBAL:::.thumb img, .poster img")
+    val LOAD_POSTER = listOf("LayarKaca21:::div.poster img[itemprop=image], div.poster img", "Pencurimovie:::div.mvic-thumb img", "Donghuastream:::div.thumb > img, img.ts-post-image", "Anichin:::div.thumb img, .ts-post-image, .wp-post-image", "Animasu,Samehadaku:::div.thumb img", "Animasu:::div.bigcontent img", "GLOBAL:::.thumb img, .poster img")
     val LOAD_BANNER = listOf("GLOBAL:::.banner img, .backdrop img")
     
     val LOAD_DESC = listOf(
@@ -182,7 +182,7 @@ object SamehadakuConstants {
     val LOAD_STATUS = listOf("Samehadaku:::div.spe span:contains(Status)", "Animasu:::span:contains(Status:) font", "GLOBAL:::.status")
     val LOAD_QUALITY = listOf("GLOBAL:::.quality")
     val LOAD_TRAILER = listOf("LayarKaca21:::ul.action-left > li:nth-child(3) > a", "Samehadaku:::iframe[src*=\"youtube\"]", "GLOBAL:::div.trailer iframe")
-    val LOAD_RECOMMEND = listOf("LayarKaca21:::div#gmr-related-load article, div.related-post article", "Samehadaku:::div.relat ul li", "Anichin,Donghuastream,Animasu:::.listupd article", "GLOBAL:::div.related article, .recommendations article")
+    val LOAD_RECOMMEND = listOf("LayarKaca21:::div#gmr-related-load article, li.slider article", "Samehadaku:::div.relat ul li, .relat article", "Anichin,Donghuastream,Animasu:::.listupd article, .related-post article", "Pencurimovie:::.mlw-related .ml-item", "GLOBAL:::div.related article, .recommendations article")
 
     val EPISODE_ITEMS = listOf("Animasu:::ul#daftarepisode > li", "Samehadaku:::div.lstepsiode ul li", "Pencurimovie:::div.tvseason div.les-content a", "Anichin,Donghuastream:::.eplister li", "GLOBAL:::.ep-list li")
     val EPISODE_HREF = listOf("Samehadaku:::a", "LayarKaca21:::a", "Pencurimovie:::a", "Anichin,Donghuastream:::.eplister li > a", "GLOBAL:::a")
@@ -195,11 +195,12 @@ object SamehadakuConstants {
         "Animasu:::.mobius > .mirror > option", 
         "Anichin,Donghuastream:::option[data-index], option[value]", 
         "LayarKaca21:::ul#player-list > li, div.player-nav select option", 
+        "Pencurimovie:::div.player_nav a, div.player_nav strong, ul.list-server li",
         "GLOBAL:::select.mirror option"
     )
     val DOWNLOAD_ITEMS = listOf("Samehadaku:::div#downloadb li", "GLOBAL:::.dl-list a")
-    val ACTOR_ITEMS = listOf("LayarKaca21:::div.cast-item, div.movie-cast", "GLOBAL:::.cast-item")
-    val ACTOR_NAME = listOf("LayarKaca21:::span[itemprop=name], h3", "GLOBAL:::.name")
+    val ACTOR_ITEMS = listOf("LayarKaca21:::div.movie-cast div.cast-item, .movie-info .cast-item", "GLOBAL:::.cast-item")
+    val ACTOR_NAME = listOf("LayarKaca21:::span[itemprop=name], .cast-name, h3", "GLOBAL:::.name")
 
     // ========================================================================
     // --- [5] SPECIAL CONSTANTS & STRINGS (UI & LOGIC) ---
@@ -235,5 +236,5 @@ object SamehadakuConstants {
     val ATTR_VALUE = listOf("GLOBAL:::value", "GLOBAL:::data-index", "GLOBAL:::data-id", "GLOBAL:::data-url", "GLOBAL:::data-link")
     val ATTR_CONTENT = listOf("GLOBAL:::content")
 
-    val BLOAT_REGEX = Regex("(?i)(Nonton|Anime|Subtitle\\s*Indonesia|Movie|TV|Series|Lengkap|HD|Free|\\d{3,4}p|Dual\\s*Audio|TAMAT|donghua|Indo|Full|Season)", RegexOption.IGNORE_CASE)
+    val BLOAT_REGEX = Regex("(?i)(ONA|Ongoing|Completed\\s*Special|Completed|Special\\s*Ongoing|TAMAT|donghua|Indo|Full|Season|Subtitle\\s*Indonesia|Nonton|Anime|Movie|TV|Series|Lengkap|HD|Free|\\d{3,4}p|Dual\\s*Audio)", RegexOption.IGNORE_CASE)
 }
