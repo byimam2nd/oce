@@ -233,7 +233,11 @@ open class Donghuastream : MainAPI() {
         
         // Pipeline: Recommendations & Actors
         val recommendations = document.selectSafeList(LOAD_RECOMMEND).mapNotNull { it.toSearchResult(currentUrl) }
-        val actors = document.selectSafeList(ACTOR_ITEMS).mapNotNull { val n = it.selectSafe(ACTOR_NAME)?.text() ?: ""; val p = it.selectFirst("img")?.safeExtractImage(ATTR_IMAGE) ?: ""; if (n.isNotBlank()) Actor(n, p) else null }
+        val actors = document.selectSafeList(ACTOR_ITEMS).mapNotNull { 
+            val n = it.selectSafe(ACTOR_NAME)?.text()?.trim() ?: ""
+            val p = it.selectFirst("img")?.safeExtractImage(ATTR_IMAGE) ?: ""
+            if (n.isNotBlank() && n.length < 100) Actor(n, p) else null 
+        }
         
         // Pipeline: Episode Processing
         val epItems = document.selectSafeList(EPISODE_ITEMS); val seasonDataScript = document.selectFirst("script#season-data")
