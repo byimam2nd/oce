@@ -131,7 +131,7 @@ object AnimasuConstants {
     // ========================================================================
 
     val SEARCH_ITEMS = listOf(
-        "LayarKaca21:::div#gmr-main-load article",
+        "LayarKaca21:::article, div.content-main article, div#gmr-main-load article",
         "Anichin,Donghuastream:::div.listupd > article",
         "Samehadaku:::div.animposx, div.post-show ul li",
         "Animasu:::div.listupd div.bs",
@@ -140,7 +140,7 @@ object AnimasuConstants {
     )
 
     val SEARCH_TITLE = listOf(
-        "LayarKaca21:::h3", 
+        "LayarKaca21:::h3, h2, a[title]", 
         "Samehadaku:::h2.entry-title a, .title", 
         "Anichin,Donghuastream:::div.bsx > a, a", 
         "Animasu:::div.tt", 
@@ -154,8 +154,8 @@ object AnimasuConstants {
         "Samehadaku:::div.animposx img, .content-thumb img",
         "Pencurimovie:::a img[data-original], a img[data-src]", 
         "Donghuastream:::div.bsx a img", 
-        "Animasu:::img[data-src], .thumb img", 
-        "LayarKaca21:::img[data-src], img[src]", 
+        "Animasu:::div.limit img, img[data-src], .thumb img", 
+        "LayarKaca21:::div.poster img, img[data-src], img[src]", 
         "Anichin:::div.bsx img", 
         "GLOBAL:::img"
     )

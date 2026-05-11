@@ -215,7 +215,7 @@ def check_provider(target, config, headers, bloat_p):
         return {"name": target['name'], "error": str(e)}
 
 def run_scrub_audit():
-    with open(CONSTANTS_PATH, "r") as f: content = f.read()
+    with open(CONSTANTS_PATH, "r", encoding="utf-8") as f: content = f.read()
     
     config = {k: extract_list(content, k) for k in [
         'SEARCH_ITEMS', 'SEARCH_TITLE', 'LOAD_TITLE', 'LOAD_POSTER', 'LOAD_DESC', 'LOAD_TAGS', 
@@ -225,7 +225,7 @@ def run_scrub_audit():
     config['EPISODES'] = config['EPISODE_ITEMS']
     
     bloat_p = get_bloat_pattern(content)
-    ua = re.search(r'"User-Agent" to "(.*?)"', content).group(1)
+    ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     headers = {"User-Agent": ua}
 
     print("\nULTRA PRECISION AUDIT REPORT | Nuclear Edition v4.3 Final")

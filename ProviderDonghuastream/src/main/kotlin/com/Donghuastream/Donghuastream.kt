@@ -350,14 +350,10 @@ open class Donghuastream : MainAPI() {
         }.getOrElse { e -> logError(providerId, "LoadLinks Critical Failure: ${e.message}"); false }
     }
 
-    // --- REFINED CONFIG ENGINE (CACHED) ---
+    // --- HIGH-STABILITY CONFIG ENGINE (V12.1) ---
 
     private fun getCached(list: List<String>, default: String): String {
         return configCache.getOrPut(list.hashCode()) { resolveConfig(list, default) }
-    }
-
-    private fun getCachedList(list: List<String>): List<String> {
-        return configListCache.getOrPut(list.hashCode()) { resolveConfigList(list) }
     }
 
     private fun resolveConfig(list: List<String>, default: String): String {
@@ -380,21 +376,48 @@ open class Donghuastream : MainAPI() {
 
     private fun Element.selectSafe(selectors: List<String>): Element? {
         if (selectors.isEmpty()) return null
-        val list = getCachedList(selectors)
-        for (sel in list) { runCatching { val el = this.selectFirst(sel); if (el != null) return el } }
+        // Pass 1: Provider Specific
+        for (s in selectors) { if (!s.contains(":::")) continue
+            val owners = s.substringBefore(":::"); if (owners.split(",").contains(providerId)) {
+                val sel = s.substringAfter(":::"); if (sel.isNotBlank()) { val el = this.selectFirst(sel); if (el != null) return el }
+            }
+        }
+        // Pass 2: Global Fallback
+        for (s in selectors) {
+            val sel = if (s.startsWith("GLOBAL:::")) s.substringAfter(":::") else if (!s.contains(":::")) s else continue
+            if (sel.isNotBlank()) { val el = this.selectFirst(sel); if (el != null) return el }
+        }
         return null
     }
 
     private fun Element.selectSafeList(selectors: List<String>): org.jsoup.select.Elements {
         if (selectors.isEmpty()) return org.jsoup.select.Elements()
-        val list = getCachedList(selectors)
-        for (sel in list) { runCatching { val els = this.select(sel); if (els.isNotEmpty()) return els } }
+        // Pass 1: Provider Specific
+        for (s in selectors) { if (!s.contains(":::")) continue
+            val owners = s.substringBefore(":::"); if (owners.split(",").contains(providerId)) {
+                val sel = s.substringAfter(":::"); if (sel.isNotBlank()) { val els = this.select(sel); if (els.isNotEmpty()) return els }
+            }
+        }
+        // Pass 2: Global Fallback
+        for (s in selectors) {
+            val sel = if (s.startsWith("GLOBAL:::")) s.substringAfter(":::") else if (!s.contains(":::")) s else continue
+            if (sel.isNotBlank()) { val els = this.select(sel); if (els.isNotEmpty()) return els }
+        }
         return org.jsoup.select.Elements()
     }
 
     private fun Element.attrSafe(attributes: List<String>): String? {
-        val list = getCachedList(attributes)
-        for (attrN in list) { val v = this.attr(attrN); if (v.isNotBlank()) return v }
+        // Pass 1: Provider Specific
+        for (a in attributes) { if (!a.contains(":::")) continue
+            val owners = a.substringBefore(":::"); if (owners.split(",").contains(providerId)) {
+                val attrN = a.substringAfter(":::"); val v = this.attr(attrN); if (v.isNotBlank()) return v
+            }
+        }
+        // Pass 2: Global Fallback
+        for (a in attributes) {
+            val attrN = if (a.startsWith("GLOBAL:::")) a.substringAfter(":::") else if (!a.contains(":::")) a else continue
+            val v = this.attr(attrN); if (v.isNotBlank()) return v
+        }
         return null
     }
 
