@@ -64,14 +64,18 @@ Sangat disarankan untuk mendapatkan rilis stabil terbaru secara otomatis.
 
 1.  **Salin Tautan Resmi (Stable):**
     ```text
-    https://github.com/byimam2nd/oce/releases/latest/download/plugins.json
+    https://github.com/byimam2nd/oce/raw/master/repo.json
     ```
     *(Tautan ini akan selalu mengarahkan Anda ke rilis stabil terbaru kami)*
 
-2.  Buka **CloudStream** ➡️ **Settings** ➡️ **Extensions**.
-3.  Pilih **Add Repository**, beri nama `OCE`, dan tempelkan tautan di atas.
+2.  **Salin Tautan Pengujian (Beta/Testing):**
+    ```text
+    https://github.com/byimam2nd/oce/raw/master/repo-beta.json
+    ```
+    *(Gunakan ini jika Anda ingin mencoba fitur terbaru sebelum rilis resmi)*
 
-> **💡 Catatan:** Jika Anda ingin mencoba fitur terbaru sebelum rilis resmi (Beta), Anda dapat menggunakan tautan branch builds: `https://raw.githubusercontent.com/byimam2nd/oce/builds/plugins.json`.
+3.  Buka **CloudStream** ➡️ **Settings** ➡️ **Extensions**.
+4.  Pilih **Add Repository**, beri nama `OCE`, dan tempelkan salah satu tautan di atas.
 
 ---
 
