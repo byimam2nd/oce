@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🌊 OCE - CloudStream Extensions Repository
+# 🌊 OCE - Open Cloudstream Extensions
 **High-Quality Extensions for Your Ultimate Streaming Experience**
 
 [![Build & Deploy](https://github.com/byimam2nd/oce/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/byimam2nd/oce/actions)
@@ -12,7 +12,7 @@
   <a href="#-features">Features</a> •
   <a href="#-installation">Installation</a> •
   <a href="#-available-extensions">Extensions</a> •
-  <a href="#-development">Development</a> •
+  <a href="#-architecture">Architecture</a> •
   <a href="#-support">Support</a>
 </p>
 
@@ -74,32 +74,16 @@ Kami terus memperluas daftar ini. Berikut adalah yang tersedia saat ini:
 
 ---
 
-## 🛠️ Untuk Pengembang
+## 🏗️ Arsitektur & Otomatisasi
 
-Kami membangun repository ini dengan standar kode yang bersih dan dokumentasi yang lengkap. Jika Anda ingin berkontribusi atau melakukan modifikasi sendiri:
+Proyek ini menggunakan sistem **Base HTML Provider Sync** yang canggih untuk memastikan konsistensi kode di seluruh penyedia layanan.
 
-### **Persiapan Environment**
-- **JDK 17+**
-- **Android SDK** (API Level 35)
-- **Gradle 8.x**
+- **`BaseHtmlProvider/`**: Blueprint utama untuk semua provider berbasis HTML. Perubahan di sini akan disinkronkan ke seluruh provider terkait.
+- **`scripts/sync_providers.py`**: Mesin sinkronisasi yang secara otomatis menerapkan perubahan dari blueprint ke masing-masing modul provider.
+- **`scripts/validate_selectors_pro.py`**: Alat validasi selektor untuk mendeteksi perubahan struktur pada website sumber secara dini.
+- **CI/CD Pipeline**: Build otomatis yang menangani kompilasi, pembuatan file `.cs3`, dan pembaruan `plugins.json` pada branch `builds`.
 
-### **Membangun Proyek**
-```bash
-# Clone repository
-git clone https://github.com/byimam2nd/oce.git
-cd oce
-
-# Build semua ekstensi
-./gradlew make
-
-# Build ekstensi spesifik (Contoh: Anichin)
-./gradlew :ProviderAnichin:make
-```
-
-Pelajari lebih lanjut di folder [docs/](docs/) kami:
-- 📖 [Panduan Pengembangan](docs/DEVELOPMENT_GUIDELINES.md)
-- 🏗️ [Struktur Proyek](docs/PROJECT_STRUCTURE.md)
-- 📝 [Standar Penamaan](docs/NAMING-STANDARDS.md)
+Untuk detail lebih lanjut mengenai struktur dan standar pengembangan, silakan merujuk ke folder [docs/](docs/).
 
 ---
 
@@ -118,11 +102,11 @@ Jika Anda merasa proyek ini bermanfaat dan ingin memberikan dukungan lebih:
 
 ## 🎖️ Credits & Special Thanks
 
-Proyek ini tidak akan menjadi seperti sekarang tanpa inspirasi dan referensi dari proyek-proyek hebat lainnya. Terima kasih khusus kepada:
+Terima kasih khusus kepada:
 
-- **[CloudStream Team & Contributors](https://github.com/recloudstream)** - Untuk aplikasi luar biasa dan ekosistem yang memungkinkan proyek ini ada.
-- **[Phisher](https://github.com/Phisher98)** - Untuk inspirasi struktur dan logika penyedia konten yang luar biasa.
-- **[ExtCloud](https://github.com/recloudstream/cloudstream-extensions)** - Sebagai referensi utama dalam pengembangan ekstensi CloudStream.
+- **[CloudStream Team & Contributors](https://github.com/recloudstream)** - Untuk ekosistem luar biasa yang memungkinkan proyek ini ada.
+- **[Phisher](https://github.com/Phisher98)** - Untuk inspirasi struktur dan logika penyedia konten.
+- **[ExtCloud](https://github.com/recloudstream/cloudstream-extensions)** - Sebagai referensi utama pengembangan ekstensi.
 
 ---
 
@@ -132,7 +116,7 @@ Proyek ini berlisensi di bawah **GNU GPLv3**.
 
 **OCE (Open Cloudstream Extensions)** adalah proyek independen dan tidak berafiliasi secara resmi dengan tim CloudStream. 
 
-**Penting:** Repository ini tidak menyimpan file video apa pun di server kami. Semua konten disediakan oleh pihak ketiga yang tidak berafiliasi dengan kami. Kami tidak bertanggung jawab atas bagaimana pengguna menggunakan ekstensi ini. Harap gunakan dengan bijak dan hormati hak cipta.
+**Penting:** Repository ini tidak menyimpan file video apa pun di server kami. Semua konten disediakan oleh pihak ketiga. Kami tidak bertanggung jawab atas penggunaan ekstensi ini oleh pengguna. Harap gunakan dengan bijak dan hormati hak cipta.
 
 ---
 <div align="center">
