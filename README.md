@@ -6,6 +6,7 @@
 ### *Redefining Resilience. Empowering Discovery. Bridging Content.*
 
 [![Build Status](https://github.com/byimam2nd/oce/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/byimam2nd/oce/actions)
+
 [![Platform: CloudStream](https://img.shields.io/badge/Platform-CloudStream-6200EE?style=for-the-badge&logo=android)](https://cloudstream.cf)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-0052cc.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0)
 [![Community](https://img.shields.io/badge/Community-Indonesia-ff4b2b?style=for-the-badge)](https://github.com/byimam2nd/oce)
