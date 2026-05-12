@@ -1,10 +1,10 @@
 [
     {
         "iconUrl": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjD5KTf3taknWZ6YLFfkHAvDCoeC79LCjfh1T5VsBajkI0hFV4afH6WBwDeiHrGtkYKaRMX4pAWa_M2kG8LXefpk8g6Ug35PnJyXpiro5lPw8tcXMPA_6RFcRw3dYQkoZgXDdjiMdHde2k8ZfwTlazvlVerXAhdrLDNAeo5NysoU-CScOAcVmsosVl_cA/s1600/NewLogo.png",
-        "fileHash": "sha256-ce199c2f2e6cb9da901057457dcad5804fc91349c6c4a89c9cb7d7ad7db41450",
+        "fileHash": "sha256-04ae90a02ea524ac7aa3a667f06006cd880099cae724090c24eca52fff2746ad",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 154753,
+        "fileSize": 154255,
         "status": 1,
         "language": "id",
         "authors": [
@@ -21,10 +21,10 @@
     },
     {
         "iconUrl": "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://v1.animasu.top&size=%size%",
-        "fileHash": "sha256-b8538187f0b0757aa5a67253be2f106cff576e5a6dea81d8dc70f40139deaf58",
+        "fileHash": "sha256-fd3468367ff64e4d92214c179d2e13247bdbbbef46ca554551c456868e7ef4b6",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 154759,
+        "fileSize": 154236,
         "status": 1,
         "language": "id",
         "authors": [
@@ -44,10 +44,10 @@
     },
     {
         "iconUrl": "https://raw.githubusercontent.com/Kohi-den/extensions-source/927f9c68fd64ce52f6212ae633d0f0585eca3545/src/en/donghuastream/res/mipmap-xxxhdpi/ic_launcher.png",
-        "fileHash": "sha256-a459340542c91a8972ca2174389da671003f71934923952d79adcedc4d646f6a",
+        "fileHash": "sha256-8515200679a4f47fc5ac3c990131cf3019f6435f1b09c079597d96f886f3195e",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 155341,
+        "fileSize": 154808,
         "status": 1,
         "language": "id",
         "authors": [
@@ -64,10 +64,10 @@
     },
     {
         "iconUrl": "https://www.google.com/s2/favicons?domain=dramabox.com&sz=%size",
-        "fileHash": "sha256-ee7ba04666186b5d2d8ee6929d91e0d7f03c42f15fd037db97aab71b1abc188a",
+        "fileHash": "sha256-6ed542ab1c1c02872444fdd8c86b07405bd78cbe3f96ce787df05aa9b9c4033e",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 155122,
+        "fileSize": 154563,
         "status": 1,
         "language": "id",
         "authors": [
@@ -85,10 +85,10 @@
     },
     {
         "iconUrl": "https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://idlixian.com&size=16",
-        "fileHash": "sha256-72a1bc4d79c91507fccd0b61a788be92638f487645b5e4968290c300abe76a5c",
+        "fileHash": "sha256-bb28b205228607317df6f9c2e5f3671061b0cc8831f141aad6ff891ba4770783",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 155037,
+        "fileSize": 154498,
         "status": 1,
         "language": "id",
         "authors": [
@@ -108,10 +108,10 @@
     },
     {
         "iconUrl": "https://www.google.com/s2/favicons?domain=89.124.116.48&sz=%size%",
-        "fileHash": "sha256-cb57ab712d16d674305bc874f8646b108981c665c4a7914609d33b59396b9429",
+        "fileHash": "sha256-62cac685f4b229de1f3159594578b634859dadad8662735c63521fae45b347f9",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 155302,
+        "fileSize": 154808,
         "status": 1,
         "language": "id",
         "authors": [
@@ -130,10 +130,10 @@
     },
     {
         "iconUrl": "https://www.google.com/s2/favicons?domain=d21.team&sz=%size%",
-        "fileHash": "sha256-57a7873e355f89aaf52355ebf8c4698bf788ca23530c03eaf56174bca906dd6e",
+        "fileHash": "sha256-755d8436ef0468c177fd05ac9982c6c2e58ec2f95ffd15ac756af68333424930",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 155329,
+        "fileSize": 154801,
         "status": 1,
         "language": "id",
         "authors": [
@@ -152,10 +152,10 @@
     },
     {
         "iconUrl": "https://www.google.com/s2/favicons?domain=tmthreader.com&sz=%size",
-        "fileHash": "sha256-4ff06176fa41921e098665edc617020f9e69b6a0dfb3fd0130c020e1f69657c0",
+        "fileHash": "sha256-d09a76631d928cb820da8fa0c240c42a2f5c181ca75fbe361fbc87407f5ee3bf",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 155089,
+        "fileSize": 154509,
         "status": 1,
         "language": "id",
         "authors": [
@@ -173,10 +173,10 @@
     },
     {
         "iconUrl": "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://ww03.pencurimovie.bond&size=%size%",
-        "fileHash": "sha256-50f9129ceb4a92d56cafbc6b57155f29e5175c55ae73eddb9ed8002b2d959907",
+        "fileHash": "sha256-fea18e3e65459820e1ece73f4a2e8b0541e6cd9b92496cd6ea9b591ad1fa6a41",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 155363,
+        "fileSize": 154746,
         "status": 1,
         "language": "id",
         "authors": [
@@ -194,10 +194,10 @@
     },
     {
         "iconUrl": "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://v1.samehadaku.how&size=%size%",
-        "fileHash": "sha256-19a0d79fe76f83f9d652ae80180b066768ca31d1c32ca177b884099a88844420",
+        "fileHash": "sha256-98a37d4bb9d298bef2b19a35c09aba3c9152e12553962641161f325047a2b44c",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 155239,
+        "fileSize": 154693,
         "status": 1,
         "language": "id",
         "authors": [
