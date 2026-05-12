@@ -299,7 +299,26 @@ class wishfast : ExtractorApi() { override var name = "wishfast"; override var m
 
 class Minochinos : ExtractorApi() { override var name = "Minochinos"; override var mainUrl = "https://minochinos.com"; override val requiresReferer = true }
 class Vidhide : ExtractorApi() { override var name = "Vidhide"; override var mainUrl = "https://vidhide.com"; override val requiresReferer = true }
-class ShortIcu : ExtractorApi() { override var name = "ShortIcu"; override var mainUrl = "https://short.icu"; override val requiresReferer = true }
+class ShortIcu : ExtractorApi() { 
+    override var name = "ShortIcu"
+    override var mainUrl = "https://short.icu"
+    override val requiresReferer = true
+    
+    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
+        val response = app.get(url, referer = referer)
+        val finalUrl = response.url
+        if (finalUrl != url) {
+            // If redirected, try loading extractor for the final URL
+            loadExtractor(finalUrl, url, subtitleCallback, callback)
+        }
+        
+        // Deep Scan the response text just in case
+        val urls = CompiledRegexPatterns.extractAllVideoUrls(response.text)
+        CompiledRegexPatterns.filterMasterM3u8(urls).forEach { videoUrl ->
+            MasterLinkGenerator.createSmartLink(this.name, videoUrl, finalUrl, callback = callback)
+        }
+    }
+}
 
 // ============================================
 // REGION 5: EXTRACTORS REGISTRY

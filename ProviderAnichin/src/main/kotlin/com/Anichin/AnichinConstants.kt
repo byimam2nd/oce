@@ -19,7 +19,7 @@ object AnichinConstants {
         "Animasu:::Animasu",
         "Donghuastream:::Donghuastream",
         "LayarKaca21:::LayarKaca",
-        "IndoDrama21:::IndoDrama21",
+        "IndoDrama21:::IndoDrama",
         "Pencurimovie:::Pencurimovie",
         "Samehadaku:::Samehadaku",
         "GLOBAL:::Base HTML Provider"
@@ -47,7 +47,7 @@ object AnichinConstants {
     )
 
     val CONFIG_LANGS = listOf(
-        "Donghuastream:::zh",
+        "Donghuastream:::id",
         "GLOBAL:::id"
     )
 
@@ -123,15 +123,74 @@ object AnichinConstants {
     // --- [3] MAIN PAGE CONTENT LISTS ---
     // ========================================================================
 
+    private val ANICHIN_MAIN = listOf(
+        "seri/?status=&type=&order=popular&page=|Popular Donghua",
+        "seri/?status=&type=&order=update&page=|Recently Updated",
+        "seri/?sub=&order=latest&page=|Latest Added",
+        "seri/?status=ongoing&type=&order=update&page=|Ongoing",
+        "seri/?status=completed&type=&order=update&page=|Completed"
+    ).joinToString(";")
+
+    private val ANIMASU_MAIN = listOf(
+        "urutan=update|Baru diupdate",
+        "status=&tipe=&urutan=publikasi|Baru ditambahkan",
+        "status=&tipe=&urutan=populer|Terpopuler",
+        "status=&tipe=&urutan=rating|Rating Tertinggi",
+        "status=&tipe=Movie&urutan=update|Movie Terbaru",
+        "status=&tipe=Movie&urutan=populer|Movie Terpopuler"
+    ).joinToString(";")
+
+    private val DONGHUASTREAM_MAIN = listOf(
+        "anime/?status=&type=&order=update&page=|Recently Updated",
+        "anime/?status=completed&type=&order=update|Completed",
+        "anime/?status=&type=special&sub=&order=update|Special Anime"
+    ).joinToString(";")
+
+    private val LAYARKACA21_MAIN = listOf(
+        "https://lk21.de/populer/page/|Film Terpopuler",
+        "https://lk21.de/rating/page/|Film Berdasarkan IMDb Rating",
+        "https://lk21.de/most-commented/page/|Film Dengan Komentar Terbanyak",
+        "https://series.lk21.de/latest-series/page/|Series Terbaru",
+        "https://series.lk21.de/series/asian/page/|Film Asian Terbaru",
+        "https://lk21.de/latest/page/|Film Upload Terbaru"
+    ).joinToString(";")
+
+    private val INDODRAMA21_MAIN = listOf(
+        "rating|Terpopuler",
+        "box-office|Box Office",
+        "country/indonesia|Film Indonesia Terupdate",
+        "country/thailand|Film Thailand Terupdate",
+        "country/china|Film China Terupdate"
+    ).joinToString(";")
+
+    private val PENCURIMOVIE_MAIN = listOf(
+        "movies|Latest Movies",
+        "series|TV Series",
+        "most-rating|Most Rating Movies",
+        "top-imdb|Top IMDB Movies"
+    ).joinToString(";")
+
+    private val SAMEHADAKU_MAIN = listOf(
+        "page/|Episode Terbaru",
+        "daftar-anime-2/?title=&status=&type=TV&order=popular&page=|TV Populer",
+        "daftar-anime-2/?title=&status=&type=OVA&order=title&page=|OVA",
+        "daftar-anime-2/?title=&status=&type=Movie&order=title&page=|Movie"
+    ).joinToString(";")
+
+    private val GLOBAL_MAIN = listOf(
+        "trending/page/|Sedang Tren",
+        "terbaru/page/|Update Terbaru"
+    ).joinToString(";")
+
     val CONFIG_MAIN_PAGE_LISTS = listOf(
-        "Anichin:::seri/?status=&type=&order=popular&page=|Popular Donghua;seri/?status=&type=&order=update&page=|Recently Updated;seri/?sub=&order=latest&page=|Latest Added;seri/?status=ongoing&type=&order=update&page=|Ongoing;seri/?status=completed&type=&order=update&page=|Completed",
-        "Animasu:::urutan=update|Baru diupdate;status=&tipe=&urutan=publikasi|Baru ditambahkan;status=&tipe=&urutan=populer|Terpopuler;status=&tipe=&urutan=rating|Rating Tertinggi;status=&tipe=Movie&urutan=update|Movie Terbaru;status=&tipe=Movie&urutan=populer|Movie Terpopuler",
-        "Donghuastream:::anime/?status=&type=&order=update&page=|Recently Updated;anime/?status=completed&type=&order=update|Completed;anime/?status=&type=special&sub=&order=update|Special Anime",
-        "LayarKaca21:::https://lk21.de/populer/page/|Film Terpopuler;https://lk21.de/rating/page/|Film Berdasarkan IMDb Rating;https://lk21.de/most-commented/page/|Film Dengan Komentar Terbanyak;https://series.lk21.de/latest-series/page/|Series Terbaru;https://series.lk21.de/series/asian/page/|Film Asian Terbaru;https://lk21.de/latest/page/|Film Upload Terbaru",
-        "IndoDrama21:::populer|Terpopuler;rating|Rating Terbaik;terbaru|Film Terbaru;box-office|Box Office;category/action|Action;category/drama|Drama;category/science-fiction|Sci-Fi;category/comedy|Comedy;category/horror|Horror;category/thriller|Thriller",
-        "Pencurimovie:::movies|Latest Movies;series|TV Series;most-rating|Most Rating Movies;top-imdb|Top IMDB Movies",
-        "Samehadaku:::page/|Episode Terbaru;daftar-anime-2/?title=&status=&type=TV&order=popular&page=|TV Populer;daftar-anime-2/?title=&status=&type=OVA&order=title&page=|OVA;daftar-anime-2/?title=&status=&type=Movie&order=title&page=|Movie",
-        "GLOBAL:::trending/page/|Sedang Tren;terbaru/page/|Update Terbaru"
+        "Anichin:::$ANICHIN_MAIN",
+        "Animasu:::$ANIMASU_MAIN",
+        "Donghuastream:::$DONGHUASTREAM_MAIN",
+        "LayarKaca21:::$LAYARKACA21_MAIN",
+        "IndoDrama21:::$INDODRAMA21_MAIN",
+        "Pencurimovie:::$PENCURIMOVIE_MAIN",
+        "Samehadaku:::$SAMEHADAKU_MAIN",
+        "GLOBAL:::$GLOBAL_MAIN"
     )
 
     // ========================================================================
@@ -150,7 +209,7 @@ object AnichinConstants {
 
     val SEARCH_TITLE = listOf(
         "LayarKaca21:::h3, h2, a[title]", 
-        "IndoDrama21:::h2.entry-title a, h3, a[title]",
+        "IndoDrama21:::h2.entry-title a, .entry-title a",
         "Samehadaku:::h2.entry-title a, .title", 
         "Anichin,Donghuastream:::div.bsx > a, a", 
         "Animasu:::div.tt", 
@@ -175,7 +234,16 @@ object AnichinConstants {
     val SEARCH_EP_TEXT = listOf("Samehadaku:::.eps span, .epx", "LayarKaca21,IndoDrama21:::span.episode strong, .gmr-duration-item", "Anichin:::div.bsx span.epx", "Animasu:::span.epx", "GLOBAL:::.ep, .episode")
 
     val LOAD_TITLE = listOf("LayarKaca21:::div.movie-info h1, h1.entry-title", "IndoDrama21:::h1.entry-title, div.movie-info h1", "Animasu:::h1[itemprop=headline], div.infox h1", "Pencurimovie:::div.mvic-desc h3", "Anichin,Donghuastream,Samehadaku:::h1.entry-title, h1.title", "GLOBAL:::h1")
-    val LOAD_POSTER = listOf("LayarKaca21:::div.movie-info div.poster img[itemprop=image], div#movie-poster img, div.poster img", "IndoDrama21:::div.gmr-movie-data figure img, div.movie-info div.poster img", "Pencurimovie:::div.mvic-thumb img", "Donghuastream:::div.thumb > img, img.ts-post-image", "Anichin:::div.thumb img, .ts-post-image, .wp-post-image", "Animasu,Samehadaku:::div.thumb img", "Animasu:::div.bigcontent img", "GLOBAL:::.thumb img, .poster img")
+    val LOAD_POSTER = listOf(
+        "LayarKaca21:::div.movie-info div.poster img[itemprop=image], div#movie-poster img, div.poster img", 
+        "IndoDrama21:::meta[property=\"og:image\"], div.gmr-movie-data figure img, figure.pull-left img", 
+        "Pencurimovie:::div.mvic-thumb img", 
+        "Donghuastream:::div.thumb > img, img.ts-post-image", 
+        "Anichin:::div.thumb img, .ts-post-image, .wp-post-image", 
+        "Animasu,Samehadaku:::div.thumb img", 
+        "Animasu:::div.bigcontent img", 
+        "GLOBAL:::.thumb img, .poster img"
+    )
     val LOAD_BANNER = listOf("GLOBAL:::.banner img, .backdrop img")
     
     val LOAD_DESC = listOf(
@@ -228,7 +296,7 @@ object AnichinConstants {
     val CONFIG_HOOK_YEAR_EXTRACTOR = listOf("LayarKaca21,IndoDrama21:::\\\\d, (\\\\d+)", "GLOBAL:::")
     val CONFIG_HOOK_YEAR_SELECTOR = listOf("LayarKaca21,IndoDrama21:::div.movie-info h1", "GLOBAL:::")
     val CONFIG_HOOK_REFERER_PLAYER = listOf("LayarKaca21,IndoDrama21:::series_url", "GLOBAL:::current_url")
-    val CONFIG_HOOK_IFRAME_SELECTORS = listOf("LayarKaca21,IndoDrama21:::div.embed-container iframe, iframe", "GLOBAL:::iframe")
+    val CONFIG_HOOK_IFRAME_SELECTORS = listOf("LayarKaca21,IndoDrama21:::div.embed-container iframe, .gmr-embed-responsive iframe, iframe", "GLOBAL:::iframe")
     
     const val VAL_REFERER = "Referer"
     const val VAL_USER_AGENT = "User-Agent"
@@ -242,7 +310,7 @@ object AnichinConstants {
 
     // --- Attributes ---
     val ATTR_TITLE = listOf("GLOBAL:::title")
-    val ATTR_IMAGE = listOf("GLOBAL:::data-original", "GLOBAL:::data-src", "GLOBAL:::data-lazy-src", "GLOBAL:::src")
+    val ATTR_IMAGE = listOf("GLOBAL:::data-original", "GLOBAL:::data-src", "GLOBAL:::data-lazy-src", "GLOBAL:::src", "GLOBAL:::content")
     val ATTR_HREF = listOf("GLOBAL:::href")
     val ATTR_VALUE = listOf("GLOBAL:::value", "GLOBAL:::data-index", "GLOBAL:::data-id", "GLOBAL:::data-url", "GLOBAL:::data-link")
     val ATTR_CONTENT = listOf("GLOBAL:::content")
