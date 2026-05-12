@@ -1,22 +1,29 @@
-# 📚 Documentation | Dokumentasi
+# 📚 Dokumentasi Proyek OCE
 
-[**🇺🇸 English**](#-english) | [**🇮🇩 Bahasa Indonesia**](#-bahasa-indonesia)
-
----
-
-## 🇺🇸 English
-
-### 🗺️ Core Guides
-1.  **[LEARNING_GUIDE.md](LEARNING_GUIDE.md) (REQUIRED):** Deep dive into Blueprint architecture and sync systems.
-2.  **[CONTRIBUTING.md](../CONTRIBUTING.md):** Rules on centralization and commit standards.
+Selamat datang di pusat dokumentasi **Open Cloudstream Extensions (OCE)**. Folder ini berisi panduan mendalam untuk membantu Anda memahami dan berkontribusi pada proyek ini.
 
 ---
 
-## 🇮🇩 Bahasa Indonesia
+## 🗺️ Panduan Utama
 
-### 🗺️ Panduan Utama
-1.  **[LEARNING_GUIDE.md](LEARNING_GUIDE.md) (WAJIB):** Panduan mendalam tentang arsitektur Blueprint.
-2.  **[CONTRIBUTING.md](../CONTRIBUTING.md):** Aturan sentralisasi dan standar commit.
+### 1. [LEARNING_GUIDE.md](LEARNING_GUIDE.md) (WAJIB)
+Panduan paling komprehensif untuk mempelajari proyek ini secara mendalam. Menjelaskan arsitektur Blueprint, sistem sinkronisasi, dan logika internal `BaseHtmlProvider`.
+
+### 2. [CONTRIBUTING.md](../CONTRIBUTING.md)
+Terletak di root direktori. Menjelaskan aturan "Hukum Sentralisasi", cara memberikan kontribusi yang benar, dan standar pesan commit.
 
 ---
-*Updated: 12 May 2026*
+
+## 📂 Struktur Penting
+
+- **BaseHtmlProvider/**: Jantung dari seluruh provider. Edit di sini untuk mengubah logika global.
+- **scripts/**: Berisi skrip sinkronisasi `sync_providers.py`.
+- **.github/workflows/**: Definisi otomatisasi build dan rilis.
+
+---
+
+## 📝 Catatan Penting
+Seluruh dokumentasi lama yang merujuk pada struktur folder `master/` atau `generated_sync/` telah dihapus karena sudah tidak relevan dengan arsitektur **Blueprint V12** yang digunakan saat ini.
+
+---
+*Terakhir Diperbarui: 12 Mei 2026*
