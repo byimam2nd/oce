@@ -180,13 +180,13 @@ open class Pencurimovie : MainAPI() {
         }
     }
 
-    private suspend fun getHtmlParsed(url: String, referer: String? = null): Document {
-        globalHtmlCache.get(url)?.let { return it }
+    private suspend fun getHtmlParsed(url: String, referer: String? = null, skipCache: Boolean = false): Document {
+        if (!skipCache) { globalHtmlCache.get(url)?.let { return it } }
         return executeWithRetry { 
             rateLimitDelay(url)
             val res = app.get(url, timeout = DEFAULT_TIMEOUT, headers = globalHeaders, referer = referer)
             val doc = if (useDocumentLarge) res.documentLarge else res.document
-            globalHtmlCache.put(url, doc)
+            if (!skipCache) { globalHtmlCache.put(url, doc) }
             doc
         }
     }
