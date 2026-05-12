@@ -119,6 +119,14 @@ object LayarKaca21Constants {
     val CONFIG_SEARCH_JSON_POSTER_PREFIXES = listOf("LayarKaca21:::https://static-jpg.lk21.party/wp-content/uploads/", "GLOBAL:::")
     val CONFIG_SEARCH_JSON_TYPES = listOf("LayarKaca21:::type", "GLOBAL:::type")
 
+    val CONFIG_USE_DOCUMENT_LARGE = listOf(
+        "LayarKaca21:::true",
+        "IndoDrama21:::true",
+        "GLOBAL:::false"
+    )
+
+    val CONFIG_CACHE_TTL_MINUTES = listOf("GLOBAL:::5")
+
     // ========================================================================
     // --- [3] MAIN PAGE CONTENT LISTS ---
     // ========================================================================

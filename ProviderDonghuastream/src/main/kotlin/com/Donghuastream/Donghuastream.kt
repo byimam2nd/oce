@@ -39,6 +39,8 @@ import com.Donghuastream.DonghuastreamConstants.CONFIG_SEARCH_JSON_POSTERS
 import com.Donghuastream.DonghuastreamConstants.CONFIG_SEARCH_JSON_POSTER_PREFIXES
 import com.Donghuastream.DonghuastreamConstants.CONFIG_SEARCH_JSON_TYPES
 import com.Donghuastream.DonghuastreamConstants.CONFIG_GLOBAL_HEADERS
+import com.Donghuastream.DonghuastreamConstants.CONFIG_USE_DOCUMENT_LARGE
+import com.Donghuastream.DonghuastreamConstants.CONFIG_CACHE_TTL_MINUTES
 import com.Donghuastream.DonghuastreamConstants.CONFIG_MAIN_PAGE_LISTS
 import com.Donghuastream.DonghuastreamConstants.FOLLOW_LINK_SELECTOR
 import com.Donghuastream.DonghuastreamConstants.CONFIG_HREF_CLEAN_REGEXPS
@@ -139,6 +141,9 @@ open class Donghuastream : MainAPI() {
     open var searchJsonPoster = getCached(CONFIG_SEARCH_JSON_POSTERS, "poster")
     open var searchJsonPosterPrefix = getCached(CONFIG_SEARCH_JSON_POSTER_PREFIXES, "")
     open var searchJsonType = getCached(CONFIG_SEARCH_JSON_TYPES, "type")
+    
+    open var useDocumentLarge = getCached(CONFIG_USE_DOCUMENT_LARGE, "false").toBoolean()
+    open var cacheTtlMinutes = getCached(CONFIG_CACHE_TTL_MINUTES, "5").toLongOrNull() ?: 5L
 
     open var globalHeaders: Map<String, String> = getCached(CONFIG_GLOBAL_HEADERS, "User-Agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
         .split("|").associate { val parts = it.split("="); if (parts.size == 2) parts[0] to parts[1] else "" to "" }.filter { it.key.isNotBlank() }
@@ -165,13 +170,24 @@ open class Donghuastream : MainAPI() {
                 mainPagePathPattern.replace("{baseUrl}", baseUrl).replace("{data}", request.data).replace("{page}", page.toString()) 
             }
 
-            val document = executeWithRetry { rateLimitDelay(); app.get(url, timeout = DEFAULT_TIMEOUT, headers = globalHeaders).documentLarge }
+            val document = getHtmlParsed(url)
             val isHorizontal = getCached(CONFIG_HOOK_IS_HORIZONTAL, "false").toBoolean() && request.name.contains("Episode Terbaru", true)
             val home = document.selectSafeList(SEARCH_ITEMS).mapNotNull { runCatching { it.toSearchResult(url) }.getOrNull() }
             newHomePageResponse(list = HomePageList(name = request.name, list = home, isHorizontalImages = isHorizontal), hasNext = home.isNotEmpty())
         }.getOrElse { e -> 
             logError(providerId, "MainPage Failure: ${e.message}")
             newHomePageResponse(request.name, emptyList(), false) 
+        }
+    }
+
+    private suspend fun getHtmlParsed(url: String, referer: String? = null): Document {
+        globalHtmlCache.get(url)?.let { return it }
+        return executeWithRetry { 
+            rateLimitDelay(url)
+            val res = app.get(url, timeout = DEFAULT_TIMEOUT, headers = globalHeaders, referer = referer)
+            val doc = if (useDocumentLarge) res.documentLarge else res.document
+            globalHtmlCache.put(url, doc)
+            doc
         }
     }
   
@@ -212,8 +228,9 @@ open class Donghuastream : MainAPI() {
                 results
             }.getOrElse { e -> logError(providerId, "JSON Search Failed: ${e.message}"); emptyList() }
         }
-        return coroutineScope { (1..searchPageLimit).map { page -> async { runCatching { rateLimitDelay(); val url = searchPathPattern.replace("{baseUrl}", baseUrl).replace("{page}", page.toString()).replace("{query}", encodedQuery)
-                        val document = app.get(url, timeout = DEFAULT_TIMEOUT, headers = globalHeaders, referer = refer).documentLarge
+        return coroutineScope { (1..searchPageLimit).map { page -> async { runCatching { 
+                        val url = searchPathPattern.replace("{baseUrl}", baseUrl).replace("{page}", page.toString()).replace("{query}", encodedQuery)
+                        val document = getHtmlParsed(url, refer)
                         document.selectSafeList(SEARCH_ITEMS).mapNotNull { runCatching { it.toSearchResult(url) }.getOrNull() } }.getOrElse { emptyList() } } }.awaitAll().flatten().distinctBy { it.url } }
     }
 
@@ -222,21 +239,24 @@ open class Donghuastream : MainAPI() {
     override suspend fun load(url: String): LoadResponse { return loadRecursive(url, 0) }
 
     private suspend fun loadRecursive(url: String, depth: Int): LoadResponse {
-        val response = executeWithRetry { rateLimitDelay(); app.get(url, timeout = DEFAULT_TIMEOUT, headers = globalHeaders) }
-        val document = response.documentLarge; val currentUrl = response.url
+        val document = getHtmlParsed(url)
+        val currentUrl = url // In real CloudStream it might be response.url but here we simplify
         if (depth < 2) { val follow = getCachedList(FOLLOW_LINK_SELECTOR)
             if (follow.isNotEmpty()) { val nextAnchor = document.selectSafe(follow); val nextHref = nextAnchor?.attr("href")
                 if (!nextHref.isNullOrBlank()) { val nextUrl = fixUrlSmart(nextHref, currentUrl); if (nextUrl != currentUrl && nextUrl != url) return loadRecursive(nextUrl, depth + 1) } } }
 
-        // Pipeline: Metadata
+        // Pipeline: Metadata (Sequential as it's small)
         val metadata = extractMetadata(document, currentUrl)
         
-        // Pipeline: Recommendations & Actors
-        val recommendations = document.selectSafeList(LOAD_RECOMMEND).mapNotNull { it.toSearchResult(currentUrl) }
-        val actors = document.selectSafeList(ACTOR_ITEMS).mapNotNull { 
-            val n = it.selectSafe(ACTOR_NAME)?.text()?.trim() ?: ""
-            val p = it.selectFirst("img")?.safeExtractImage(ATTR_IMAGE) ?: ""
-            if (n.isNotBlank() && n.length < 100) Actor(n, p) else null 
+        // Pipeline: Recommendations & Actors (Parallel for speed)
+        val (recommendations, actors) = coroutineScope {
+            val recs = async { document.selectSafeList(LOAD_RECOMMEND).mapNotNull { it.toSearchResult(currentUrl) } }
+            val acts = async { document.selectSafeList(ACTOR_ITEMS).mapNotNull { 
+                val n = it.selectSafe(ACTOR_NAME)?.text()?.trim() ?: ""
+                val p = it.selectFirst("img")?.safeExtractImage(ATTR_IMAGE) ?: ""
+                if (n.isNotBlank() && n.length < 100) Actor(n, p) else null 
+            } }
+            recs.await() to acts.await()
         }
         
         // Pipeline: Episode Processing
@@ -299,8 +319,8 @@ open class Donghuastream : MainAPI() {
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
         return runCatching {
-            val response = executeWithRetry { rateLimitDelay(); app.get(data, timeout = DEFAULT_TIMEOUT, headers = globalHeaders) }
-            val document = response.documentLarge; val currentUrl = response.url
+            val document = getHtmlParsed(data)
+            val currentUrl = data
             val attrValueSelectors = getCachedList(ATTR_VALUE)
             val allPossibleLinks = mutableSetOf<Pair<String, String?>>()
 

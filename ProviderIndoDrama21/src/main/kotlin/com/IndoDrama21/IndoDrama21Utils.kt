@@ -11,11 +11,49 @@ import java.net.URI
 import kotlin.random.Random
 
 /**
- * SUPER UTILS FOR TEMPLATES PROVIDER - V9.8 (PHISHER-SYNC)
+ * SUPER UTILS FOR TEMPLATES PROVIDER - V12.5 (PERFORMANCE EDITION)
  */
 
-suspend fun rateLimitDelay(moduleName: String = "default") {
-    try { delay(100L + Random.nextLong(400L)) } catch (_: Exception) {}
+object SmartThrottle {
+    private val lastRequestMap = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private const val MIN_DELAY = 500L
+
+    suspend fun wait(domain: String) {
+        val now = System.currentTimeMillis()
+        val lastRequest = lastRequestMap[domain] ?: 0L
+        val diff = now - lastRequest
+        if (diff < MIN_DELAY) {
+            delay(MIN_DELAY - diff + Random.nextLong(100L))
+        }
+        lastRequestMap[domain] = System.currentTimeMillis()
+    }
+}
+
+class ExpiringCache<T>(private val durationMs: Long) {
+    private val cache = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, T>>()
+
+    fun get(key: String): T? {
+        val entry = cache[key] ?: return null
+        if (System.currentTimeMillis() - entry.first > durationMs) {
+            cache.remove(key)
+            return null
+        }
+        return entry.second
+    }
+
+    fun put(key: String, value: T) {
+        cache[key] = System.currentTimeMillis() to value
+    }
+}
+
+val globalHtmlCache = ExpiringCache<org.jsoup.nodes.Document>(5 * 60 * 1000L)
+
+suspend fun rateLimitDelay(url: String = "") {
+    if (url.isBlank()) {
+        try { delay(100L + Random.nextLong(200L)) } catch (_: Exception) {}
+    } else {
+        runCatching { SmartThrottle.wait(URI(url).host ?: "default") }
+    }
 }
 
 suspend fun <T> executeWithRetry(
