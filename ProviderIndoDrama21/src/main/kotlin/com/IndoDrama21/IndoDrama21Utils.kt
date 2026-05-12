@@ -77,9 +77,10 @@ fun String.safeCleanBloat(original: String, regex: Regex): String {
 
 fun String.safeDeduplicate(): String {
     if (this.isBlank()) return this
-    val s = this.trim()
+    // Normalize spaces to single space and trim
+    val s = this.replace(Regex("\\s+"), " ").trim()
     
-    // Case 1: Exact string repeat without space "TitleTitle" or "Title Title"
+    // Case 1: Exact string repeat "Title Title"
     val mid = s.length / 2
     if (s.length >= 6 && s.length % 2 == 0) {
         val s1 = s.substring(0, mid).trim()
@@ -88,7 +89,7 @@ fun String.safeDeduplicate(): String {
     }
     
     // Case 2: Word-based repeat "Word1 Word2 Word1 Word2"
-    val parts = s.split(" ")
+    val parts = s.split(" ").filter { it.isNotBlank() }
     if (parts.size >= 2 && parts.size % 2 == 0) {
         val half = parts.size / 2
         val firstHalf = parts.subList(0, half).joinToString(" ")
@@ -96,6 +97,12 @@ fun String.safeDeduplicate(): String {
         if (firstHalf.equals(secondHalf, ignoreCase = true)) return firstHalf
     }
     
+    // Case 3: Fuzzy check for common repetitions (e.g. "Title - Title")
+    if (s.contains(" - ")) {
+        val split = s.split(" - ")
+        if (split.size == 2 && split[0].trim().equals(split[1].trim(), ignoreCase = true)) return split[0].trim()
+    }
+
     return s
 }
 
