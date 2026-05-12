@@ -283,7 +283,7 @@ open class Samehadaku : MainAPI() {
 
     private fun extractMetadata(document: Document, currentUrl: String): MetadataPackage {
         val rawTitle = document.selectSafe(LOAD_TITLE)?.text() ?: "Unknown Title"
-        val title = rawTitle.safeCleanBloat(rawTitle, BLOAT_REGEX)
+        val title = rawTitle.safeCleanBloat(rawTitle, BLOAT_REGEX).safeDeduplicate()
         val poster = document.selectSafe(LOAD_POSTER)?.safeExtractImage(ATTR_IMAGE) ?: ""
         val banner = document.selectSafe(LOAD_BANNER)?.safeExtractImage(ATTR_IMAGE)
         val description = document.selectSafe(LOAD_DESC)?.text()?.trim() ?: ""

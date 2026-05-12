@@ -75,6 +75,30 @@ fun String.safeCleanBloat(original: String, regex: Regex): String {
     return try { val cleaned = regex.replace(this, "").trim(); cleaned.ifBlank { original } } catch (_: Exception) { original }
 }
 
+fun String.safeDeduplicate(): String {
+    if (this.isBlank()) return this
+    val s = this.trim()
+    
+    // Case 1: Exact string repeat without space "TitleTitle" or "Title Title"
+    val mid = s.length / 2
+    if (s.length >= 6 && s.length % 2 == 0) {
+        val s1 = s.substring(0, mid).trim()
+        val s2 = s.substring(mid).trim()
+        if (s1.equals(s2, ignoreCase = true)) return s1
+    }
+    
+    // Case 2: Word-based repeat "Word1 Word2 Word1 Word2"
+    val parts = s.split(" ")
+    if (parts.size >= 2 && parts.size % 2 == 0) {
+        val half = parts.size / 2
+        val firstHalf = parts.subList(0, half).joinToString(" ")
+        val secondHalf = parts.subList(half, parts.size).joinToString(" ")
+        if (firstHalf.equals(secondHalf, ignoreCase = true)) return firstHalf
+    }
+    
+    return s
+}
+
 fun String?.safeExtractYear(): Int? {
     if (this == null) return null
     return try { Regex("\\d{4}").find(this)?.value?.toIntOrNull() } catch (_: Exception) { null }
