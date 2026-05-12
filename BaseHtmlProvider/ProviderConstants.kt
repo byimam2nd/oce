@@ -19,7 +19,7 @@ object ProviderConstants {
         "Animasu:::Animasu",
         "Donghuastream:::Donghuastream",
         "LayarKaca21:::LayarKaca",
-        "IndoDrama21:::IndoDrama21",
+        "IndoDrama21:::IndoDrama",
         "Pencurimovie:::Pencurimovie",
         "Samehadaku:::Samehadaku",
         "GLOBAL:::Base HTML Provider"
@@ -47,7 +47,7 @@ object ProviderConstants {
     )
 
     val CONFIG_LANGS = listOf(
-        "Donghuastream:::zh",
+        "Donghuastream:::id",
         "GLOBAL:::id"
     )
 
