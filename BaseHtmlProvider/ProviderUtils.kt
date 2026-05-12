@@ -11,7 +11,7 @@ import java.net.URI
 import kotlin.random.Random
 
 /**
- * SUPER UTILS FOR TEMPLATES PROVIDER - V12.5 (PERFORMANCE EDITION)
+ * SUPER UTILS FOR TEMPLATES PROVIDER - V2.2.0 (STABILITY EDITION)
  */
 
 object SmartThrottle {

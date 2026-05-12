@@ -91,12 +91,12 @@ import com.Samehadaku.SamehadakuConstants.CONFIG_HOOK_REFERER_PLAYER
 import com.Samehadaku.SamehadakuConstants.CONFIG_HOOK_IFRAME_SELECTORS
 
 /**
- * 🚀 ULTIMATE HTML SCRAPING ENGINE - VERSION 12.0 (INDUSTRIAL EDITION)
+ * 🚀 ULTIMATE HTML SCRAPING ENGINE - VERSION 2.2.0 (STABILITY EDITION)
  * 
- * Perubahan V12:
- * 1. Configuration Caching: Akses konfigurasi O(1) untuk efisiensi CPU.
- * 2. Modular Scraper Pipeline: load() dipecah menjadi sub-modul untuk resiliensi.
- * 3. Semantic UI Engine: Kata kunci UI (Dub/Ongoing) kini dikelola via Constants.
+ * Perubahan V2.2.0:
+ * 1. Stability Engine: Bypass cache untuk loadLinks dan implementasi Semaphore.
+ * 2. Configuration Caching: Akses konfigurasi O(1) untuk efisiensi CPU.
+ * 3. Modular Scraper Pipeline: load() dipecah menjadi sub-modul untuk resiliensi.
  * 4. Contextual Logging: Debugging lebih presisi dengan log level modul.
  */
 

@@ -3,7 +3,7 @@ package com.LayarKaca21
 import com.lagradost.cloudstream3.TvType
 
 /**
- * 📘 MASTER CONFIGURATION: BASE HTML PROVIDER (V10.3 - STABLE PRODUCTION)
+ * 📘 MASTER CONFIGURATION: BASE HTML PROVIDER (V2.2.0 - STABLE PRODUCTION)
  * 
  * Pusat kendali seluruh metadata dan selektor untuk 6 provider.
  * Menggunakan sistem 'Owner Tagging' (ProviderID:::) untuk isolasi konfigurasi.
