@@ -169,6 +169,7 @@ suspend fun loadExtractorWithFallbackCustom(
 ): Boolean {
     val collectedLinks = mutableListOf<ExtractorLink>()
     val seenUrls = mutableSetOf<String>()
+    val providerId = "ExtractorEngine" // Tag internal untuk log
     
     val internalCallback: (ExtractorLink) -> Unit = { link ->
         if (seenUrls.add(link.url)) { collectedLinks.add(link) }
@@ -180,33 +181,57 @@ suspend fun loadExtractorWithFallbackCustom(
         urlDomain.contains(extractorDomain)
     }
 
-    // Jalankan extractor lokal yang cocok secara paralel (max 3 thread)
+    // 1. Jalankan extractor lokal yang cocok secara paralel (max 3 thread)
     if (matchingExtractors.isNotEmpty()) {
         coroutineScope {
             val semaphore = Semaphore(3)
             matchingExtractors.forEach { extractor ->
-                launch { semaphore.withPermit { try { extractor.getUrl(url, referer, subtitleCallback, internalCallback) } catch (_: Exception) {} } }
+                launch { semaphore.withPermit { 
+                    runCatching { 
+                        extractor.getUrl(url, referer, subtitleCallback, internalCallback) 
+                    }.onFailure { e -> 
+                        logDebug(providerId, "Local Extractor (${extractor.name}) failed for $url: ${e.message}")
+                    }
+                } }
             }
         }
     }
 
-    // Gunakan sistem extractor inti CloudStream jika lokal gagal
-    if (collectedLinks.isEmpty()) { try { loadExtractor(url, referer, subtitleCallback, internalCallback) } catch (_: Exception) {} }
+    // 2. Gunakan sistem extractor inti CloudStream jika lokal gagal
+    if (collectedLinks.isEmpty()) { 
+        runCatching { 
+            loadExtractor(url, referer, subtitleCallback, internalCallback) 
+        }.onFailure { e -> 
+            logDebug(providerId, "Global Extractor failed for $url: ${e.message}")
+        }
+    }
     
-    // Direct Link Generation
+    // 3. Direct Link Generation
     if (collectedLinks.isEmpty() && (url.contains(".mp4") || url.contains(".m3u8") || url.contains(".mkv") || url.contains(".mpd"))) {
         MasterLinkGenerator.createSmartLink("Direct", url, referer, callback = internalCallback)
     }
 
-    // Deep Scanning: Mencari link video di dalam kode HTML host
+    // 4. Deep Scanning: Mencari link video di dalam kode HTML host
     if (collectedLinks.isEmpty()) {
-        try {
+        runCatching {
             val response = app.get(url, referer = referer).text
             val urls = CompiledRegexPatterns.extractAllVideoUrls(response)
-            CompiledRegexPatterns.filterMasterM3u8(urls).forEach { videoUrl ->
-                MasterLinkGenerator.createSmartLink("DeepScan", videoUrl, url, callback = internalCallback)
+            val filtered = CompiledRegexPatterns.filterMasterM3u8(urls)
+            if (filtered.isNotEmpty()) {
+                filtered.forEach { videoUrl ->
+                    MasterLinkGenerator.createSmartLink("DeepScan", videoUrl, url, callback = internalCallback)
+                }
+            } else {
+                logDebug(providerId, "DeepScan found no video URLs in HTML source of $url")
             }
-        } catch (_: Exception) {}
+        }.onFailure { e ->
+            logDebug(providerId, "DeepScan network failure for $url: ${e.message}")
+        }
+    }
+
+    // 5. Final Report if still empty
+    if (collectedLinks.isEmpty()) {
+        logFail(providerId, "All extraction methods failed to find playable links for host: $urlDomain", url = url)
     }
 
     MasterLinkGenerator.refineAndDeliver(collectedLinks, callback)
