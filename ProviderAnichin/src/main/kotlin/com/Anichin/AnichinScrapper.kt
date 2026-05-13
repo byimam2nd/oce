@@ -63,19 +63,19 @@ class AnichinScrapper(
 ) {
 
     suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        return runCatching {
-            val baseUrl = if (request.name.contains(seriesKeyword, true) && seriesUrl.isNotBlank()) seriesUrl else mainUrl
-            val url = if (request.data.startsWith("http")) { 
-                val d = request.data.replace("{page}", page.toString())
-                val pagePattern = Regex("""(/page/|page=)$page(\b|/|$)""")
-                if (!pagePattern.containsMatchIn(d)) { 
-                    if (d.endsWith("/page/")) "${d}$page" 
-                    else { val conn = if (d.contains("?")) "&" else "?"; "${d}${conn}page=$page" } 
-                } else d
-            } else { 
-                mainPagePathPattern.replace("{baseUrl}", baseUrl).replace("{data}", request.data).replace("{page}", page.toString()) 
-            }
+        val baseUrl = if (request.name.contains(seriesKeyword, true) && seriesUrl.isNotBlank()) seriesUrl else mainUrl
+        val url = if (request.data.startsWith("http")) { 
+            val d = request.data.replace("{page}", page.toString())
+            val pagePattern = Regex("""(/page/|page=)$page(\b|/|$)""")
+            if (!pagePattern.containsMatchIn(d)) { 
+                if (d.endsWith("/page/")) "${d}$page" 
+                else { val conn = if (d.contains("?")) "&" else "?"; "${d}${conn}page=$page" } 
+            } else d
+        } else { 
+            mainPagePathPattern.replace("{baseUrl}", baseUrl).replace("{data}", request.data).replace("{page}", page.toString()) 
+        }
 
+        return runCatching {
             val document = getHtmlParsed(url)
             val isHorizontal = resolveConfig(providerId, AnichinConstants.CONFIG_HOOK_IS_HORIZONTAL, "false").toBoolean() && request.name.contains("Episode Terbaru", true)
             val home = document.selectSafe(providerId, SEARCH_ITEMS).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() }
@@ -89,8 +89,9 @@ class AnichinScrapper(
     suspend fun search(query: String): List<SearchResponse> {
         val encodedQuery = runCatching { java.net.URLEncoder.encode(query, "UTF-8") }.getOrDefault(query)
         val baseUrl = if (searchUrl.isNotBlank()) searchUrl else mainUrl; val refer = app.get(mainUrl).url
-        if (isJsonSearch) { return runCatching {
-                val url = searchPathPattern.replace("{baseUrl}", baseUrl).replace("{query}", encodedQuery).replace("{page}", "1")
+        if (isJsonSearch) { 
+            val url = searchPathPattern.replace("{baseUrl}", baseUrl).replace("{query}", encodedQuery).replace("{page}", "1")
+            return runCatching {
                 val response = app.get(url, referer = refer, headers = globalHeaders).text; val root = JSONObject(response)
                 val items = if (searchJsonRoot.isBlank()) root.getJSONArray("results") else root.getJSONArray(searchJsonRoot)
                 val results = mutableListOf<SearchResponse>()
@@ -104,7 +105,6 @@ class AnichinScrapper(
                 }
                 results
             }.getOrElse { e -> 
-                val url = searchPathPattern.replace("{baseUrl}", baseUrl).replace("{query}", encodedQuery).replace("{page}", "1")
                 logFail(providerId, "JSON Search Execution Failed for '$query': ${e.message}", url = url)
                 emptyList() 
             }
