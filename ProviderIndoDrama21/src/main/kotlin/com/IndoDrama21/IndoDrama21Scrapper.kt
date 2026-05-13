@@ -11,6 +11,8 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTMDbId
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
@@ -155,7 +157,7 @@ class IndoDrama21Scrapper(
 
     suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
         return runCatching {
-            val document = getHtmlParsed(data)
+            val document = getHtmlParsed(data, skipCache = true)
             val currentUrl = data
             val attrValueSelectors = resolveConfigList(providerId, IndoDrama21Constants.ATTR_VALUE)
             val allPossibleLinks = mutableSetOf<Pair<String, String?>>()
@@ -180,7 +182,8 @@ class IndoDrama21Scrapper(
             }
 
             coroutineScope {
-                allPossibleLinks.filter { it.first.isNotBlank() }.map { (raw, label) -> async { runCatching {
+                val semaphore = Semaphore(3)
+                allPossibleLinks.filter { it.first.isNotBlank() }.map { (raw, label) -> async { semaphore.withPermit { runCatching {
                     val decodedRaw = if (!raw.startsWith("http") && !raw.startsWith("//") && !raw.startsWith("/") && raw.safeIsBase64()) {
                         val dec = raw.safeDecode()
                         if (dec.contains("iframe")) Jsoup.parse(dec).selectFirst("iframe")?.attr("src") ?: raw
@@ -204,7 +207,7 @@ class IndoDrama21Scrapper(
                             MasterLinkGenerator.createSmartLink(label ?: name, finalIframe, refererForExtractor, callback = callback)
                         }
                     }
-                }.getOrElse { e -> logDebug(providerId, "Link Processor Error: ${e.message}") } } }.awaitAll()
+                }.getOrElse { e -> logDebug(providerId, "Link Processor Error: ${e.message}") } } } }.awaitAll()
             }
             true
         }.getOrElse { e -> logError(providerId, "LoadLinks Critical Failure: ${e.message}"); false }
