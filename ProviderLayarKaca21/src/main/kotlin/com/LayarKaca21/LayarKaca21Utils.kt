@@ -73,57 +73,58 @@ suspend fun <T> executeWithRetry(
 
 // --- CENTRALIZED LOGGING SYSTEM ---
 
+enum class LogLevel { DEBUG, FAIL, ERROR, CRITICAL }
+
 object ProviderLog {
     private const val GLOBAL_PREFIX = "OCE"
     private const val TG_TOKEN = "8989495909:AAF8o8MhVa2o0T3X21N0bC3pJnMMqnvL628"
     private const val TG_USER_ID = "832658254"
 
-    fun d(tag: String, message: String) {
-        Log.d(GLOBAL_PREFIX, "[$tag] DEBUG: $message")
+    fun log(level: LogLevel, tag: String, message: String, error: Throwable? = null) {
+        val errContext = error?.let { 
+            "\nCause: ${it.message}\nAt: ${it.stackTrace.take(2).joinToString(" -> ")}" 
+        } ?: ""
+        val fullMsg = message + errContext
+
+        // 1. Local Logcat Logging
+        when (level) {
+            LogLevel.DEBUG -> Log.d(GLOBAL_PREFIX, "[$tag] DEBUG: $message")
+            LogLevel.FAIL -> Log.w(GLOBAL_PREFIX, "[$tag] FAIL: $message")
+            LogLevel.ERROR -> Log.e(GLOBAL_PREFIX, "[$tag] ERROR: $fullMsg")
+            LogLevel.CRITICAL -> Log.e(GLOBAL_PREFIX, "[$tag] CRITICAL: $fullMsg")
+        }
+
+        // 2. Remote Telegram Reporting (Only for FAIL, ERROR, CRITICAL)
+        if (level != LogLevel.DEBUG) {
+            sendToTelegram(level.name, tag, fullMsg)
+        }
     }
 
     private fun sendToTelegram(level: String, tag: String, message: String) {
-        val fullMsg = """
+        val formattedMsg = """
             ⚠️ *[$level]*
             *Provider:* $tag
             *Message:* $message
             *Time:* ${java.util.Date()}
         """.trimIndent()
         
-        // Menjalankan di background agar tidak mengganggu scraping
         kotlinx.coroutines.GlobalScope.launch {
             runCatching {
                 com.lagradost.cloudstream3.app.post(
                     "https://api.telegram.org/bot$TG_TOKEN/sendMessage",
-                    data = mapOf("chat_id" to TG_USER_ID, "text" to fullMsg, "parse_mode" to "Markdown")
+                    data = mapOf("chat_id" to TG_USER_ID, "text" to formattedMsg, "parse_mode" to "Markdown")
                 )
             }
         }
     }
-
-    fun f(tag: String, message: String) {
-        Log.w(GLOBAL_PREFIX, "[$tag] FAIL: $message")
-        sendToTelegram("FAIL", tag, message)
-    }
-
-    fun e(tag: String, message: String, error: Throwable? = null) {
-        val errContext = error?.let { "\nCause: ${it.message}\nAt: ${it.stackTrace.take(1).firstOrNull()}" } ?: ""
-        Log.e(GLOBAL_PREFIX, "[$tag] ERROR: $message$errContext")
-        sendToTelegram("ERROR", tag, message + errContext)
-    }
-
-    fun c(tag: String, message: String, error: Throwable? = null) {
-        val stack = error?.stackTrace?.take(3)?.joinToString("\n") { "at $it" } ?: ""
-        val fullMsg = "$message\n$stack"
-        Log.e(GLOBAL_PREFIX, "[$tag] CRITICAL: $fullMsg")
-        sendToTelegram("CRITICAL", tag, fullMsg)
-    }
 }
 
-fun logDebug(tag: String, message: String) = ProviderLog.d(tag, message)
-fun logFail(tag: String, message: String) = ProviderLog.f(tag, message)
-fun logError(tag: String, message: String, error: Throwable? = null) = ProviderLog.e(tag, message, error)
-fun logCritical(tag: String, message: String, error: Throwable? = null) = ProviderLog.c(tag, message, error)
+// Global Bridge Functions
+fun log(level: LogLevel, tag: String, message: String, error: Throwable? = null) = ProviderLog.log(level, tag, message, error)
+fun logDebug(tag: String, message: String) = log(LogLevel.DEBUG, tag, message)
+fun logFail(tag: String, message: String) = log(LogLevel.FAIL, tag, message)
+fun logError(tag: String, message: String, error: Throwable? = null) = log(LogLevel.ERROR, tag, message, error)
+fun logCritical(tag: String, message: String, error: Throwable? = null) = log(LogLevel.CRITICAL, tag, message, error)
 
 // --- HIGH-STABILITY CONFIG ENGINE ---
 
