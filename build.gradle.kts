@@ -80,11 +80,11 @@ subprojects {
 
         // Include ProviderBase library classes in every provider's DEX
         afterEvaluate {
-            tasks.withType<com.lagradost.cloudstream3.gradle.tasks.CompileDexTask>().configureEach { task ->
+            tasks.withType<com.lagradost.cloudstream3.gradle.tasks.CompileDexTask>().configureEach {
                 val pbCompile = rootProject.project(":ProviderBase")
                     .tasks.named("compileDebugKotlin")
-                task.dependsOn(pbCompile)
-                task.input.from(pbCompile.map { it.outputs.files.singleFile })
+                dependsOn(pbCompile)
+                input.from(pbCompile.map { it.outputs.files.singleFile })
             }
         }
     }
