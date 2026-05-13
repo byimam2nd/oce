@@ -81,7 +81,7 @@ class AnichinScrapper(
             val home = document.selectSafe(providerId, SEARCH_ITEMS).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() }
             newHomePageResponse(list = HomePageList(name = request.name, list = home, isHorizontalImages = isHorizontal), hasNext = home.isNotEmpty())
         }.getOrElse { e -> 
-            logError(providerId, "MainPage Failure: ${e.message}")
+            logFail(providerId, "MainPage Fetch Failure on ${request.name}: ${e.message}")
             newHomePageResponse(request.name, emptyList(), false) 
         }
     }
@@ -103,7 +103,7 @@ class AnichinScrapper(
                     results.add(api.newAnimeSearchResponse(title, finalUrl, if (isTv) TvType.TvSeries else TvType.Movie) { this.posterUrl = pUrl; this.posterHeaders = globalHeaders.toMutableMap().apply { put(AnichinConstants.VAL_REFERER, mainUrl) } })
                 }
                 results
-            }.getOrElse { e -> logError(providerId, "JSON Search Execution Failed: ${e.message}"); emptyList() }
+            }.getOrElse { e -> logFail(providerId, "JSON Search Execution Failed for '$query': ${e.message}"); emptyList() }
         }
         return coroutineScope { (1..searchPageLimit).map { page -> async { runCatching { 
                         val url = searchPathPattern.replace("{baseUrl}", baseUrl).replace("{page}", page.toString()).replace("{query}", encodedQuery)
@@ -182,6 +182,10 @@ class AnichinScrapper(
                 resolveConfigList(providerId, AnichinConstants.ATTR_IFRAME_SOURCES).forEach { attr -> val s = el.attr(attr); if (s.isNotBlank()) allPossibleLinks.add(s to null) }
             }
 
+            if (allPossibleLinks.isEmpty()) {
+                logFail(providerId, "No media links or iframes found for: $data")
+            }
+
             coroutineScope {
                 val semaphore = Semaphore(3)
                 allPossibleLinks.filter { it.first.isNotBlank() }.map { (raw, label) -> async { semaphore.withPermit { runCatching {
@@ -211,7 +215,7 @@ class AnichinScrapper(
                 }.getOrElse { e -> logDebug(providerId, "Link Processor Error: ${e.message}") } } } }.awaitAll()
             }
             true
-        }.getOrElse { e -> logError(providerId, "LoadLinks Critical Failure: ${e.message}"); false }
+        }.getOrElse { e -> logCritical(providerId, "LoadLinks Critical Failure on data: $data", e); false }
     }
 
     private suspend fun getHtmlParsed(url: String, referer: String? = null, skipCache: Boolean = false): Document {

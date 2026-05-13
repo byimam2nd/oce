@@ -2,6 +2,8 @@ package com.baseprovider
 
 import com.lagradost.api.Log
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.GlobalScope
 import java.net.URI
 import kotlin.random.Random
 
@@ -73,24 +75,55 @@ suspend fun <T> executeWithRetry(
 
 object ProviderLog {
     private const val GLOBAL_PREFIX = "OCE"
+    private const val TG_TOKEN = "8989495909:AAF8o8MhVa2o0T3X21N0bC3pJnMMqnvL628"
+    private const val TG_USER_ID = "832658254"
 
     fun d(tag: String, message: String) {
         Log.d(GLOBAL_PREFIX, "[$tag] DEBUG: $message")
     }
 
-    fun e(tag: String, message: String, error: Throwable? = null) {
-        Log.e(GLOBAL_PREFIX, "[$tag] CRITICAL_ERROR: $message")
-        error?.let { 
-            Log.e(GLOBAL_PREFIX, "[$tag] CAUSE: ${it.message}")
-            it.stackTrace.take(3).forEach { trace -> 
-                Log.e(GLOBAL_PREFIX, "[$tag] AT: $trace")
+    private fun sendToTelegram(level: String, tag: String, message: String) {
+        val fullMsg = """
+            ⚠️ *[$level]*
+            *Provider:* $tag
+            *Message:* $message
+            *Time:* ${java.util.Date()}
+        """.trimIndent()
+        
+        // Menjalankan di background agar tidak mengganggu scraping
+        kotlinx.coroutines.GlobalScope.launch {
+            runCatching {
+                com.lagradost.cloudstream3.app.post(
+                    "https://api.telegram.org/bot$TG_TOKEN/sendMessage",
+                    data = mapOf("chat_id" to TG_USER_ID, "text" to fullMsg, "parse_mode" to "Markdown")
+                )
             }
         }
+    }
+
+    fun f(tag: String, message: String) {
+        Log.w(GLOBAL_PREFIX, "[$tag] FAIL: $message")
+        sendToTelegram("FAIL", tag, message)
+    }
+
+    fun e(tag: String, message: String, error: Throwable? = null) {
+        val errContext = error?.let { "\nCause: ${it.message}\nAt: ${it.stackTrace.take(1).firstOrNull()}" } ?: ""
+        Log.e(GLOBAL_PREFIX, "[$tag] ERROR: $message$errContext")
+        sendToTelegram("ERROR", tag, message + errContext)
+    }
+
+    fun c(tag: String, message: String, error: Throwable? = null) {
+        val stack = error?.stackTrace?.take(3)?.joinToString("\n") { "at $it" } ?: ""
+        val fullMsg = "$message\n$stack"
+        Log.e(GLOBAL_PREFIX, "[$tag] CRITICAL: $fullMsg")
+        sendToTelegram("CRITICAL", tag, fullMsg)
     }
 }
 
 fun logDebug(tag: String, message: String) = ProviderLog.d(tag, message)
+fun logFail(tag: String, message: String) = ProviderLog.f(tag, message)
 fun logError(tag: String, message: String, error: Throwable? = null) = ProviderLog.e(tag, message, error)
+fun logCritical(tag: String, message: String, error: Throwable? = null) = ProviderLog.c(tag, message, error)
 
 // --- HIGH-STABILITY CONFIG ENGINE ---
 
