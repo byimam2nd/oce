@@ -80,7 +80,7 @@ object ProviderLog {
     private const val TG_TOKEN = "8989495909:AAF8o8MhVa2o0T3X21N0bC3pJnMMqnvL628"
     private const val TG_USER_ID = "832658254"
 
-    fun log(level: LogLevel, tag: String, message: String, error: Throwable? = null) {
+    fun log(level: LogLevel, tag: String, message: String, error: Throwable? = null, url: String? = null) {
         val errContext = error?.let { 
             "\nCause: ${it.message}\nAt: ${it.stackTrace.take(2).joinToString(" -> ")}" 
         } ?: ""
@@ -96,15 +96,16 @@ object ProviderLog {
 
         // 2. Remote Telegram Reporting (Only for FAIL, ERROR, CRITICAL)
         if (level != LogLevel.DEBUG) {
-            sendToTelegram(level.name, tag, fullMsg)
+            sendToTelegram(level.name, tag, fullMsg, url)
         }
     }
 
-    private fun sendToTelegram(level: String, tag: String, message: String) {
+    private fun sendToTelegram(level: String, tag: String, message: String, url: String? = null) {
+        val urlSection = if (!url.isNullOrBlank()) "\n🔗 *Link:* [Open Website]($url)" else ""
         val formattedMsg = """
             ⚠️ *[$level]*
             *Provider:* $tag
-            *Message:* $message
+            *Message:* $message$urlSection
             *Time:* ${java.util.Date()}
         """.trimIndent()
         
@@ -112,7 +113,7 @@ object ProviderLog {
             runCatching {
                 com.lagradost.cloudstream3.app.post(
                     "https://api.telegram.org/bot$TG_TOKEN/sendMessage",
-                    data = mapOf("chat_id" to TG_USER_ID, "text" to formattedMsg, "parse_mode" to "Markdown")
+                    data = mapOf("chat_id" to TG_USER_ID, "text" to formattedMsg, "parse_mode" to "Markdown", "disable_web_page_preview" to "true")
                 )
             }
         }
@@ -120,11 +121,11 @@ object ProviderLog {
 }
 
 // Global Bridge Functions
-fun log(level: LogLevel, tag: String, message: String, error: Throwable? = null) = ProviderLog.log(level, tag, message, error)
+fun log(level: LogLevel, tag: String, message: String, error: Throwable? = null, url: String? = null) = ProviderLog.log(level, tag, message, error, url)
 fun logDebug(tag: String, message: String) = log(LogLevel.DEBUG, tag, message)
-fun logFail(tag: String, message: String) = log(LogLevel.FAIL, tag, message)
-fun logError(tag: String, message: String, error: Throwable? = null) = log(LogLevel.ERROR, tag, message, error)
-fun logCritical(tag: String, message: String, error: Throwable? = null) = log(LogLevel.CRITICAL, tag, message, error)
+fun logFail(tag: String, message: String, url: String? = null) = log(LogLevel.FAIL, tag, message, url = url)
+fun logError(tag: String, message: String, error: Throwable? = null, url: String? = null) = log(LogLevel.ERROR, tag, message, error, url)
+fun logCritical(tag: String, message: String, error: Throwable? = null, url: String? = null) = log(LogLevel.CRITICAL, tag, message, error, url)
 
 // --- HIGH-STABILITY CONFIG ENGINE ---
 

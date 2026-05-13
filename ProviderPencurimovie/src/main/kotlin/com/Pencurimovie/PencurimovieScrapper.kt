@@ -81,7 +81,7 @@ class PencurimovieScrapper(
             val home = document.selectSafe(providerId, SEARCH_ITEMS).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() }
             newHomePageResponse(list = HomePageList(name = request.name, list = home, isHorizontalImages = isHorizontal), hasNext = home.isNotEmpty())
         }.getOrElse { e -> 
-            logFail(providerId, "MainPage Fetch Failure on ${request.name}: ${e.message}")
+            logFail(providerId, "MainPage Fetch Failure on ${request.name}: ${e.message}", url = url)
             newHomePageResponse(request.name, emptyList(), false) 
         }
     }
@@ -103,7 +103,11 @@ class PencurimovieScrapper(
                     results.add(api.newAnimeSearchResponse(title, finalUrl, if (isTv) TvType.TvSeries else TvType.Movie) { this.posterUrl = pUrl; this.posterHeaders = globalHeaders.toMutableMap().apply { put(PencurimovieConstants.VAL_REFERER, mainUrl) } })
                 }
                 results
-            }.getOrElse { e -> logFail(providerId, "JSON Search Execution Failed for '$query': ${e.message}"); emptyList() }
+            }.getOrElse { e -> 
+                val url = searchPathPattern.replace("{baseUrl}", baseUrl).replace("{query}", encodedQuery).replace("{page}", "1")
+                logFail(providerId, "JSON Search Execution Failed for '$query': ${e.message}", url = url)
+                emptyList() 
+            }
         }
         return coroutineScope { (1..searchPageLimit).map { page -> async { runCatching { 
                         val url = searchPathPattern.replace("{baseUrl}", baseUrl).replace("{page}", page.toString()).replace("{query}", encodedQuery)
@@ -183,7 +187,7 @@ class PencurimovieScrapper(
             }
 
             if (allPossibleLinks.isEmpty()) {
-                logFail(providerId, "No media links or iframes found for: $data")
+                logFail(providerId, "No media links or iframes found for: $data", url = data)
             }
 
             coroutineScope {
@@ -215,7 +219,7 @@ class PencurimovieScrapper(
                 }.getOrElse { e -> logDebug(providerId, "Link Processor Error: ${e.message}") } } } }.awaitAll()
             }
             true
-        }.getOrElse { e -> logCritical(providerId, "LoadLinks Critical Failure on data: $data", e); false }
+        }.getOrElse { e -> logCritical(providerId, "LoadLinks Critical Failure on data: $data", e, url = data); false }
     }
 
     private suspend fun getHtmlParsed(url: String, referer: String? = null, skipCache: Boolean = false): Document {
