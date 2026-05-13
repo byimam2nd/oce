@@ -15,19 +15,19 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import org.json.JSONObject
-import com.basehtmlprovider.ProviderConstants.DEFAULT_TIMEOUT
-import com.basehtmlprovider.ProviderConstants.SEARCH_ITEMS
-import com.basehtmlprovider.ProviderConstants.BLOAT_REGEX
-import com.basehtmlprovider.ProviderConstants.FOLLOW_LINK_SELECTOR
-import com.basehtmlprovider.ProviderConstants.LOAD_RECOMMEND
-import com.basehtmlprovider.ProviderConstants.ACTOR_ITEMS
-import com.basehtmlprovider.ProviderConstants.ACTOR_NAME
-import com.basehtmlprovider.ProviderConstants.ATTR_IMAGE
-import com.basehtmlprovider.ProviderConstants.EPISODE_ITEMS
-import com.basehtmlprovider.ProviderConstants.LINK_OPTIONS
-import com.basehtmlprovider.ProviderConstants.DOWNLOAD_ITEMS
-import com.basehtmlprovider.ProviderConstants.CONFIG_HOOK_REFERER_PLAYER
-import com.basehtmlprovider.ProviderConstants.CONFIG_HOOK_IFRAME_SELECTORS
+import com.basehtmlprovider.ProviderHTMLConstants.DEFAULT_TIMEOUT
+import com.basehtmlprovider.ProviderHTMLConstants.SEARCH_ITEMS
+import com.basehtmlprovider.ProviderHTMLConstants.BLOAT_REGEX
+import com.basehtmlprovider.ProviderHTMLConstants.FOLLOW_LINK_SELECTOR
+import com.basehtmlprovider.ProviderHTMLConstants.LOAD_RECOMMEND
+import com.basehtmlprovider.ProviderHTMLConstants.ACTOR_ITEMS
+import com.basehtmlprovider.ProviderHTMLConstants.ACTOR_NAME
+import com.basehtmlprovider.ProviderHTMLConstants.ATTR_IMAGE
+import com.basehtmlprovider.ProviderHTMLConstants.EPISODE_ITEMS
+import com.basehtmlprovider.ProviderHTMLConstants.LINK_OPTIONS
+import com.basehtmlprovider.ProviderHTMLConstants.DOWNLOAD_ITEMS
+import com.basehtmlprovider.ProviderHTMLConstants.CONFIG_HOOK_REFERER_PLAYER
+import com.basehtmlprovider.ProviderHTMLConstants.CONFIG_HOOK_IFRAME_SELECTORS
 
 /**
  * SCRAPING ORCHESTRATOR LAYER
@@ -74,7 +74,7 @@ class ProviderScrapper(
             }
 
             val document = getHtmlParsed(url)
-            val isHorizontal = resolveConfig(providerId, ProviderConstants.CONFIG_HOOK_IS_HORIZONTAL, "false").toBoolean() && request.name.contains("Episode Terbaru", true)
+            val isHorizontal = resolveConfig(providerId, ProviderHTMLConstants.CONFIG_HOOK_IS_HORIZONTAL, "false").toBoolean() && request.name.contains("Episode Terbaru", true)
             val home = document.selectSafeList(providerId, SEARCH_ITEMS).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() }
             newHomePageResponse(list = HomePageList(name = request.name, list = home, isHorizontalImages = isHorizontal), hasNext = home.isNotEmpty())
         }.getOrElse { e -> 
@@ -97,7 +97,7 @@ class ProviderScrapper(
                     if (!pUrl.startsWith("http") && searchJsonPosterPrefix.isNotBlank()) pUrl = searchJsonPosterPrefix + pUrl
                     val isTv = item.optString(searchJsonType).contains("series", true) || item.optString(searchJsonType).contains("tv", true)
                     var finalUrl = if (isTv) "$seriesUrl/$slug" else "$mainUrl/$slug"
-                    results.add(api.newAnimeSearchResponse(title, finalUrl, if (isTv) TvType.TvSeries else TvType.Movie) { this.posterUrl = pUrl; this.posterHeaders = globalHeaders.toMutableMap().apply { put(ProviderConstants.VAL_REFERER, mainUrl) } })
+                    results.add(api.newAnimeSearchResponse(title, finalUrl, if (isTv) TvType.TvSeries else TvType.Movie) { this.posterUrl = pUrl; this.posterHeaders = globalHeaders.toMutableMap().apply { put(ProviderHTMLConstants.VAL_REFERER, mainUrl) } })
                 }
                 results
             }.getOrElse { e -> logError(providerId, "JSON Search Failed: ${e.message}"); emptyList() }
@@ -139,15 +139,15 @@ class ProviderScrapper(
             val watchUrl = fixUrlSmart(document.selectSafe(providerId, listOf(".play-button", ".watch-now", ".btn-watch"))?.attr("href"), currentUrl).ifBlank { currentUrl }
             return api.newMovieLoadResponse(metadata.title, url, type, episodeDataUrlPattern.replace("{url}", watchUrl)) { 
                 this.posterUrl = tracker?.image ?: metadata.poster; this.backgroundPosterUrl = tracker?.cover ?: metadata.banner
-                this.posterHeaders = globalHeaders.toMutableMap().apply { put(ProviderConstants.VAL_REFERER, mainUrl) }; this.plot = metadata.description; this.tags = metadata.tags.ifEmpty { null }; this.year = metadata.year; this.score = Score.from10(metadata.rating)
+                this.posterHeaders = globalHeaders.toMutableMap().apply { put(ProviderHTMLConstants.VAL_REFERER, mainUrl) }; this.plot = metadata.description; this.tags = metadata.tags.ifEmpty { null }; this.year = metadata.year; this.score = Score.from10(metadata.rating)
                 this.recommendations = recommendations; this.comingSoon = metadata.statusText?.contains("Coming Soon", true) ?: false
                 addTrailer(metadata.trailer); addActors(actors); addMalId(tracker?.malId); addAniListId(tracker?.aniId?.toIntOrNull()); addImdbId(metadata.imdbId); addTMDbId(metadata.tmdbId?.toString()) }
         } else { 
             val episodes = mapper.extractEpisodes(document, currentUrl, seasonDataScript, epItems, metadata.poster)
             return if (type == TvType.Anime || type == TvType.OVA || type == TvType.AnimeMovie) {
-                api.newAnimeLoadResponse(metadata.title, url, type) { this.posterUrl = tracker?.image ?: metadata.poster; this.backgroundPosterUrl = tracker?.cover ?: metadata.banner; this.posterHeaders = globalHeaders.toMutableMap().apply { put(ProviderConstants.VAL_REFERER, mainUrl) }; this.plot = metadata.description; this.tags = metadata.tags.ifEmpty { null }
+                api.newAnimeLoadResponse(metadata.title, url, type) { this.posterUrl = tracker?.image ?: metadata.poster; this.backgroundPosterUrl = tracker?.cover ?: metadata.banner; this.posterHeaders = globalHeaders.toMutableMap().apply { put(ProviderHTMLConstants.VAL_REFERER, mainUrl) }; this.plot = metadata.description; this.tags = metadata.tags.ifEmpty { null }
                     this.year = metadata.year; this.score = Score.from10(metadata.rating); this.recommendations = recommendations; this.showStatus = metadata.status; addEpisodes(DubStatus.Subbed, episodes); addTrailer(metadata.trailer); addMalId(tracker?.malId); addAniListId(tracker?.aniId?.toIntOrNull()) }
-            } else { api.newTvSeriesLoadResponse(metadata.title, url, type, episodes) { this.posterUrl = tracker?.image ?: metadata.poster; this.backgroundPosterUrl = tracker?.cover ?: metadata.banner; this.posterHeaders = globalHeaders.toMutableMap().apply { put(ProviderConstants.VAL_REFERER, mainUrl) }; this.plot = metadata.description; this.tags = metadata.tags.ifEmpty { null }
+            } else { api.newTvSeriesLoadResponse(metadata.title, url, type, episodes) { this.posterUrl = tracker?.image ?: metadata.poster; this.backgroundPosterUrl = tracker?.cover ?: metadata.banner; this.posterHeaders = globalHeaders.toMutableMap().apply { put(ProviderHTMLConstants.VAL_REFERER, mainUrl) }; this.plot = metadata.description; this.tags = metadata.tags.ifEmpty { null }
                     this.year = metadata.year; this.score = Score.from10(metadata.rating); this.recommendations = recommendations; this.showStatus = metadata.status; addTrailer(metadata.trailer); addActors(actors); addMalId(tracker?.malId); addAniListId(tracker?.aniId?.toIntOrNull()); addImdbId(metadata.imdbId); addTMDbId(metadata.tmdbId?.toString()) } }
         }
     }
@@ -156,7 +156,7 @@ class ProviderScrapper(
         return runCatching {
             val document = getHtmlParsed(data)
             val currentUrl = data
-            val attrValueSelectors = resolveConfigList(providerId, ProviderConstants.ATTR_VALUE)
+            val attrValueSelectors = resolveConfigList(providerId, ProviderHTMLConstants.ATTR_VALUE)
             val allPossibleLinks = mutableSetOf<Pair<String, String?>>()
 
             // AGGRESSIVE GATHERING V12

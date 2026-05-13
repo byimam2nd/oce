@@ -4,31 +4,31 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
-import com.basehtmlprovider.ProviderConstants.SEARCH_TITLE
-import com.basehtmlprovider.ProviderConstants.BLOAT_REGEX
-import com.basehtmlprovider.ProviderConstants.SEARCH_HREF
-import com.basehtmlprovider.ProviderConstants.SEARCH_POSTER
-import com.basehtmlprovider.ProviderConstants.ATTR_IMAGE
-import com.basehtmlprovider.ProviderConstants.SEARCH_RATING
-import com.basehtmlprovider.ProviderConstants.SEARCH_EP_TEXT
-import com.basehtmlprovider.ProviderConstants.VAL_REFERER
-import com.basehtmlprovider.ProviderConstants.LOAD_TITLE
-import com.basehtmlprovider.ProviderConstants.LOAD_POSTER
-import com.basehtmlprovider.ProviderConstants.LOAD_BANNER
-import com.basehtmlprovider.ProviderConstants.LOAD_DESC
-import com.basehtmlprovider.ProviderConstants.LOAD_INFO_BOX
-import com.basehtmlprovider.ProviderConstants.CONFIG_HOOK_YEAR_SELECTOR
-import com.basehtmlprovider.ProviderConstants.CONFIG_HOOK_YEAR_EXTRACTOR
-import com.basehtmlprovider.ProviderConstants.LOAD_STATUS
-import com.basehtmlprovider.ProviderConstants.LOAD_TAGS
-import com.basehtmlprovider.ProviderConstants.LOAD_RATING
-import com.basehtmlprovider.ProviderConstants.ATTR_HREF
-import com.basehtmlprovider.ProviderConstants.LOAD_TRAILER
-import com.basehtmlprovider.ProviderConstants.EPISODE_HREF
-import com.basehtmlprovider.ProviderConstants.EPISODE_TITLE
-import com.basehtmlprovider.ProviderConstants.EPISODE_NUM
-import com.basehtmlprovider.ProviderConstants.EPISODE_DESC
-import com.basehtmlprovider.ProviderConstants.EPISODE_TIME
+import com.basehtmlprovider.ProviderHTMLConstants.SEARCH_TITLE
+import com.basehtmlprovider.ProviderHTMLConstants.BLOAT_REGEX
+import com.basehtmlprovider.ProviderHTMLConstants.SEARCH_HREF
+import com.basehtmlprovider.ProviderHTMLConstants.SEARCH_POSTER
+import com.basehtmlprovider.ProviderHTMLConstants.ATTR_IMAGE
+import com.basehtmlprovider.ProviderHTMLConstants.SEARCH_RATING
+import com.basehtmlprovider.ProviderHTMLConstants.SEARCH_EP_TEXT
+import com.basehtmlprovider.ProviderHTMLConstants.VAL_REFERER
+import com.basehtmlprovider.ProviderHTMLConstants.LOAD_TITLE
+import com.basehtmlprovider.ProviderHTMLConstants.LOAD_POSTER
+import com.basehtmlprovider.ProviderHTMLConstants.LOAD_BANNER
+import com.basehtmlprovider.ProviderHTMLConstants.LOAD_DESC
+import com.basehtmlprovider.ProviderHTMLConstants.LOAD_INFO_BOX
+import com.basehtmlprovider.ProviderHTMLConstants.CONFIG_HOOK_YEAR_SELECTOR
+import com.basehtmlprovider.ProviderHTMLConstants.CONFIG_HOOK_YEAR_EXTRACTOR
+import com.basehtmlprovider.ProviderHTMLConstants.LOAD_STATUS
+import com.basehtmlprovider.ProviderHTMLConstants.LOAD_TAGS
+import com.basehtmlprovider.ProviderHTMLConstants.LOAD_RATING
+import com.basehtmlprovider.ProviderHTMLConstants.ATTR_HREF
+import com.basehtmlprovider.ProviderHTMLConstants.LOAD_TRAILER
+import com.basehtmlprovider.ProviderHTMLConstants.EPISODE_HREF
+import com.basehtmlprovider.ProviderHTMLConstants.EPISODE_TITLE
+import com.basehtmlprovider.ProviderHTMLConstants.EPISODE_NUM
+import com.basehtmlprovider.ProviderHTMLConstants.EPISODE_DESC
+import com.basehtmlprovider.ProviderHTMLConstants.EPISODE_TIME
 import org.json.JSONObject
 
 /**
@@ -57,8 +57,8 @@ class ProviderMapper(
             val title = rawTitle.safeCleanBloat(rawTitle, BLOAT_REGEX)
             val hrefEl = element.selectSafe(providerId, SEARCH_HREF) ?: element.selectFirst("a") ?: element.parent()?.selectFirst("a")
             var href = fixUrlSmart(hrefEl?.attr("href"), base)
-            val cleanRegex = resolveConfig(providerId, ProviderConstants.CONFIG_HREF_CLEAN_REGEXPS, "")
-            val cleanReplace = resolveConfig(providerId, ProviderConstants.CONFIG_HREF_CLEAN_REPLACES, "")
+            val cleanRegex = resolveConfig(providerId, ProviderHTMLConstants.CONFIG_HREF_CLEAN_REGEXPS, "")
+            val cleanReplace = resolveConfig(providerId, ProviderHTMLConstants.CONFIG_HREF_CLEAN_REPLACES, "")
             if (cleanRegex.isNotBlank() && cleanReplace.isNotBlank()) { href = href.replace(Regex(cleanRegex), cleanReplace) }
             val poster = element.selectSafe(providerId, SEARCH_POSTER)?.safeExtractImage(ATTR_IMAGE); val rating = element.selectSafe(providerId, SEARCH_RATING)?.text(); val eps = element.selectSafe(providerId, SEARCH_EP_TEXT)?.text()?.safeExtractEpNum()
             val isMovie = (moviePathSegment.isNotBlank() && href.contains(moviePathSegment)) || href.contains("movie", true)

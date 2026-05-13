@@ -8,7 +8,7 @@ import com.lagradost.cloudstream3.TvType
  * Pusat kendali seluruh metadata dan selektor untuk 6 provider.
  * Menggunakan sistem 'Owner Tagging' (ProviderID:::) untuk isolasi konfigurasi.
  */
-object ProviderConstants {
+object ProviderHTMLConstants {
 
     // ========================================================================
     // --- [1] BASIC METADATA & IDENTITY ---
