@@ -14,7 +14,7 @@ import com.lagradost.cloudstream3.utils.Qualities
 
 // --- JSOUP SAFE SELECTORS ---
 
-fun Element.selectFirstSafe(providerId: String, selectors: List<String>): Element? {
+fun Element.selectFirstSafe(providerId: String, selectors: List<String>, constantName: String? = null): Element? {
     if (selectors.isEmpty()) return null
     for (s in selectors) { if (!s.contains(":::")) continue
         val owners = s.substringBefore(":::"); if (owners.split(",").contains(providerId)) {
@@ -25,10 +25,14 @@ fun Element.selectFirstSafe(providerId: String, selectors: List<String>): Elemen
         val sel = if (s.startsWith("GLOBAL:::")) s.substringAfter(":::") else if (!s.contains(":::")) s else continue
         if (sel.isNotBlank()) { val el = this.selectFirst(sel); if (el != null) return el }
     }
+    // Jika gagal, catat ke log untuk maintenance
+    if (constantName != null) {
+        logDebug(providerId, "Selector Constant '$constantName' failed to find elements in ${this.tagName()}")
+    }
     return null
 }
 
-fun Element.selectSafe(providerId: String, selectors: List<String>): org.jsoup.select.Elements {
+fun Element.selectSafe(providerId: String, selectors: List<String>, constantName: String? = null): org.jsoup.select.Elements {
     if (selectors.isEmpty()) return org.jsoup.select.Elements()
     for (s in selectors) { if (!s.contains(":::")) continue
         val owners = s.substringBefore(":::"); if (owners.split(",").contains(providerId)) {
@@ -39,10 +43,14 @@ fun Element.selectSafe(providerId: String, selectors: List<String>): org.jsoup.s
         val sel = if (s.startsWith("GLOBAL:::")) s.substringAfter(":::") else if (!s.contains(":::")) s else continue
         if (sel.isNotBlank()) { val els = this.select(sel); if (els.isNotEmpty()) return els }
     }
+    // Jika gagal, catat ke log untuk maintenance
+    if (constantName != null) {
+        logDebug(providerId, "Selector Constant '$constantName' returned empty list in ${this.tagName()}")
+    }
     return org.jsoup.select.Elements()
 }
 
-fun Element.attrSafe(providerId: String, attributes: List<String>): String? {
+fun Element.attrSafe(providerId: String, attributes: List<String>, constantName: String? = null): String? {
     for (a in attributes) { if (!a.contains(":::")) continue
         val owners = a.substringBefore(":::"); if (owners.split(",").contains(providerId)) {
             val attrN = a.substringAfter(":::"); val v = this.attr(attrN); if (v.isNotBlank()) return v
@@ -51,6 +59,10 @@ fun Element.attrSafe(providerId: String, attributes: List<String>): String? {
     for (a in attributes) {
         val attrN = if (a.startsWith("GLOBAL:::")) a.substringAfter(":::") else if (!a.contains(":::")) a else continue
         val v = this.attr(attrN); if (v.isNotBlank()) return v
+    }
+    // Jika gagal, catat ke log untuk maintenance
+    if (constantName != null) {
+        logDebug(providerId, "Attribute Constant '$constantName' failed to extract value from ${this.tagName()}")
     }
     return null
 }
