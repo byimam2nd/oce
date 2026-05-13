@@ -110,6 +110,8 @@ jobs:
           cp **/build/*.cs3 $GITHUB_WORKSPACE/builds/ 2>/dev/null || true
           cp **/build/*.jar $GITHUB_WORKSPACE/builds/ 2>/dev/null || true
           cp build/plugins.json $GITHUB_WORKSPACE/builds/ 2>/dev/null || true
+          # Remove shared library artifact (not a provider plugin)
+          rm -f $GITHUB_WORKSPACE/builds/ProviderBase.cs3
 
       - name: Push builds
         run: |
