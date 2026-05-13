@@ -78,14 +78,10 @@ subprojects {
             authors = authorsStr.split(",").map { it.trim() }
         }
 
-        // Include ProviderBase library classes in every provider's DEX
-        afterEvaluate {
-            tasks.withType<com.lagradost.cloudstream3.gradle.tasks.CompileDexTask>().configureEach {
-                val pbCompile = rootProject.project(":ProviderBase")
-                    .tasks.named("compileDebugKotlin")
-                dependsOn(pbCompile)
-                input.from(pbCompile.map { it.outputs.files.singleFile })
-            }
+    // Use sourceSets to compile ProviderBase code directly into each provider
+    if (project.name != "ProviderBase" && project.name != "Dramabox" && project.name != "Idlix" && project.name != "Melolo") {
+        android.sourceSets.getByName("main") {
+            java.srcDirs("${rootProject.projectDir}/ProviderBase/src/main/kotlin")
         }
     }
 

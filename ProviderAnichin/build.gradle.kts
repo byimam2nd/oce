@@ -15,6 +15,3 @@ cloudstream {
     isCrossPlatform = false
 }
 
-dependencies {
-    implementation(project(":ProviderBase"))
-}
