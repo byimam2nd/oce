@@ -167,11 +167,12 @@ suspend fun loadExtractorWithFallbackCustom(
     referer: String? = null,
     subtitleCallback: (SubtitleFile) -> Unit,
     headers: Map<String, String>? = null,
-    callback: (ExtractorLink) -> Unit
+    callback: (ExtractorLink) -> Unit,
+    providerTag: String = "ExtractorEngine"
 ): Boolean {
     val collectedLinks = mutableListOf<ExtractorLink>()
     val seenUrls = mutableSetOf<String>()
-    val providerId = "ExtractorEngine" // Tag internal untuk log
+    val providerId = providerTag
     
     val internalCallback: (ExtractorLink) -> Unit = { link ->
         if (seenUrls.add(link.url)) { collectedLinks.add(link) }
@@ -417,7 +418,7 @@ class Lk21PlayerPage : ExtractorApi() {
         doc.select("iframe").forEach { iframe ->
             val src = iframe.attr("src")
             if (src.isNotBlank()) {
-                loadExtractorWithFallbackCustom(src, url, subtitleCallback, callback = callback)
+                loadExtractorWithFallbackCustom(src, url, subtitleCallback, callback = callback, providerTag = "Lk21Player")
             }
         }
     }

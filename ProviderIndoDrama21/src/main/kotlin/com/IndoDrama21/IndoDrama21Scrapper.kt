@@ -231,7 +231,7 @@ class IndoDrama21Scrapper(
 
                     logDebug(providerId, "Processing link: $fixedUrl (label: $label)")
 
-                    val okDirect = runCatching { loadExtractorWithFallbackCustom(fixedUrl, currentUrl, subtitleCallback, headers = globalHeaders, callback = callback) }.getOrDefault(false)
+                    val okDirect = runCatching { loadExtractorWithFallbackCustom(fixedUrl, currentUrl, subtitleCallback, headers = globalHeaders, callback = callback, providerTag = providerId) }.getOrDefault(false)
                     if (!okDirect) {
                         val refererMode = resolveConfig(providerId, CONFIG_HOOK_REFERER_PLAYER, IndoDrama21Constants.STR_REFERER_MODE_CURRENT)
                         val refererForPlayer = if (refererMode == IndoDrama21Constants.STR_REFERER_MODE_SERIES) "$seriesUrl/" else currentUrl
@@ -255,7 +255,7 @@ class IndoDrama21Scrapper(
                         
                         logDebug(providerId, "Found iframe: $finalIframe, extracting...")
                         
-                        val okRecursive = runCatching { loadExtractorWithFallbackCustom(finalIframe, refererForExtractor, subtitleCallback, headers = globalHeaders, callback = callback) }.getOrDefault(false)
+                        val okRecursive = runCatching { loadExtractorWithFallbackCustom(finalIframe, refererForExtractor, subtitleCallback, headers = globalHeaders, callback = callback, providerTag = providerId) }.getOrDefault(false)
                         if (!okRecursive && (finalIframe.contains(".mp4") || finalIframe.contains(".m3u8") || finalIframe.contains(".mkv") || finalIframe.contains(".mpd"))) {
                             MasterLinkGenerator.createSmartLink(label ?: name, finalIframe, refererForExtractor, headers = globalHeaders, callback = callback)
                         }
