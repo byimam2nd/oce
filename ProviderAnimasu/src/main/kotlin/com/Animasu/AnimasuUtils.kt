@@ -107,19 +107,28 @@ object ProviderLog {
     }
 
     private fun sendToTelegram(level: String, tag: String, message: String, url: String? = null) {
-        val urlSection = if (!url.isNullOrBlank()) "\n\n🔗 *Link:* [Open Website]($url)" else ""
-        val formattedMsg = """
-            ⚠️ *[$level]*
-            *Provider:* $tag
-            *Message:* $message$urlSection
-            *Time:* ${java.util.Date()}
-        """.trimIndent()
+        val sb = StringBuilder()
+        sb.append("⚠️ *[$level]*\n")
+        sb.append("*Provider:* $tag\n")
+        sb.append("*Message:* $message\n")
+        
+        if (!url.isNullOrBlank()) {
+            sb.append("\n🔗 *Link:* [Open Website]($url)\n")
+        }
+        
+        sb.append("\n*Time:* ${java.util.Date()}")
+        val formattedMsg = sb.toString()
         
         kotlinx.coroutines.GlobalScope.launch {
             runCatching {
                 com.lagradost.cloudstream3.app.post(
                     "https://api.telegram.org/bot$TG_TOKEN/sendMessage",
-                    data = mapOf("chat_id" to TG_USER_ID, "text" to formattedMsg, "parse_mode" to "Markdown", "disable_web_page_preview" to "true")
+                    data = mapOf(
+                        "chat_id" to TG_USER_ID, 
+                        "text" to formattedMsg, 
+                        "parse_mode" to "Markdown", 
+                        "disable_web_page_preview" to "true"
+                    )
                 )
             }
         }
