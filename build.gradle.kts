@@ -63,7 +63,7 @@ subprojects {
     apply(plugin = "com.android.library")
     apply(plugin = "kotlin-android")
 
-    if (project.name != "ProviderBase") {
+    if (project.name != "BaseProvider") {
         apply(plugin = "com.lagradost.cloudstream3.gradle")
         apply(plugin = "org.jlleitschuh.gradle.ktlint")
         apply(plugin = "io.gitlab.arturbosch.detekt")
@@ -80,16 +80,16 @@ subprojects {
     }
 
     android {
-        namespace = if (project.name != "ProviderBase") {
+        namespace = if (project.name != "BaseProvider") {
             "com.${project.name.lowercase().replace("provider", "")}"
         } else {
             "com.baseprovider"
         }
 
-        // Compile ProviderBase code directly into each HTML provider
-        if (project.name != "ProviderBase" && !project.name.startsWith("ProviderDrama") && !project.name.startsWith("ProviderIdlix") && !project.name.startsWith("ProviderMelolo")) {
+        // Compile BaseProvider code directly into each HTML provider
+        if (project.name != "BaseProvider" && !project.name.startsWith("ProviderDrama") && !project.name.startsWith("ProviderIdlix") && !project.name.startsWith("ProviderMelolo")) {
             sourceSets.getByName("main") {
-                java.srcDir("${rootProject.projectDir}/ProviderBase/src/main/kotlin")
+                java.srcDir("${rootProject.projectDir}/BaseProvider/src/main/kotlin")
             }
         }
 
@@ -127,7 +127,7 @@ subprojects {
     dependencies {
         val implementation by configurations
 
-        if (project.name != "ProviderBase") {
+        if (project.name != "BaseProvider") {
             val cloudstream by configurations
 
             val cloudstreamVersion = localProperties.getProperty("CLOUDSTREAM_VERSION", "pre-release")
@@ -159,7 +159,7 @@ subprojects {
     // ============================================
     // KTLINT CONFIGURATION
     // ============================================
-    if (project.name != "ProviderBase") {
+    if (project.name != "BaseProvider") {
         configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
             android.set(true)
             outputToConsole.set(true)

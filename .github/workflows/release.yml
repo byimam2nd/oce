@@ -58,7 +58,7 @@ jobs:
           mkdir -p release-artifacts
           cp **/build/*.cs3 release-artifacts/ 2>/dev/null || true
           cp build/plugins.json release-artifacts/ 2>/dev/null || true
-          rm -f release-artifacts/ProviderBase.cs3
+          rm -f release-artifacts/BaseProvider.cs3
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

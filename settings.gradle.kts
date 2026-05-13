@@ -24,7 +24,7 @@ File(rootDir, ".").eachDir { dir ->
     }
 }
 
-include(":ProviderBase")
+include(":BaseProvider")
 
 fun File.eachDir(block: (File) -> Unit) {
     listFiles()?.filter { it.isDirectory }?.forEach { block(it) }
