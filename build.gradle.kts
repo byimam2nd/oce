@@ -77,12 +77,6 @@ subprojects {
             val authorsStr = localProperties.getProperty("AUTHORS", "Imam2nd")
             authors = authorsStr.split(",").map { it.trim() }
         }
-
-    // Use sourceSets to compile ProviderBase code directly into each provider
-    if (project.name != "ProviderBase" && project.name != "Dramabox" && project.name != "Idlix" && project.name != "Melolo") {
-        android.sourceSets.getByName("main") {
-            java.srcDirs("${rootProject.projectDir}/ProviderBase/src/main/kotlin")
-        }
     }
 
     android {
@@ -90,6 +84,13 @@ subprojects {
             "com.${project.name.lowercase().replace("provider", "")}"
         } else {
             "com.baseprovider"
+        }
+
+        // Compile ProviderBase code directly into each HTML provider
+        if (project.name != "ProviderBase" && !project.name.startsWith("ProviderDrama") && !project.name.startsWith("ProviderIdlix") && !project.name.startsWith("ProviderMelolo")) {
+            sourceSets.getByName("main") {
+                java.srcDirs("${rootProject.projectDir}/ProviderBase/src/main/kotlin")
+            }
         }
 
         defaultConfig {
