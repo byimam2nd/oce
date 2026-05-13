@@ -69,7 +69,10 @@ class PencurimovieMapper(
                 this.score = Score.from10(rating)
                 addDubStatus(dubExist = element.text().contains(dubKeyword, true), subExist = true, subEpisodes = eps) 
             }
-        }.getOrNull()
+        }.getOrElse { e -> 
+            logDebug(providerId, "Mapping Item Failure: ${e.message}")
+            null 
+        }
     }
 
     fun extractMetadata(document: Document, currentUrl: String): MetadataPackage {

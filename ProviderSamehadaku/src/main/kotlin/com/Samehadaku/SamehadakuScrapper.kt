@@ -102,12 +102,12 @@ class SamehadakuScrapper(
                     results.add(api.newAnimeSearchResponse(title, finalUrl, if (isTv) TvType.TvSeries else TvType.Movie) { this.posterUrl = pUrl; this.posterHeaders = globalHeaders.toMutableMap().apply { put(SamehadakuConstants.VAL_REFERER, mainUrl) } })
                 }
                 results
-            }.getOrElse { e -> logError(providerId, "JSON Search Failed: ${e.message}"); emptyList() }
+            }.getOrElse { e -> logError(providerId, "JSON Search Execution Failed: ${e.message}"); emptyList() }
         }
         return coroutineScope { (1..searchPageLimit).map { page -> async { runCatching { 
                         val url = searchPathPattern.replace("{baseUrl}", baseUrl).replace("{page}", page.toString()).replace("{query}", encodedQuery)
                         val document = getHtmlParsed(url, refer)
-                        document.selectSafeList(providerId, SEARCH_ITEMS).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() } }.getOrElse { emptyList() } } }.awaitAll().flatten().distinctBy { it.url } }
+                        document.selectSafeList(providerId, SEARCH_ITEMS).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() } }.getOrElse { e -> logDebug(providerId, "Search Page $page Error: ${e.message}"); emptyList() } } }.awaitAll().flatten().distinctBy { it.url } }
     }
 
     suspend fun load(url: String): LoadResponse { return loadRecursive(url, 0) }
@@ -136,7 +136,7 @@ class SamehadakuScrapper(
         val seasonDataScript = document.selectSafe(providerId, SamehadakuConstants.SELECTOR_SEASON_CONTAINER)
         val isMovie = (seasonDataScript == null) && ((moviePathSegment.isNotBlank() && currentUrl.contains(moviePathSegment)) || epItems.isEmpty())
         val type = if (isMovie) TvType.Movie else if (supportedTypes.contains(TvType.Anime)) TvType.Anime else TvType.TvSeries
-        val tracker = runCatching { APIHolder.getTracker(listOf(metadata.title), TrackerType.getTypes(type), metadata.year, true) }.getOrNull()
+        val tracker = runCatching { APIHolder.getTracker(listOf(metadata.title), TrackerType.getTypes(type), metadata.year, true) }.getOrElse { e -> logDebug(providerId, "Tracker Fetch Warning: ${e.message}"); null }
 
         if (isMovie) {
             val watchUrl = fixUrlSmart(document.selectSafe(providerId, SamehadakuConstants.SELECTOR_WATCH_BUTTONS)?.attr("href"), currentUrl).ifBlank { currentUrl }

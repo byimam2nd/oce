@@ -40,11 +40,15 @@ import com.Donghuastream.DonghuastreamConstants.STR_SERIES
  */
 
 open class Donghuastream : MainAPI() {
-    
+
+    init {
+        logDebug(providerId, "Initializing BaseProvider Engine V2.2.0")
+    }
+
     // Cache untuk mempercepat akses konfigurasi (O(1))
     private val configCache = mutableMapOf<Int, String>()
     private val configListCache = mutableMapOf<Int, List<String>>()
-
+...
     protected val providerId: String by lazy { 
         this::class.java.simpleName.replace("Provider", "").replace(Regex("[^a-zA-Z0-9]"), "")
     }
