@@ -16,13 +16,15 @@ buildCache {
 }
 
 // Auto-include all modules with build.gradle.kts
-val disabled = listOf<String>("BaseHtmlProvider")
+val disabled = listOf("BaseHtmlProvider", "BaseProvider")
 
 File(rootDir, ".").eachDir { dir ->
     if (!disabled.contains(dir.name) && File(dir, "build.gradle.kts").exists()) {
         include(dir.name)
     }
 }
+
+include(":ProviderBase")
 
 fun File.eachDir(block: (File) -> Unit) {
     listFiles()?.filter { it.isDirectory }?.forEach { block(it) }

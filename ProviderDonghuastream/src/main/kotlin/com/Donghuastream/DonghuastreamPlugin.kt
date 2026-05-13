@@ -2,15 +2,12 @@ package com.Donghuastream
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
+import com.baseprovider.ProviderExtractors
 
 @CloudstreamPlugin
-class TemplatesProviderPlugin: BasePlugin() {
+class DonghuastreamPlugin: BasePlugin() {
     override fun load() {
         registerMainAPI(Donghuastream())
-        
-        // Register specific extractors for TemplatesProvider
-        DonghuastreamEkstraktors.list.forEach { extractor ->
-            registerExtractorAPI(extractor)
-        }
+        ProviderExtractors.list.forEach { registerExtractorAPI(it) }
     }
 }

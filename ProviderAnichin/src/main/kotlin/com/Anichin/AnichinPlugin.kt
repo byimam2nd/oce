@@ -2,15 +2,12 @@ package com.Anichin
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
+import com.baseprovider.ProviderExtractors
 
 @CloudstreamPlugin
-class TemplatesProviderPlugin: BasePlugin() {
+class AnichinPlugin: BasePlugin() {
     override fun load() {
         registerMainAPI(Anichin())
-        
-        // Register specific extractors for TemplatesProvider
-        AnichinEkstraktors.list.forEach { extractor ->
-            registerExtractorAPI(extractor)
-        }
+        ProviderExtractors.list.forEach { registerExtractorAPI(it) }
     }
 }

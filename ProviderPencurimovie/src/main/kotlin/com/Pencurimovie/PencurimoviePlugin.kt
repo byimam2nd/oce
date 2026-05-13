@@ -2,15 +2,12 @@ package com.Pencurimovie
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
+import com.baseprovider.ProviderExtractors
 
 @CloudstreamPlugin
-class TemplatesProviderPlugin: BasePlugin() {
+class PencurimoviePlugin: BasePlugin() {
     override fun load() {
         registerMainAPI(Pencurimovie())
-        
-        // Register specific extractors for TemplatesProvider
-        PencurimovieEkstraktors.list.forEach { extractor ->
-            registerExtractorAPI(extractor)
-        }
+        ProviderExtractors.list.forEach { registerExtractorAPI(it) }
     }
 }

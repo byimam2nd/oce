@@ -2,15 +2,12 @@ package com.IndoDrama21
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
+import com.baseprovider.ProviderExtractors
 
 @CloudstreamPlugin
-class TemplatesProviderPlugin: BasePlugin() {
+class IndoDrama21Plugin: BasePlugin() {
     override fun load() {
         registerMainAPI(IndoDrama21())
-        
-        // Register specific extractors for TemplatesProvider
-        IndoDrama21Ekstraktors.list.forEach { extractor ->
-            registerExtractorAPI(extractor)
-        }
+        ProviderExtractors.list.forEach { registerExtractorAPI(it) }
     }
 }

@@ -2,15 +2,12 @@ package com.Samehadaku
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
+import com.baseprovider.ProviderExtractors
 
 @CloudstreamPlugin
-class TemplatesProviderPlugin: BasePlugin() {
+class SamehadakuPlugin: BasePlugin() {
     override fun load() {
         registerMainAPI(Samehadaku())
-        
-        // Register specific extractors for TemplatesProvider
-        SamehadakuEkstraktors.list.forEach { extractor ->
-            registerExtractorAPI(extractor)
-        }
+        ProviderExtractors.list.forEach { registerExtractorAPI(it) }
     }
 }

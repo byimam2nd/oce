@@ -2,15 +2,12 @@ package com.Animasu
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
+import com.baseprovider.ProviderExtractors
 
 @CloudstreamPlugin
-class TemplatesProviderPlugin: BasePlugin() {
+class AnimasuPlugin: BasePlugin() {
     override fun load() {
         registerMainAPI(Animasu())
-        
-        // Register specific extractors for TemplatesProvider
-        AnimasuEkstraktors.list.forEach { extractor ->
-            registerExtractorAPI(extractor)
-        }
+        ProviderExtractors.list.forEach { registerExtractorAPI(it) }
     }
 }
