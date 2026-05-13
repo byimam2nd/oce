@@ -96,6 +96,7 @@ open class Samehadaku : MainAPI() {
     // Modular Components
     private val mapper by lazy {
         SamehadakuMapper(
+            api = this,
             providerId = providerId,
             mainUrl = mainUrl,
             moviePathSegment = moviePathSegment,
@@ -105,13 +106,13 @@ open class Samehadaku : MainAPI() {
             ongoingKeyword = ongoingKeyword,
             episodeKeyword = episodeKeyword,
             reverseEpisodes = reverseEpisodes,
-            episodeDataUrlPattern = episodeDataUrlPattern,
-            configCache = configCache
+            episodeDataUrlPattern = episodeDataUrlPattern
         )
     }
 
     private val scrapper by lazy {
         SamehadakuScrapper(
+            api = this,
             providerId = providerId,
             mainUrl = mainUrl,
             seriesUrl = seriesUrl,

@@ -96,6 +96,7 @@ open class Anichin : MainAPI() {
     // Modular Components
     private val mapper by lazy {
         AnichinMapper(
+            api = this,
             providerId = providerId,
             mainUrl = mainUrl,
             moviePathSegment = moviePathSegment,
@@ -105,13 +106,13 @@ open class Anichin : MainAPI() {
             ongoingKeyword = ongoingKeyword,
             episodeKeyword = episodeKeyword,
             reverseEpisodes = reverseEpisodes,
-            episodeDataUrlPattern = episodeDataUrlPattern,
-            configCache = configCache
+            episodeDataUrlPattern = episodeDataUrlPattern
         )
     }
 
     private val scrapper by lazy {
         AnichinScrapper(
+            api = this,
             providerId = providerId,
             mainUrl = mainUrl,
             seriesUrl = seriesUrl,

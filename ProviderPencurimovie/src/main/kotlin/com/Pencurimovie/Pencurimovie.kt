@@ -96,6 +96,7 @@ open class Pencurimovie : MainAPI() {
     // Modular Components
     private val mapper by lazy {
         PencurimovieMapper(
+            api = this,
             providerId = providerId,
             mainUrl = mainUrl,
             moviePathSegment = moviePathSegment,
@@ -105,13 +106,13 @@ open class Pencurimovie : MainAPI() {
             ongoingKeyword = ongoingKeyword,
             episodeKeyword = episodeKeyword,
             reverseEpisodes = reverseEpisodes,
-            episodeDataUrlPattern = episodeDataUrlPattern,
-            configCache = configCache
+            episodeDataUrlPattern = episodeDataUrlPattern
         )
     }
 
     private val scrapper by lazy {
         PencurimovieScrapper(
+            api = this,
             providerId = providerId,
             mainUrl = mainUrl,
             seriesUrl = seriesUrl,

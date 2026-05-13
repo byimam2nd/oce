@@ -96,6 +96,7 @@ open class Animasu : MainAPI() {
     // Modular Components
     private val mapper by lazy {
         AnimasuMapper(
+            api = this,
             providerId = providerId,
             mainUrl = mainUrl,
             moviePathSegment = moviePathSegment,
@@ -105,13 +106,13 @@ open class Animasu : MainAPI() {
             ongoingKeyword = ongoingKeyword,
             episodeKeyword = episodeKeyword,
             reverseEpisodes = reverseEpisodes,
-            episodeDataUrlPattern = episodeDataUrlPattern,
-            configCache = configCache
+            episodeDataUrlPattern = episodeDataUrlPattern
         )
     }
 
     private val scrapper by lazy {
         AnimasuScrapper(
+            api = this,
             providerId = providerId,
             mainUrl = mainUrl,
             seriesUrl = seriesUrl,

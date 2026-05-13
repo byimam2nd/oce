@@ -2,6 +2,12 @@ package com.IndoDrama21
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
+import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
+import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
+import com.lagradost.cloudstream3.LoadResponse.Companion.addTMDbId
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -11,6 +17,7 @@ import org.jsoup.nodes.Element
 import org.json.JSONObject
 import com.IndoDrama21.IndoDrama21Constants.DEFAULT_TIMEOUT
 import com.IndoDrama21.IndoDrama21Constants.SEARCH_ITEMS
+import com.IndoDrama21.IndoDrama21Constants.BLOAT_REGEX
 import com.IndoDrama21.IndoDrama21Constants.FOLLOW_LINK_SELECTOR
 import com.IndoDrama21.IndoDrama21Constants.LOAD_RECOMMEND
 import com.IndoDrama21.IndoDrama21Constants.ACTOR_ITEMS
@@ -27,6 +34,7 @@ import com.IndoDrama21.IndoDrama21Constants.CONFIG_HOOK_IFRAME_SELECTORS
  */
 
 class IndoDrama21Scrapper(
+    private val api: MainAPI,
     private val providerId: String,
     private val mainUrl: String,
     private val seriesUrl: String,
@@ -67,7 +75,7 @@ class IndoDrama21Scrapper(
 
             val document = getHtmlParsed(url)
             val isHorizontal = resolveConfig(providerId, IndoDrama21Constants.CONFIG_HOOK_IS_HORIZONTAL, "false").toBoolean() && request.name.contains("Episode Terbaru", true)
-            val home = document.selectSafeList(providerId, SEARCH_ITEMS).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() }
+            val home = document.selectSafeList(providerId, listOf(SEARCH_ITEMS)).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() }
             newHomePageResponse(list = HomePageList(name = request.name, list = home, isHorizontalImages = isHorizontal), hasNext = home.isNotEmpty())
         }.getOrElse { e -> 
             logError(providerId, "MainPage Failure: ${e.message}")
@@ -89,7 +97,7 @@ class IndoDrama21Scrapper(
                     if (!pUrl.startsWith("http") && searchJsonPosterPrefix.isNotBlank()) pUrl = searchJsonPosterPrefix + pUrl
                     val isTv = item.optString(searchJsonType).contains("series", true) || item.optString(searchJsonType).contains("tv", true)
                     var finalUrl = if (isTv) "$seriesUrl/$slug" else "$mainUrl/$slug"
-                    results.add(newAnimeSearchResponse(title, finalUrl, if (isTv) TvType.TvSeries else TvType.Movie) { this.posterUrl = pUrl; this.posterHeaders = globalHeaders.toMutableMap().apply { put(IndoDrama21Constants.VAL_REFERER, mainUrl) } })
+                    results.add(api.newAnimeSearchResponse(title, finalUrl, if (isTv) TvType.TvSeries else TvType.Movie) { this.posterUrl = pUrl; this.posterHeaders = globalHeaders.toMutableMap().apply { put(IndoDrama21Constants.VAL_REFERER, mainUrl) } })
                 }
                 results
             }.getOrElse { e -> logError(providerId, "JSON Search Failed: ${e.message}"); emptyList() }
@@ -97,7 +105,7 @@ class IndoDrama21Scrapper(
         return coroutineScope { (1..searchPageLimit).map { page -> async { runCatching { 
                         val url = searchPathPattern.replace("{baseUrl}", baseUrl).replace("{page}", page.toString()).replace("{query}", encodedQuery)
                         val document = getHtmlParsed(url, refer)
-                        document.selectSafeList(providerId, SEARCH_ITEMS).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() } }.getOrElse { emptyList() } } }.awaitAll().flatten().distinctBy { it.url } }
+                        document.selectSafeList(providerId, listOf(SEARCH_ITEMS)).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() } }.getOrElse { emptyList() } } }.awaitAll().flatten().distinctBy { it.url } }
     }
 
     suspend fun load(url: String): LoadResponse { return loadRecursive(url, 0) }
@@ -106,41 +114,41 @@ class IndoDrama21Scrapper(
         val document = getHtmlParsed(url)
         val currentUrl = url
         if (depth < 2) { 
-            val follow = resolveConfigList(providerId, FOLLOW_LINK_SELECTOR)
+            val follow = resolveConfigList(providerId, listOf(FOLLOW_LINK_SELECTOR))
             if (follow.isNotEmpty()) { val nextAnchor = document.selectSafe(providerId, follow); val nextHref = nextAnchor?.attr("href")
                 if (!nextHref.isNullOrBlank()) { val nextUrl = fixUrlSmart(nextHref, currentUrl); if (nextUrl != currentUrl && nextUrl != url) return loadRecursive(nextUrl, depth + 1) } } }
 
         val metadata = mapper.extractMetadata(document, currentUrl)
         
         val (recommendations, actors) = coroutineScope {
-            val recs = async { document.selectSafeList(providerId, LOAD_RECOMMEND).mapNotNull { mapper.toSearchResult(it, currentUrl) } }
-            val acts = async { document.selectSafeList(providerId, ACTOR_ITEMS).mapNotNull { 
-                val n = it.selectSafe(providerId, ACTOR_NAME)?.text()?.trim() ?: ""
-                val p = it.selectFirst("img")?.safeExtractImage(ATTR_IMAGE) ?: ""
+            val recs = async { document.selectSafeList(providerId, listOf(LOAD_RECOMMEND)).mapNotNull { mapper.toSearchResult(it, currentUrl) } }
+            val acts = async { document.selectSafeList(providerId, listOf(ACTOR_ITEMS)).mapNotNull { 
+                val n = it.selectSafe(providerId, listOf(ACTOR_NAME))?.text()?.trim() ?: ""
+                val p = it.selectFirst("img")?.safeExtractImage(listOf(ATTR_IMAGE)) ?: ""
                 if (n.isNotBlank() && n.length < 100) Actor(n, p) else null 
             } }
             recs.await() to acts.await()
         }
         
-        val epItems = document.selectSafeList(providerId, EPISODE_ITEMS); val seasonDataScript = document.selectFirst("script#season-data")
+        val epItems = document.selectSafeList(providerId, listOf(EPISODE_ITEMS)); val seasonDataScript = document.selectFirst("script#season-data")
         val isMovie = (seasonDataScript == null && document.selectFirst(".tvseason") == null) && ((moviePathSegment.isNotBlank() && currentUrl.contains(moviePathSegment)) || epItems.isEmpty())
         val type = if (isMovie) TvType.Movie else if (supportedTypes.contains(TvType.Anime)) TvType.Anime else TvType.TvSeries
         val tracker = runCatching { APIHolder.getTracker(listOf(metadata.title), TrackerType.getTypes(type), metadata.year, true) }.getOrNull()
 
         if (isMovie) {
             val watchUrl = fixUrlSmart(document.selectSafe(providerId, listOf(".play-button", ".watch-now", ".btn-watch"))?.attr("href"), currentUrl).ifBlank { currentUrl }
-            return newMovieLoadResponse(metadata.title, url, type, episodeDataUrlPattern.replace("{url}", watchUrl)) { 
+            return api.newMovieLoadResponse(metadata.title, url, type, episodeDataUrlPattern.replace("{url}", watchUrl)) { 
                 this.posterUrl = tracker?.image ?: metadata.poster; this.backgroundPosterUrl = tracker?.cover ?: metadata.banner
                 this.posterHeaders = globalHeaders.toMutableMap().apply { put(IndoDrama21Constants.VAL_REFERER, mainUrl) }; this.plot = metadata.description; this.tags = metadata.tags.ifEmpty { null }; this.year = metadata.year; this.score = Score.from10(metadata.rating)
                 this.recommendations = recommendations; this.comingSoon = metadata.statusText?.contains("Coming Soon", true) ?: false
-                LoadResponse.addTrailer(metadata.trailer); LoadResponse.addActors(actors); LoadResponse.addMalId(tracker?.malId); LoadResponse.addAniListId(tracker?.aniId?.toIntOrNull()); LoadResponse.addImdbId(metadata.imdbId); LoadResponse.addTMDbId(metadata.tmdbId?.toString()) }
+                addTrailer(metadata.trailer); addActors(actors); addMalId(tracker?.malId); addAniListId(tracker?.aniId?.toIntOrNull()); addImdbId(metadata.imdbId); addTMDbId(metadata.tmdbId?.toString()) }
         } else { 
             val episodes = mapper.extractEpisodes(document, currentUrl, seasonDataScript, epItems, metadata.poster)
             return if (type == TvType.Anime || type == TvType.OVA || type == TvType.AnimeMovie) {
-                newAnimeLoadResponse(metadata.title, url, type) { this.posterUrl = tracker?.image ?: metadata.poster; this.backgroundPosterUrl = tracker?.cover ?: metadata.banner; this.posterHeaders = globalHeaders.toMutableMap().apply { put(IndoDrama21Constants.VAL_REFERER, mainUrl) }; this.plot = metadata.description; this.tags = metadata.tags.ifEmpty { null }
-                    this.year = metadata.year; this.score = Score.from10(metadata.rating); this.recommendations = recommendations; this.showStatus = metadata.status; addEpisodes(DubStatus.Subbed, episodes); LoadResponse.addTrailer(metadata.trailer); LoadResponse.addMalId(tracker?.malId); LoadResponse.addAniListId(tracker?.aniId?.toIntOrNull()) }
-            } else { newTvSeriesLoadResponse(metadata.title, url, type, episodes) { this.posterUrl = tracker?.image ?: metadata.poster; this.backgroundPosterUrl = tracker?.cover ?: metadata.banner; this.posterHeaders = globalHeaders.toMutableMap().apply { put(IndoDrama21Constants.VAL_REFERER, mainUrl) }; this.plot = metadata.description; this.tags = metadata.tags.ifEmpty { null }
-                    this.year = metadata.year; this.score = Score.from10(metadata.rating); this.recommendations = recommendations; this.showStatus = metadata.status; LoadResponse.addTrailer(metadata.trailer); LoadResponse.addActors(actors); LoadResponse.addMalId(tracker?.malId); LoadResponse.addAniListId(tracker?.aniId?.toIntOrNull()); LoadResponse.addImdbId(metadata.imdbId); LoadResponse.addTMDbId(metadata.tmdbId?.toString()) } }
+                api.newAnimeLoadResponse(metadata.title, url, type) { this.posterUrl = tracker?.image ?: metadata.poster; this.backgroundPosterUrl = tracker?.cover ?: metadata.banner; this.posterHeaders = globalHeaders.toMutableMap().apply { put(IndoDrama21Constants.VAL_REFERER, mainUrl) }; this.plot = metadata.description; this.tags = metadata.tags.ifEmpty { null }
+                    this.year = metadata.year; this.score = Score.from10(metadata.rating); this.recommendations = recommendations; this.showStatus = metadata.status; addEpisodes(DubStatus.Subbed, episodes); addTrailer(metadata.trailer); addMalId(tracker?.malId); addAniListId(tracker?.aniId?.toIntOrNull()) }
+            } else { api.newTvSeriesLoadResponse(metadata.title, url, type, episodes) { this.posterUrl = tracker?.image ?: metadata.poster; this.backgroundPosterUrl = tracker?.cover ?: metadata.banner; this.posterHeaders = globalHeaders.toMutableMap().apply { put(IndoDrama21Constants.VAL_REFERER, mainUrl) }; this.plot = metadata.description; this.tags = metadata.tags.ifEmpty { null }
+                    this.year = metadata.year; this.score = Score.from10(metadata.rating); this.recommendations = recommendations; this.showStatus = metadata.status; addTrailer(metadata.trailer); addActors(actors); addMalId(tracker?.malId); addAniListId(tracker?.aniId?.toIntOrNull()); addImdbId(metadata.imdbId); addTMDbId(metadata.tmdbId?.toString()) } }
         }
     }
 
@@ -148,11 +156,11 @@ class IndoDrama21Scrapper(
         return runCatching {
             val document = getHtmlParsed(data)
             val currentUrl = data
-            val attrValueSelectors = resolveConfigList(providerId, IndoDrama21Constants.ATTR_VALUE)
+            val attrValueSelectors = resolveConfigList(providerId, listOf(IndoDrama21Constants.ATTR_VALUE))
             val allPossibleLinks = mutableSetOf<Pair<String, String?>>()
 
             // AGGRESSIVE GATHERING V12
-            resolveConfigList(providerId, LINK_OPTIONS).forEach { selector ->
+            resolveConfigList(providerId, listOf(LINK_OPTIONS)).forEach { selector ->
                 document.select(selector).forEach { container ->
                     val anchors = container.select("a")
                     if (anchors.isNotEmpty()) anchors.forEach { a -> allPossibleLinks.add(a.attr("href") to a.text()) }
@@ -160,7 +168,7 @@ class IndoDrama21Scrapper(
                 }
             }
 
-            resolveConfigList(providerId, DOWNLOAD_ITEMS).forEach { selector ->
+            resolveConfigList(providerId, listOf(DOWNLOAD_ITEMS)).forEach { selector ->
                 document.select(selector).forEach { container ->
                     container.select("a").forEach { a -> val href = a.attr("href"); if (href.isNotBlank()) allPossibleLinks.add(href to a.text()) }
                 }
@@ -186,7 +194,7 @@ class IndoDrama21Scrapper(
                         val refererMode = resolveConfig(providerId, CONFIG_HOOK_REFERER_PLAYER, "current_url")
                         val refererForPlayer = if (refererMode == "series_url") "$seriesUrl/" else currentUrl
                         val playerDoc = app.get(fixedUrl, referer = refererForPlayer, headers = globalHeaders).document
-                        val iframeSelectors = resolveConfigList(providerId, CONFIG_HOOK_IFRAME_SELECTORS)
+                        val iframeSelectors = resolveConfigList(providerId, listOf(CONFIG_HOOK_IFRAME_SELECTORS))
                         val iframeSrc = iframeSelectors.asSequence().mapNotNull { playerDoc.selectFirst(it)?.attr("src") }.firstOrNull() ?: return@runCatching
                         val finalIframe = fixUrlSmart(iframeSrc, fixedUrl)
                         val refererForExtractor = getBaseUrl(fixedUrl)
