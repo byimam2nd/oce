@@ -77,6 +77,16 @@ subprojects {
             val authorsStr = localProperties.getProperty("AUTHORS", "Imam2nd")
             authors = authorsStr.split(",").map { it.trim() }
         }
+
+        // Include ProviderBase library classes in every provider's DEX
+        afterEvaluate {
+            tasks.withType<com.lagradost.cloudstream3.gradle.tasks.CompileDexTask>().configureEach { task ->
+                val pbCompile = rootProject.project(":ProviderBase")
+                    .tasks.named("compileDebugKotlin")
+                task.dependsOn(pbCompile)
+                task.input.from(pbCompile.map { it.outputs.files.singleFile })
+            }
+        }
     }
 
     android {
