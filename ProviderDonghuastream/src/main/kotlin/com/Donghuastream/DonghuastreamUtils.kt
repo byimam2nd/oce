@@ -189,6 +189,62 @@ fun logError(tag: String, message: String, error: Throwable? = null) {
     error?.let { Log.e(tag, "[$tag] CAUSE: ${it.message}") }
 }
 
+// --- HIGH-STABILITY CONFIG ENGINE ---
+
+fun resolveConfig(providerId: String, list: List<String>, default: String): String {
+    for (item in list) { if (item.contains(":::")) { val owners = item.substringBefore(":::").split(","); if (owners.contains(providerId)) { val v = item.substringAfter(":::"); if (v.isBlank()) break; return v } } }
+    for (item in list) { if (item.startsWith("GLOBAL:::")) return item.substringAfter(":::"); if (!item.contains(":::")) return item }
+    return default
+}
+
+fun resolveConfigList(providerId: String, list: List<String>): List<String> {
+    val result = mutableListOf<String>(); for (item in list) { if (item.contains(":::")) { val owners = item.substringBefore(":::").split(","); if (owners.contains(providerId)) { val v = item.substringAfter(":::"); if (v.isNotBlank()) result.add(v) } } }
+    if (result.isNotEmpty()) return result
+    for (item in list) { val v = if (item.contains(":::")) { if (item.startsWith("GLOBAL:::")) item.substringAfter(":::") else continue } else item; if (v.isNotBlank()) result.add(v) }
+    return result
+}
+
+fun Element.selectSafe(providerId: String, selectors: List<String>): Element? {
+    if (selectors.isEmpty()) return null
+    for (s in selectors) { if (!s.contains(":::")) continue
+        val owners = s.substringBefore(":::"); if (owners.split(",").contains(providerId)) {
+            val sel = s.substringAfter(":::"); if (sel.isNotBlank()) { val el = this.selectFirst(sel); if (el != null) return el }
+        }
+    }
+    for (s in selectors) {
+        val sel = if (s.startsWith("GLOBAL:::")) s.substringAfter(":::") else if (!s.contains(":::")) s else continue
+        if (sel.isNotBlank()) { val el = this.selectFirst(sel); if (el != null) return el }
+    }
+    return null
+}
+
+fun Element.selectSafeList(providerId: String, selectors: List<String>): org.jsoup.select.Elements {
+    if (selectors.isEmpty()) return org.jsoup.select.Elements()
+    for (s in selectors) { if (!s.contains(":::")) continue
+        val owners = s.substringBefore(":::"); if (owners.split(",").contains(providerId)) {
+            val sel = s.substringAfter(":::"); if (sel.isNotBlank()) { val els = this.select(sel); if (els.isNotEmpty()) return els }
+        }
+    }
+    for (s in selectors) {
+        val sel = if (s.startsWith("GLOBAL:::")) s.substringAfter(":::") else if (!s.contains(":::")) s else continue
+        if (sel.isNotBlank()) { val els = this.select(sel); if (els.isNotEmpty()) return els }
+    }
+    return org.jsoup.select.Elements()
+}
+
+fun Element.attrSafe(providerId: String, attributes: List<String>): String? {
+    for (a in attributes) { if (!a.contains(":::")) continue
+        val owners = a.substringBefore(":::"); if (owners.split(",").contains(providerId)) {
+            val attrN = a.substringAfter(":::"); val v = this.attr(attrN); if (v.isNotBlank()) return v
+        }
+    }
+    for (a in attributes) {
+        val attrN = if (a.startsWith("GLOBAL:::")) a.substringAfter(":::") else if (!a.contains(":::")) a else continue
+        val v = this.attr(attrN); if (v.isNotBlank()) return v
+    }
+    return null
+}
+
 /**
  * Mendeteksi dan membongkar JavaScript yang di-pack (P.A.C.K.E.R).
  */

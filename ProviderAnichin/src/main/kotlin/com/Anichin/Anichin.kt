@@ -1,23 +1,7 @@
 package com.Anichin
 
-import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
-import com.lagradost.cloudstream3.LoadResponse.Companion.addAniListId
-import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
-import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
-import com.lagradost.cloudstream3.LoadResponse.Companion.addActors
-import com.lagradost.cloudstream3.LoadResponse.Companion.addImdbId
-import com.lagradost.cloudstream3.LoadResponse.Companion.addTMDbId
 import com.lagradost.cloudstream3.utils.*
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
-import org.jsoup.Jsoup
-import org.jsoup.nodes.Document
-import org.jsoup.nodes.Element
-import org.json.JSONObject
-
-// Import Master Configuration
 import com.Anichin.AnichinConstants.CONFIG_NAMES
 import com.Anichin.AnichinConstants.CONFIG_MAIN_URLS
 import com.Anichin.AnichinConstants.CONFIG_SERIES_URLS
@@ -42,62 +26,17 @@ import com.Anichin.AnichinConstants.CONFIG_GLOBAL_HEADERS
 import com.Anichin.AnichinConstants.CONFIG_USE_DOCUMENT_LARGE
 import com.Anichin.AnichinConstants.CONFIG_CACHE_TTL_MINUTES
 import com.Anichin.AnichinConstants.CONFIG_MAIN_PAGE_LISTS
-import com.Anichin.AnichinConstants.FOLLOW_LINK_SELECTOR
-import com.Anichin.AnichinConstants.CONFIG_HREF_CLEAN_REGEXPS
-import com.Anichin.AnichinConstants.CONFIG_HREF_CLEAN_REPLACES
-import com.Anichin.AnichinConstants.SEARCH_ITEMS
-import com.Anichin.AnichinConstants.SEARCH_TITLE
-import com.Anichin.AnichinConstants.SEARCH_HREF
-import com.Anichin.AnichinConstants.SEARCH_POSTER
-import com.Anichin.AnichinConstants.SEARCH_RATING
-import com.Anichin.AnichinConstants.SEARCH_EP_TEXT
-import com.Anichin.AnichinConstants.LOAD_TITLE
-import com.Anichin.AnichinConstants.LOAD_POSTER
-import com.Anichin.AnichinConstants.LOAD_BANNER
-import com.Anichin.AnichinConstants.LOAD_DESC
-import com.Anichin.AnichinConstants.LOAD_INFO_BOX
-import com.Anichin.AnichinConstants.LOAD_TAGS
-import com.Anichin.AnichinConstants.LOAD_RATING
-import com.Anichin.AnichinConstants.LOAD_STATUS
-import com.Anichin.AnichinConstants.LOAD_QUALITY
-import com.Anichin.AnichinConstants.LOAD_TRAILER
-import com.Anichin.AnichinConstants.LOAD_RECOMMEND
-import com.Anichin.AnichinConstants.EPISODE_ITEMS
-import com.Anichin.AnichinConstants.EPISODE_HREF
-import com.Anichin.AnichinConstants.EPISODE_TITLE
-import com.Anichin.AnichinConstants.EPISODE_NUM
-import com.Anichin.AnichinConstants.EPISODE_DESC
-import com.Anichin.AnichinConstants.EPISODE_TIME
-import com.Anichin.AnichinConstants.LINK_OPTIONS
-import com.Anichin.AnichinConstants.DOWNLOAD_ITEMS
-import com.Anichin.AnichinConstants.ACTOR_ITEMS
-import com.Anichin.AnichinConstants.ACTOR_NAME
-import com.Anichin.AnichinConstants.ATTR_TITLE
-import com.Anichin.AnichinConstants.ATTR_IMAGE
-import com.Anichin.AnichinConstants.ATTR_HREF
-import com.Anichin.AnichinConstants.ATTR_VALUE
-import com.Anichin.AnichinConstants.ATTR_CONTENT
-import com.Anichin.AnichinConstants.BLOAT_REGEX
-import com.Anichin.AnichinConstants.DEFAULT_TIMEOUT
-import com.Anichin.AnichinConstants.VAL_REFERER
 import com.Anichin.AnichinConstants.STR_DUB
 import com.Anichin.AnichinConstants.STR_ONGOING
 import com.Anichin.AnichinConstants.STR_EPISODE
 import com.Anichin.AnichinConstants.STR_SERIES
-import com.Anichin.AnichinConstants.CONFIG_HOOK_IS_HORIZONTAL
-import com.Anichin.AnichinConstants.CONFIG_HOOK_YEAR_EXTRACTOR
-import com.Anichin.AnichinConstants.CONFIG_HOOK_YEAR_SELECTOR
-import com.Anichin.AnichinConstants.CONFIG_HOOK_REFERER_PLAYER
-import com.Anichin.AnichinConstants.CONFIG_HOOK_IFRAME_SELECTORS
 
 /**
- * 🚀 ULTIMATE HTML SCRAPING ENGINE - VERSION 2.2.0 (STABILITY EDITION)
+ * 🚀 ULTIMATE HTML SCRAPING ENGINE - VERSION 2.2.0 (MODULAR EDITION)
  * 
- * Perubahan V2.2.0:
- * 1. Stability Engine: Bypass cache untuk loadLinks dan implementasi Semaphore.
- * 2. Configuration Caching: Akses konfigurasi O(1) untuk efisiensi CPU.
- * 3. Modular Scraper Pipeline: load() dipecah menjadi sub-modul untuk resiliensi.
- * 4. Contextual Logging: Debugging lebih presisi dengan log level modul.
+ * Provider.kt sekarang bertindak sebagai adapter murni.
+ * Seluruh logika scraping berada di AnichinScrapper.
+ * Seluruh logika pemetaan berada di AnichinMapper.
  */
 
 open class Anichin : MainAPI() {
@@ -132,8 +71,6 @@ open class Anichin : MainAPI() {
     open var episodeDataUrlPattern = getCached(CONFIG_EPISODE_DATA_URL_PATTERNS, "{url}")
     open var searchPageLimit = getCached(CONFIG_SEARCH_PAGE_LIMITS, "2").toIntOrNull() ?: 2
     open var reverseEpisodes = getCached(CONFIG_REVERSE_EPISODES, "true").toBoolean()
-    open var hrefCleanRegexp = getCached(CONFIG_HREF_CLEAN_REGEXPS, "")
-    open var hrefCleanReplace = getCached(CONFIG_HREF_CLEAN_REPLACES, "")
     open var isJsonSearch = getCached(CONFIG_SEARCH_IS_JSON, "false").toBoolean()
     open var searchJsonRoot = getCached(CONFIG_SEARCH_JSON_ROOTS, "data")
     open var searchJsonTitle = getCached(CONFIG_SEARCH_JSON_TITLES, "title")
@@ -156,303 +93,77 @@ open class Anichin : MainAPI() {
     private val seriesKeyword by lazy { getCached(STR_SERIES, "Series") }
     private val episodeKeyword by lazy { getCached(STR_EPISODE, "Episode") }
 
-    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        return runCatching {
-            val baseUrl = if (request.name.contains(seriesKeyword, true) && seriesUrl.isNotBlank()) seriesUrl else mainUrl
-            val url = if (request.data.startsWith("http")) { 
-                val d = request.data.replace("{page}", page.toString())
-                val pagePattern = Regex("""(/page/|page=)$page(\b|/|$)""")
-                if (!pagePattern.containsMatchIn(d)) { 
-                    if (d.endsWith("/page/")) "${d}$page" 
-                    else { val conn = if (d.contains("?")) "&" else "?"; "${d}${conn}page=$page" } 
-                } else d
-            } else { 
-                mainPagePathPattern.replace("{baseUrl}", baseUrl).replace("{data}", request.data).replace("{page}", page.toString()) 
-            }
-
-            val document = getHtmlParsed(url)
-            val isHorizontal = getCached(CONFIG_HOOK_IS_HORIZONTAL, "false").toBoolean() && request.name.contains("Episode Terbaru", true)
-            val home = document.selectSafeList(SEARCH_ITEMS).mapNotNull { runCatching { it.toSearchResult(url) }.getOrNull() }
-            newHomePageResponse(list = HomePageList(name = request.name, list = home, isHorizontalImages = isHorizontal), hasNext = home.isNotEmpty())
-        }.getOrElse { e -> 
-            logError(providerId, "MainPage Failure: ${e.message}")
-            newHomePageResponse(request.name, emptyList(), false) 
-        }
-    }
-
-    private suspend fun getHtmlParsed(url: String, referer: String? = null, skipCache: Boolean = false): Document {
-        if (!skipCache) { globalHtmlCache.get(url)?.let { return it } }
-        return executeWithRetry { 
-            rateLimitDelay(url)
-            val res = app.get(url, timeout = DEFAULT_TIMEOUT, headers = globalHeaders, referer = referer)
-            val doc = if (useDocumentLarge) res.documentLarge else res.document
-            if (!skipCache) { globalHtmlCache.put(url, doc) }
-            doc
-        }
-    }
-  
-    private fun Element.toSearchResult(baseUrl: String? = null): SearchResponse? {
-        return runCatching {
-            val base = baseUrl ?: mainUrl
-            val titleEl = this.selectSafe(SEARCH_TITLE) ?: this.parent()?.selectSafe(SEARCH_TITLE) ?: this.selectFirst("h2, h3")
-            val rawTitle = titleEl?.text()?.trim() ?: titleEl?.attrSafe(ATTR_TITLE) ?: return null
-            val title = rawTitle.safeCleanBloat(rawTitle, BLOAT_REGEX)
-            val hrefEl = this.selectSafe(SEARCH_HREF) ?: this.selectFirst("a") ?: this.parent()?.selectFirst("a")
-            var href = fixUrlSmart(hrefEl?.attr("href"), base)
-            val cleanRegex = hrefCleanRegexp; val cleanReplace = hrefCleanReplace
-            if (cleanRegex.isNotBlank() && cleanReplace.isNotBlank()) { href = href.replace(Regex(cleanRegex), cleanReplace) }
-            val poster = this.selectSafe(SEARCH_POSTER)?.safeExtractImage(ATTR_IMAGE); val rating = this.selectSafe(SEARCH_RATING)?.text(); val eps = this.selectSafe(SEARCH_EP_TEXT)?.text()?.safeExtractEpNum()
-            val isMovie = (moviePathSegment.isNotBlank() && href.contains(moviePathSegment)) || href.contains("movie", true)
-            val type = if (isMovie) TvType.Movie else if (supportedTypes.contains(TvType.Anime)) TvType.Anime else TvType.TvSeries
-            newAnimeSearchResponse(title, href, type) { this.posterUrl = poster; this.posterHeaders = globalHeaders.toMutableMap().apply { put(VAL_REFERER, mainUrl) }; this.score = Score.from10(rating)
-                addDubStatus(dubExist = this@toSearchResult.text().contains(dubKeyword, true), subExist = true, subEpisodes = eps) }
-        }.getOrNull()
-    }
-
-    override suspend fun search(query: String): List<SearchResponse> {
-        val encodedQuery = runCatching { java.net.URLEncoder.encode(query, "UTF-8") }.getOrDefault(query)
-        val baseUrl = if (searchUrl.isNotBlank()) searchUrl else mainUrl; val refer = app.get(mainUrl).url
-        if (isJsonSearch) { return runCatching {
-                val url = searchPathPattern.replace("{baseUrl}", baseUrl).replace("{query}", encodedQuery).replace("{page}", "1")
-                val response = app.get(url, referer = refer, headers = globalHeaders).text; val root = JSONObject(response)
-                val items = if (searchJsonRoot.isBlank()) root.getJSONArray("results") else root.getJSONArray(searchJsonRoot)
-                val results = mutableListOf<SearchResponse>()
-                for (i in 0 until items.length()) { val item = items.getJSONObject(i)
-                    val title = item.optString(searchJsonTitle).safeCleanBloat(item.optString(searchJsonTitle), BLOAT_REGEX)
-                    val slug = item.optString(searchJsonHref); var pUrl = item.optString(searchJsonPoster)
-                    if (!pUrl.startsWith("http") && searchJsonPosterPrefix.isNotBlank()) pUrl = searchJsonPosterPrefix + pUrl
-                    val isTv = item.optString(searchJsonType).contains("series", true) || item.optString(searchJsonType).contains("tv", true)
-                    var finalUrl = if (isTv) "$seriesUrl/$slug" else "$mainUrl/$slug"
-                    results.add(newAnimeSearchResponse(title, finalUrl, if (isTv) TvType.TvSeries else TvType.Movie) { this.posterUrl = pUrl; this.posterHeaders = globalHeaders.toMutableMap().apply { put(VAL_REFERER, mainUrl) } })
-                }
-                results
-            }.getOrElse { e -> logError(providerId, "JSON Search Failed: ${e.message}"); emptyList() }
-        }
-        return coroutineScope { (1..searchPageLimit).map { page -> async { runCatching { 
-                        val url = searchPathPattern.replace("{baseUrl}", baseUrl).replace("{page}", page.toString()).replace("{query}", encodedQuery)
-                        val document = getHtmlParsed(url, refer)
-                        document.selectSafeList(SEARCH_ITEMS).mapNotNull { runCatching { it.toSearchResult(url) }.getOrNull() } }.getOrElse { emptyList() } } }.awaitAll().flatten().distinctBy { it.url } }
-    }
-
-    override suspend fun quickSearch(query: String): List<SearchResponse>? = search(query)
-
-    override suspend fun load(url: String): LoadResponse { return loadRecursive(url, 0) }
-
-    private suspend fun loadRecursive(url: String, depth: Int): LoadResponse {
-        val document = getHtmlParsed(url)
-        val currentUrl = url // In real CloudStream it might be response.url but here we simplify
-        if (depth < 2) { val follow = getCachedList(FOLLOW_LINK_SELECTOR)
-            if (follow.isNotEmpty()) { val nextAnchor = document.selectSafe(follow); val nextHref = nextAnchor?.attr("href")
-                if (!nextHref.isNullOrBlank()) { val nextUrl = fixUrlSmart(nextHref, currentUrl); if (nextUrl != currentUrl && nextUrl != url) return loadRecursive(nextUrl, depth + 1) } } }
-
-        // Pipeline: Metadata (Sequential as it's small)
-        val metadata = extractMetadata(document, currentUrl)
-        
-        // Pipeline: Recommendations & Actors (Parallel for speed)
-        val (recommendations, actors) = coroutineScope {
-            val recs = async { document.selectSafeList(LOAD_RECOMMEND).mapNotNull { it.toSearchResult(currentUrl) } }
-            val acts = async { document.selectSafeList(ACTOR_ITEMS).mapNotNull { 
-                val n = it.selectSafe(ACTOR_NAME)?.text()?.trim() ?: ""
-                val p = it.selectFirst("img")?.safeExtractImage(ATTR_IMAGE) ?: ""
-                if (n.isNotBlank() && n.length < 100) Actor(n, p) else null 
-            } }
-            recs.await() to acts.await()
-        }
-        
-        // Pipeline: Episode Processing
-        val epItems = document.selectSafeList(EPISODE_ITEMS); val seasonDataScript = document.selectFirst("script#season-data")
-        val isMovie = (seasonDataScript == null && document.selectFirst(".tvseason") == null) && ((moviePathSegment.isNotBlank() && currentUrl.contains(moviePathSegment)) || epItems.isEmpty())
-        val type = if (isMovie) TvType.Movie else if (supportedTypes.contains(TvType.Anime)) TvType.Anime else TvType.TvSeries
-        val tracker = runCatching { APIHolder.getTracker(listOf(metadata.title), TrackerType.getTypes(type), metadata.year, true) }.getOrNull()
-
-        if (isMovie) {
-            val watchUrl = fixUrlSmart(document.selectSafe(listOf(".play-button", ".watch-now", ".btn-watch"))?.attr("href"), currentUrl).ifBlank { currentUrl }
-            return newMovieLoadResponse(metadata.title, url, type, episodeDataUrlPattern.replace("{url}", watchUrl)) { this.posterUrl = tracker?.image ?: metadata.poster; this.backgroundPosterUrl = tracker?.cover ?: metadata.banner
-                this.posterHeaders = globalHeaders.toMutableMap().apply { put(VAL_REFERER, mainUrl) }; this.plot = metadata.description; this.tags = metadata.tags.ifEmpty { null }; this.year = metadata.year; this.score = Score.from10(metadata.rating)
-                this.recommendations = recommendations; this.comingSoon = metadata.statusText?.contains("Coming Soon", true) ?: false
-                addTrailer(metadata.trailer); addActors(actors); addMalId(tracker?.malId); addAniListId(tracker?.aniId?.toIntOrNull()); addImdbId(metadata.imdbId); addTMDbId(metadata.tmdbId?.toString()) }
-        } else { 
-            val episodes = extractEpisodes(document, currentUrl, seasonDataScript, epItems, metadata.poster)
-            return if (type == TvType.Anime || type == TvType.OVA || type == TvType.AnimeMovie) {
-                newAnimeLoadResponse(metadata.title, url, type) { this.posterUrl = tracker?.image ?: metadata.poster; this.backgroundPosterUrl = tracker?.cover ?: metadata.banner; this.posterHeaders = globalHeaders.toMutableMap().apply { put(VAL_REFERER, mainUrl) }; this.plot = metadata.description; this.tags = metadata.tags.ifEmpty { null }
-                    this.year = metadata.year; this.score = Score.from10(metadata.rating); this.recommendations = recommendations; this.showStatus = metadata.status; addEpisodes(DubStatus.Subbed, episodes); addTrailer(metadata.trailer); addMalId(tracker?.malId); addAniListId(tracker?.aniId?.toIntOrNull()) }
-            } else { newTvSeriesLoadResponse(metadata.title, url, type, episodes) { this.posterUrl = tracker?.image ?: metadata.poster; this.backgroundPosterUrl = tracker?.cover ?: metadata.banner; this.posterHeaders = globalHeaders.toMutableMap().apply { put(VAL_REFERER, mainUrl) }; this.plot = metadata.description; this.tags = metadata.tags.ifEmpty { null }
-                    this.year = metadata.year; this.score = Score.from10(metadata.rating); this.recommendations = recommendations; this.showStatus = metadata.status; addTrailer(metadata.trailer); addActors(actors); addMalId(tracker?.malId); addAniListId(tracker?.aniId?.toIntOrNull()); addImdbId(metadata.imdbId); addTMDbId(metadata.tmdbId?.toString()) } }
-        }
-    }
-
-    private fun extractMetadata(document: Document, currentUrl: String): MetadataPackage {
-        val rawTitle = document.selectSafe(LOAD_TITLE)?.text() ?: "Unknown Title"
-        val title = rawTitle.safeCleanBloat(rawTitle, BLOAT_REGEX).safeDeduplicate()
-        val poster = document.selectSafe(LOAD_POSTER)?.safeExtractImage(ATTR_IMAGE) ?: ""
-        val banner = document.selectSafe(LOAD_BANNER)?.safeExtractImage(ATTR_IMAGE)
-        val description = document.selectSafe(LOAD_DESC)?.text()?.trim() ?: ""
-        val infoText = document.selectSafeList(LOAD_INFO_BOX).text()
-        val year = infoText.safeExtractYear() ?: run {
-            val selector = getCached(CONFIG_HOOK_YEAR_SELECTOR, ""); val regexStr = getCached(CONFIG_HOOK_YEAR_EXTRACTOR, "")
-            if (selector.isNotBlank() && regexStr.isNotBlank()) { Regex(regexStr).find(document.select(selector).text())?.groupValues?.get(1)?.toIntOrNull() } else null
-        }
-        val statusText = document.selectSafe(LOAD_STATUS)?.text()
-        return MetadataPackage(
-            title = title, poster = poster, banner = banner, description = description, 
-            year = year, statusText = statusText,
-            tags = document.selectSafeList(LOAD_TAGS).map { it.text() },
-            rating = document.selectSafe(LOAD_RATING)?.text(),
-            status = if (statusText?.contains(ongoingKeyword, true) == true) ShowStatus.Ongoing else ShowStatus.Completed,
-            imdbId = document.selectFirst("a[href*='imdb.com/title/']")?.attrSafe(ATTR_HREF)?.split("/")?.filter { it.startsWith("tt") }?.firstOrNull(),
-            tmdbId = document.selectFirst("a[href*='themoviedb.org/']")?.attrSafe(ATTR_HREF)?.split("/")?.lastOrNull()?.toIntOrNull(),
-            trailer = document.selectSafe(LOAD_TRAILER)?.let { if (it.tagName() == "iframe") it.safeExtractImage(ATTR_IMAGE) else it.attrSafe(ATTR_HREF) }
+    // Modular Components
+    private val mapper by lazy {
+        AnichinMapper(
+            providerId = providerId,
+            mainUrl = mainUrl,
+            moviePathSegment = moviePathSegment,
+            supportedTypes = supportedTypes,
+            dubKeyword = dubKeyword,
+            globalHeaders = globalHeaders,
+            ongoingKeyword = ongoingKeyword,
+            episodeKeyword = episodeKeyword,
+            reverseEpisodes = reverseEpisodes,
+            episodeDataUrlPattern = episodeDataUrlPattern,
+            configCache = configCache
         )
     }
 
-    private fun extractEpisodes(document: Document, currentUrl: String, seasonDataScript: Element?, epItems: org.jsoup.select.Elements, poster: String): List<Episode> {
-        var episodes = mutableListOf<Episode>()
-        if (seasonDataScript != null) { runCatching { val root = JSONObject(seasonDataScript.data()); root.keys().forEach { k -> val arr = root.getJSONArray(k)
-                    for (i in 0 until arr.length()) { val ep = arr.getJSONObject(i); episodes.add(newEpisode(fixUrlSmart(ep.getString("slug"), currentUrl)) { this.season = ep.optInt("s"); this.episode = ep.optInt("episode_no"); this.name = "${episodeKeyword} ${ep.optInt("episode_no")}" }) } } } }
-        if (episodes.isEmpty()) { episodes.addAll(epItems.mapNotNull { ep -> runCatching { val anchor = ep.selectSafe(EPISODE_HREF) ?: ep.selectFirst("a") ?: return@runCatching null
-                val href = episodeDataUrlPattern.replace("{url}", fixUrlSmart(anchor.attr("href"), currentUrl)); val titleEl = ep.selectSafe(EPISODE_TITLE) ?: ep.selectFirst("a")
-                val epNum = titleEl?.text()?.safeExtractEpNum() ?: ep.selectSafe(EPISODE_NUM)?.text()?.safeExtractEpNum() ?: ep.text().safeExtractEpNum(); val rawName = titleEl?.text()?.trim() ?: ""
-                val isJustNumber = rawName.matches(Regex("""^\d+(\.\d+)?$""")); newEpisode(href) { if (!isJustNumber && rawName.isNotBlank()) this.name = rawName; this.episode = epNum; this.description = ep.selectSafe(EPISODE_DESC)?.text()?.trim()
-                    this.runTime = ep.selectSafe(EPISODE_TIME)?.text()?.filter { it.isDigit() }?.toIntOrNull(); this.posterUrl = ep.selectFirst("img")?.safeExtractImage(ATTR_IMAGE) ?: poster } }.getOrNull() }) }
-        return if (reverseEpisodes && seasonDataScript == null) episodes.reversed() else episodes
+    private val scrapper by lazy {
+        AnichinScrapper(
+            providerId = providerId,
+            mainUrl = mainUrl,
+            seriesUrl = seriesUrl,
+            searchUrl = searchUrl,
+            searchPathPattern = searchPathPattern,
+            mainPagePathPattern = mainPagePathPattern,
+            useDocumentLarge = useDocumentLarge,
+            globalHeaders = globalHeaders,
+            isJsonSearch = isJsonSearch,
+            searchJsonRoot = searchJsonRoot,
+            searchJsonTitle = searchJsonTitle,
+            searchJsonHref = searchJsonHref,
+            searchJsonPoster = searchJsonPoster,
+            searchJsonPosterPrefix = searchJsonPosterPrefix,
+            searchJsonType = searchJsonType,
+            searchPageLimit = searchPageLimit,
+            seriesKeyword = seriesKeyword,
+            moviePathSegment = moviePathSegment,
+            supportedTypes = supportedTypes,
+            episodeDataUrlPattern = episodeDataUrlPattern,
+            mapper = mapper,
+            name = name
+        )
     }
 
-    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
-        return runCatching {
-            val document = getHtmlParsed(data)
-            val currentUrl = data
-            val attrValueSelectors = getCachedList(ATTR_VALUE)
-            val allPossibleLinks = mutableSetOf<Pair<String, String?>>()
+    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse =
+        scrapper.getMainPage(page, request)
 
-            // AGGRESSIVE GATHERING V12
-            getCachedList(LINK_OPTIONS).forEach { selector ->
-                document.select(selector).forEach { container ->
-                    val anchors = container.select("a")
-                    if (anchors.isNotEmpty()) anchors.forEach { a -> allPossibleLinks.add(a.attr("href") to a.text()) }
-                    else { val raw = container.attrSafe(attrValueSelectors) ?: container.attr("href") ?: ""; if (raw.isNotBlank()) allPossibleLinks.add(raw to container.text()) }
-                }
-            }
+    override suspend fun search(query: String): List<SearchResponse> =
+        scrapper.search(query)
 
-            getCachedList(DOWNLOAD_ITEMS).forEach { selector ->
-                document.select(selector).forEach { container ->
-                    container.select("a").forEach { a -> val href = a.attr("href"); if (href.isNotBlank()) allPossibleLinks.add(href to a.text()) }
-                }
-            }
+    override suspend fun quickSearch(query: String): List<SearchResponse>? = 
+        scrapper.search(query)
 
-            document.select("iframe").forEach { el ->
-                listOf("src", "data-src", "data-link").forEach { attr -> val s = el.attr(attr); if (s.isNotBlank()) allPossibleLinks.add(s to null) }
-            }
+    override suspend fun load(url: String): LoadResponse =
+        scrapper.load(url)
 
-            coroutineScope {
-                allPossibleLinks.filter { it.first.isNotBlank() }.map { (raw, label) -> async { runCatching {
-                    val decodedRaw = if (!raw.startsWith("http") && !raw.startsWith("//") && !raw.startsWith("/") && raw.safeIsBase64()) {
-                        val dec = raw.safeDecode()
-                        if (dec.contains("iframe")) Jsoup.parse(dec).selectFirst("iframe")?.attr("src") ?: raw
-                        else if (dec.startsWith("http") || dec.startsWith("//") || dec.startsWith("/")) dec else raw
-                    } else raw
+    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean =
+        scrapper.loadLinks(data, isCasting, subtitleCallback, callback)
 
-                    val fixedUrl = fixUrlSmart(decodedRaw, currentUrl).safeHttpsify().unpackPacked()
-                    if (fixedUrl.isBlank()) return@runCatching
-
-                    val okDirect = runCatching { loadExtractorWithFallbackCustom(fixedUrl, currentUrl, subtitleCallback, callback) }.getOrDefault(false)
-                    if (!okDirect) {
-                        val refererMode = getCached(CONFIG_HOOK_REFERER_PLAYER, "current_url")
-                        val refererForPlayer = if (refererMode == "series_url") "$seriesUrl/" else currentUrl
-                        val playerDoc = app.get(fixedUrl, referer = refererForPlayer, headers = globalHeaders).document
-                        val iframeSelectors = getCachedList(CONFIG_HOOK_IFRAME_SELECTORS)
-                        val iframeSrc = iframeSelectors.asSequence().mapNotNull { playerDoc.selectFirst(it)?.attr("src") }.firstOrNull() ?: return@runCatching
-                        val finalIframe = fixUrlSmart(iframeSrc, fixedUrl)
-                        val refererForExtractor = getBaseUrl(fixedUrl)
-                        val okRecursive = runCatching { loadExtractorWithFallbackCustom(finalIframe, refererForExtractor, subtitleCallback, callback) }.getOrDefault(false)
-                        if (!okRecursive && (finalIframe.contains(".mp4") || finalIframe.contains(".m3u8") || finalIframe.contains(".mkv") || finalIframe.contains(".mpd"))) {
-                            MasterLinkGenerator.createSmartLink(label ?: name, finalIframe, refererForExtractor, callback = callback)
-                        }
-                    }
-                }.getOrElse { e -> logDebug(providerId, "Link Processor Error: ${e.message}") } } }.awaitAll()
-            }
-            true
-        }.getOrElse { e -> logError(providerId, "LoadLinks Critical Failure: ${e.message}"); false }
-    }
-
-    // --- HIGH-STABILITY CONFIG ENGINE (V12.1) ---
+    // --- CONFIG BRIDGE ---
 
     private fun getCached(list: List<String>, default: String): String {
-        return configCache.getOrPut(list.hashCode()) { resolveConfig(list, default) }
+        return configCache.getOrPut(list.hashCode()) { resolveConfig(providerId, list, default) }
     }
 
     private fun getCachedList(list: List<String>): List<String> {
-        return configListCache.getOrPut(list.hashCode()) { resolveConfigList(list) }
-    }
-
-    private fun resolveConfig(list: List<String>, default: String): String {
-        for (item in list) { if (item.contains(":::")) { val owners = item.substringBefore(":::").split(","); if (owners.contains(providerId)) { val v = item.substringAfter(":::"); if (v.isBlank()) break; return v } } }
-        for (item in list) { if (item.startsWith("GLOBAL:::")) return item.substringAfter(":::"); if (!item.contains(":::")) return item }
-        return default
-    }
-
-    private fun resolveConfigList(list: List<String>): List<String> {
-        val result = mutableListOf<String>(); for (item in list) { if (item.contains(":::")) { val owners = item.substringBefore(":::").split(","); if (owners.contains(providerId)) { val v = item.substringAfter(":::"); if (v.isNotBlank()) result.add(v) } } }
-        if (result.isNotEmpty()) return result
-        for (item in list) { val v = if (item.contains(":::")) { if (item.startsWith("GLOBAL:::")) item.substringAfter(":::") else continue } else item; if (v.isNotBlank()) result.add(v) }
-        return result
+        return configListCache.getOrPut(list.hashCode()) { resolveConfigList(providerId, list) }
     }
 
     private fun resolveMainPageList(): List<Pair<String, String>> {
         val raw = getCached(CONFIG_MAIN_PAGE_LISTS, "trending/page/|Sedang Tren")
         return raw.split(";").mapNotNull { val parts = it.split("|"); if (parts.size == 2) parts[0] to parts[1] else null }
     }
-
-    private fun Element.selectSafe(selectors: List<String>): Element? {
-        if (selectors.isEmpty()) return null
-        // Pass 1: Provider Specific
-        for (s in selectors) { if (!s.contains(":::")) continue
-            val owners = s.substringBefore(":::"); if (owners.split(",").contains(providerId)) {
-                val sel = s.substringAfter(":::"); if (sel.isNotBlank()) { val el = this.selectFirst(sel); if (el != null) return el }
-            }
-        }
-        // Pass 2: Global Fallback
-        for (s in selectors) {
-            val sel = if (s.startsWith("GLOBAL:::")) s.substringAfter(":::") else if (!s.contains(":::")) s else continue
-            if (sel.isNotBlank()) { val el = this.selectFirst(sel); if (el != null) return el }
-        }
-        return null
-    }
-
-    private fun Element.selectSafeList(selectors: List<String>): org.jsoup.select.Elements {
-        if (selectors.isEmpty()) return org.jsoup.select.Elements()
-        // Pass 1: Provider Specific
-        for (s in selectors) { if (!s.contains(":::")) continue
-            val owners = s.substringBefore(":::"); if (owners.split(",").contains(providerId)) {
-                val sel = s.substringAfter(":::"); if (sel.isNotBlank()) { val els = this.select(sel); if (els.isNotEmpty()) return els }
-            }
-        }
-        // Pass 2: Global Fallback
-        for (s in selectors) {
-            val sel = if (s.startsWith("GLOBAL:::")) s.substringAfter(":::") else if (!s.contains(":::")) s else continue
-            if (sel.isNotBlank()) { val els = this.select(sel); if (els.isNotEmpty()) return els }
-        }
-        return org.jsoup.select.Elements()
-    }
-
-    private fun Element.attrSafe(attributes: List<String>): String? {
-        // Pass 1: Provider Specific
-        for (a in attributes) { if (!a.contains(":::")) continue
-            val owners = a.substringBefore(":::"); if (owners.split(",").contains(providerId)) {
-                val attrN = a.substringAfter(":::"); val v = this.attr(attrN); if (v.isNotBlank()) return v
-            }
-        }
-        // Pass 2: Global Fallback
-        for (a in attributes) {
-            val attrN = if (a.startsWith("GLOBAL:::")) a.substringAfter(":::") else if (!a.contains(":::")) a else continue
-            val v = this.attr(attrN); if (v.isNotBlank()) return v
-        }
-        return null
-    }
-
-    // Helper Data Class for Pipeline
-    data class MetadataPackage(
-        val title: String, val poster: String, val banner: String?, val description: String,
-        val year: Int?, val statusText: String?, val tags: List<String>, val rating: String?,
-        val status: ShowStatus, val imdbId: String?, val tmdbId: Int?, val trailer: String?
-    )
 }

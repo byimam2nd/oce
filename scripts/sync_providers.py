@@ -17,7 +17,10 @@ FILES_TO_SYNC = {
     "ProviderEkstraktors.kt": "{name}Ekstraktors.kt",
     "ProviderPlugin.kt": "{name}Plugin.kt",
     "ProviderUtils.kt": "{name}Utils.kt",
-    "ProviderConstants.kt": "{name}Constants.kt"
+    "ProviderConstants.kt": "{name}Constants.kt",
+    "ProviderScrapper.kt": "{name}Scrapper.kt",
+    "ProviderMapper.kt": "{name}Mapper.kt",
+    "ProviderModels.kt": "{name}Models.kt"
 }
 
 class Colors:
@@ -56,6 +59,9 @@ def sync_provider(name):
         "ProviderConstants": f"{name}Constants",
         "ProviderEkstraktors": f"{name}Ekstraktors",
         "ProviderUtils": f"{name}Utils",
+        "ProviderScrapper": f"{name}Scrapper",
+        "ProviderMapper": f"{name}Mapper",
+        "ProviderModels": f"{name}Models",
         "basehtmlprovider": name
     }
 
