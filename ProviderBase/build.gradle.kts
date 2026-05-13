@@ -18,7 +18,7 @@ android {
 }
 
 dependencies {
-    compileOnly("com.lagradost:cloudstream3:pre-release")
+    implementation("com.lagradost:cloudstream3:pre-release")
     implementation(kotlin("stdlib"))
     implementation("com.github.Blatzar:NiceHttp:0.4.16")
     implementation("org.jsoup:jsoup:1.22.1")
