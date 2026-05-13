@@ -32,7 +32,7 @@ object DonghuastreamConstants {
         "LayarKaca21:::https://tv10.lk21official.cc",
         "IndoDrama21:::http://89.124.116.48",
         "Pencurimovie:::https://ww73.pencurimovie.bond",
-        "Samehadaku:::https://v1.samehadaku.how",
+        "Samehadaku:::https://samehadaku.care",
         "GLOBAL:::https://example.com"
     )
 
