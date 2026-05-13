@@ -201,11 +201,28 @@ fun Element.extractImageAttr(): String {
     return this.safeExtractImage(listOf("data-src", "src", "data-original", "data-lazy-src"))
 }
 
-fun logDebug(tag: String, message: String) = Log.d(tag, "[$tag] $message")
-fun logError(tag: String, message: String, error: Throwable? = null) {
-    Log.e(tag, "[$tag] ERROR: $message")
-    error?.let { Log.e(tag, "[$tag] CAUSE: ${it.message}") }
+// --- CENTRALIZED LOGGING SYSTEM ---
+
+object ProviderLog {
+    private const val GLOBAL_PREFIX = "OCE"
+
+    fun d(tag: String, message: String) {
+        Log.d(GLOBAL_PREFIX, "[$tag] DEBUG: $message")
+    }
+
+    fun e(tag: String, message: String, error: Throwable? = null) {
+        Log.e(GLOBAL_PREFIX, "[$tag] CRITICAL_ERROR: $message")
+        error?.let { 
+            Log.e(GLOBAL_PREFIX, "[$tag] CAUSE: ${it.message}")
+            it.stackTrace.take(3).forEach { trace -> 
+                Log.e(GLOBAL_PREFIX, "[$tag] AT: $trace")
+            }
+        }
+    }
 }
+
+fun logDebug(tag: String, message: String) = ProviderLog.d(tag, message)
+fun logError(tag: String, message: String, error: Throwable? = null) = ProviderLog.e(tag, message, error)
 
 // --- HIGH-STABILITY CONFIG ENGINE ---
 

@@ -8,7 +8,7 @@ HTML_PROVIDERS = [
     "LayarKaca21", "IndoDrama21", "Pencurimovie", "Samehadaku"
 ]
 
-TEMPLATE_DIR = "BaseHtmlProvider"
+TEMPLATE_DIR = "BaseProvider"
 SRC_DIR = TEMPLATE_DIR
 
 # Full overwrite sync for all core logic and constants
