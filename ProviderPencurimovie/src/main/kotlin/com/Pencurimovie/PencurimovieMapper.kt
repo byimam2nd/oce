@@ -52,15 +52,15 @@ class PencurimovieMapper(
     fun toSearchResult(element: Element, baseUrl: String? = null): SearchResponse? {
         return runCatching {
             val base = baseUrl ?: mainUrl
-            val titleEl = element.selectSafe(providerId, listOf(SEARCH_TITLE)) ?: element.parent()?.selectSafe(providerId, listOf(SEARCH_TITLE)) ?: element.selectFirst("h2, h3")
-            val rawTitle = titleEl?.text()?.trim() ?: titleEl?.attrSafe(providerId, listOf(ATTR_IMAGE)) ?: titleEl?.attr("title") ?: return null
+            val titleEl = element.selectSafe(providerId, SEARCH_TITLE) ?: element.parent()?.selectSafe(providerId, SEARCH_TITLE) ?: element.selectFirst("h2, h3")
+            val rawTitle = titleEl?.text()?.trim() ?: titleEl?.attrSafe(providerId, ATTR_IMAGE) ?: titleEl?.attr("title") ?: return null
             val title = rawTitle.safeCleanBloat(rawTitle, BLOAT_REGEX)
-            val hrefEl = element.selectSafe(providerId, listOf(SEARCH_HREF)) ?: element.selectFirst("a") ?: element.parent()?.selectFirst("a")
+            val hrefEl = element.selectSafe(providerId, SEARCH_HREF) ?: element.selectFirst("a") ?: element.parent()?.selectFirst("a")
             var href = fixUrlSmart(hrefEl?.attr("href"), base)
             val cleanRegex = resolveConfig(providerId, PencurimovieConstants.CONFIG_HREF_CLEAN_REGEXPS, "")
             val cleanReplace = resolveConfig(providerId, PencurimovieConstants.CONFIG_HREF_CLEAN_REPLACES, "")
             if (cleanRegex.isNotBlank() && cleanReplace.isNotBlank()) { href = href.replace(Regex(cleanRegex), cleanReplace) }
-            val poster = element.selectSafe(providerId, listOf(SEARCH_POSTER))?.safeExtractImage(listOf(ATTR_IMAGE)); val rating = element.selectSafe(providerId, listOf(SEARCH_RATING))?.text(); val eps = element.selectSafe(providerId, listOf(SEARCH_EP_TEXT))?.text()?.safeExtractEpNum()
+            val poster = element.selectSafe(providerId, SEARCH_POSTER)?.safeExtractImage(ATTR_IMAGE); val rating = element.selectSafe(providerId, SEARCH_RATING)?.text(); val eps = element.selectSafe(providerId, SEARCH_EP_TEXT)?.text()?.safeExtractEpNum()
             val isMovie = (moviePathSegment.isNotBlank() && href.contains(moviePathSegment)) || href.contains("movie", true)
             val type = if (isMovie) TvType.Movie else if (supportedTypes.contains(TvType.Anime)) TvType.Anime else TvType.TvSeries
             api.newAnimeSearchResponse(title, href, type) { 
@@ -73,27 +73,27 @@ class PencurimovieMapper(
     }
 
     fun extractMetadata(document: Document, currentUrl: String): MetadataPackage {
-        val rawTitle = document.selectSafe(providerId, listOf(LOAD_TITLE))?.text() ?: "Unknown Title"
+        val rawTitle = document.selectSafe(providerId, LOAD_TITLE)?.text() ?: "Unknown Title"
         val title = rawTitle.safeCleanBloat(rawTitle, BLOAT_REGEX).safeDeduplicate()
-        val poster = document.selectSafe(providerId, listOf(LOAD_POSTER))?.safeExtractImage(listOf(ATTR_IMAGE)) ?: ""
-        val banner = document.selectSafe(providerId, listOf(LOAD_BANNER))?.safeExtractImage(listOf(ATTR_IMAGE))
-        val description = document.selectSafe(providerId, listOf(LOAD_DESC))?.text()?.trim() ?: ""
-        val infoText = document.selectSafeList(providerId, listOf(LOAD_INFO_BOX)).text()
+        val poster = document.selectSafe(providerId, LOAD_POSTER)?.safeExtractImage(ATTR_IMAGE) ?: ""
+        val banner = document.selectSafe(providerId, LOAD_BANNER)?.safeExtractImage(ATTR_IMAGE)
+        val description = document.selectSafe(providerId, LOAD_DESC)?.text()?.trim() ?: ""
+        val infoText = document.selectSafeList(providerId, LOAD_INFO_BOX).text()
         val year = infoText.safeExtractYear() ?: run {
             val selector = resolveConfig(providerId, CONFIG_HOOK_YEAR_SELECTOR, "")
             val regexStr = resolveConfig(providerId, CONFIG_HOOK_YEAR_EXTRACTOR, "")
             if (selector.isNotBlank() && regexStr.isNotBlank()) { Regex(regexStr).find(document.select(selector).text())?.groupValues?.get(1)?.toIntOrNull() } else null
         }
-        val statusText = document.selectSafe(providerId, listOf(LOAD_STATUS))?.text()
+        val statusText = document.selectSafe(providerId, LOAD_STATUS)?.text()
         return MetadataPackage(
             title = title, poster = poster, banner = banner, description = description, 
             year = year, statusText = statusText,
-            tags = document.selectSafeList(providerId, listOf(LOAD_TAGS)).map { it.text() },
-            rating = document.selectSafe(providerId, listOf(LOAD_RATING))?.text(),
+            tags = document.selectSafeList(providerId, LOAD_TAGS).map { it.text() },
+            rating = document.selectSafe(providerId, LOAD_RATING)?.text(),
             status = if (statusText?.contains(ongoingKeyword, true) == true) ShowStatus.Ongoing else ShowStatus.Completed,
-            imdbId = document.selectFirst("a[href*='imdb.com/title/']")?.attrSafe(providerId, listOf(ATTR_HREF))?.split("/")?.filter { it.startsWith("tt") }?.firstOrNull(),
-            tmdbId = document.selectFirst("a[href*='themoviedb.org/']")?.attrSafe(providerId, listOf(ATTR_HREF))?.split("/")?.lastOrNull()?.toIntOrNull(),
-            trailer = document.selectSafe(providerId, listOf(LOAD_TRAILER))?.let { if (it.tagName() == "iframe") it.safeExtractImage(listOf(ATTR_IMAGE)) else it.attrSafe(providerId, listOf(ATTR_HREF)) }
+            imdbId = document.selectFirst("a[href*='imdb.com/title/']")?.attrSafe(providerId, ATTR_HREF)?.split("/")?.filter { it.startsWith("tt") }?.firstOrNull(),
+            tmdbId = document.selectFirst("a[href*='themoviedb.org/']")?.attrSafe(providerId, ATTR_HREF)?.split("/")?.lastOrNull()?.toIntOrNull(),
+            trailer = document.selectSafe(providerId, LOAD_TRAILER)?.let { if (it.tagName() == "iframe") it.safeExtractImage(ATTR_IMAGE) else it.attrSafe(providerId, ATTR_HREF) }
         )
     }
 
@@ -101,11 +101,11 @@ class PencurimovieMapper(
         var episodes = mutableListOf<Episode>()
         if (seasonDataScript != null) { runCatching { val root = JSONObject(seasonDataScript.data()); root.keys().forEach { k -> val arr = root.getJSONArray(k)
                     for (i in 0 until arr.length()) { val ep = arr.getJSONObject(i); episodes.add(api.newEpisode(fixUrlSmart(ep.getString("slug"), currentUrl)) { this.season = ep.optInt("s"); this.episode = ep.optInt("episode_no"); this.name = "${episodeKeyword} ${ep.optInt("episode_no")}" }) } } } }
-        if (episodes.isEmpty()) { episodes.addAll(epItems.mapNotNull { ep -> runCatching { val anchor = ep.selectSafe(providerId, listOf(EPISODE_HREF)) ?: ep.selectFirst("a") ?: return@runCatching null
-                val href = episodeDataUrlPattern.replace("{url}", fixUrlSmart(anchor.attr("href"), currentUrl)); val titleEl = ep.selectSafe(providerId, listOf(EPISODE_TITLE)) ?: ep.selectFirst("a")
-                val epNum = titleEl?.text()?.safeExtractEpNum() ?: ep.selectSafe(providerId, listOf(EPISODE_NUM))?.text()?.safeExtractEpNum() ?: ep.text().safeExtractEpNum(); val rawName = titleEl?.text()?.trim() ?: ""
-                val isJustNumber = rawName.matches(Regex("""^\d+(\.\d+)?$""")); api.newEpisode(href) { if (!isJustNumber && rawName.isNotBlank()) this.name = rawName; this.episode = epNum; this.description = ep.selectSafe(providerId, listOf(EPISODE_DESC))?.text()?.trim()
-                    this.runTime = ep.selectSafe(providerId, listOf(EPISODE_TIME))?.text()?.filter { it.isDigit() }?.toIntOrNull(); this.posterUrl = ep.selectFirst("img")?.safeExtractImage(listOf(ATTR_IMAGE)) ?: poster } }.getOrNull() }) }
+        if (episodes.isEmpty()) { episodes.addAll(epItems.mapNotNull { ep -> runCatching { val anchor = ep.selectSafe(providerId, EPISODE_HREF) ?: ep.selectFirst("a") ?: return@runCatching null
+                val href = episodeDataUrlPattern.replace("{url}", fixUrlSmart(anchor.attr("href"), currentUrl)); val titleEl = ep.selectSafe(providerId, EPISODE_TITLE) ?: ep.selectFirst("a")
+                val epNum = titleEl?.text()?.safeExtractEpNum() ?: ep.selectSafe(providerId, EPISODE_NUM)?.text()?.safeExtractEpNum() ?: ep.text().safeExtractEpNum(); val rawName = titleEl?.text()?.trim() ?: ""
+                val isJustNumber = rawName.matches(Regex("""^\d+(\.\d+)?$""")); api.newEpisode(href) { if (!isJustNumber && rawName.isNotBlank()) this.name = rawName; this.episode = epNum; this.description = ep.selectSafe(providerId, EPISODE_DESC)?.text()?.trim()
+                    this.runTime = ep.selectSafe(providerId, EPISODE_TIME)?.text()?.filter { it.isDigit() }?.toIntOrNull(); this.posterUrl = ep.selectFirst("img")?.safeExtractImage(ATTR_IMAGE) ?: poster } }.getOrNull() }) }
         return if (reverseEpisodes && seasonDataScript == null) episodes.reversed() else episodes
     }
 }
