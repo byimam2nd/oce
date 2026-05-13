@@ -290,7 +290,23 @@ object SamehadakuConstants {
     val ACTOR_NAME = listOf("LayarKaca21,IndoDrama21:::span[itemprop=name], .cast-name, h3", "GLOBAL:::.name")
 
     // ========================================================================
-    // --- [5] SPECIAL CONSTANTS & STRINGS (UI & LOGIC) ---
+    // --- [5] STRUCTURAL SELECTORS (HARDCODE CLEANUP) ---
+    // ========================================================================
+
+    val SELECTOR_WATCH_BUTTONS = listOf("GLOBAL:::.play-button, .watch-now, .btn-watch")
+    val SELECTOR_SEASON_CONTAINER = listOf("GLOBAL:::.tvseason, #season-data")
+    val SELECTOR_IMDB_EXTERNAL = listOf("GLOBAL:::a[href*='imdb.com/title/']")
+    val SELECTOR_TMDB_EXTERNAL = listOf("GLOBAL:::a[href*='themoviedb.org/']")
+    val SELECTOR_IFRAME_TAG = listOf("GLOBAL:::iframe")
+    
+    val ATTR_IFRAME_SOURCES = listOf("GLOBAL:::src, data-src, data-link")
+    
+    val STR_COMING_SOON = listOf("GLOBAL:::Coming Soon")
+    val STR_REFERER_MODE_SERIES = "series_url"
+    val STR_REFERER_MODE_CURRENT = "current_url"
+
+    // ========================================================================
+    // --- [6] SPECIAL CONSTANTS & STRINGS (UI & LOGIC) ---
     // ========================================================================
 
     val FOLLOW_LINK_SELECTOR = listOf("LayarKaca21,IndoDrama21:::a#openNow, div.links a", "GLOBAL:::")

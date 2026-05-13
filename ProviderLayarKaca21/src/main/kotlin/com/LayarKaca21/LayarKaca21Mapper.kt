@@ -91,8 +91,8 @@ class LayarKaca21Mapper(
             tags = document.selectSafeList(providerId, LOAD_TAGS).map { it.text() },
             rating = document.selectSafe(providerId, LOAD_RATING)?.text(),
             status = if (statusText?.contains(ongoingKeyword, true) == true) ShowStatus.Ongoing else ShowStatus.Completed,
-            imdbId = document.selectFirst("a[href*='imdb.com/title/']")?.attrSafe(providerId, ATTR_HREF)?.split("/")?.filter { it.startsWith("tt") }?.firstOrNull(),
-            tmdbId = document.selectFirst("a[href*='themoviedb.org/']")?.attrSafe(providerId, ATTR_HREF)?.split("/")?.lastOrNull()?.toIntOrNull(),
+            imdbId = document.selectSafe(providerId, LayarKaca21Constants.SELECTOR_IMDB_EXTERNAL)?.attrSafe(providerId, ATTR_HREF)?.split("/")?.filter { it.startsWith("tt") }?.firstOrNull(),
+            tmdbId = document.selectSafe(providerId, LayarKaca21Constants.SELECTOR_TMDB_EXTERNAL)?.attrSafe(providerId, ATTR_HREF)?.split("/")?.lastOrNull()?.toIntOrNull(),
             trailer = document.selectSafe(providerId, LOAD_TRAILER)?.let { if (it.tagName() == "iframe") it.safeExtractImage(ATTR_IMAGE) else it.attrSafe(providerId, ATTR_HREF) }
         )
     }

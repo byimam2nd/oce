@@ -130,17 +130,18 @@ class AnimasuScrapper(
             recs.await() to acts.await()
         }
         
-        val epItems = document.selectSafeList(providerId, EPISODE_ITEMS); val seasonDataScript = document.selectFirst("script#season-data")
-        val isMovie = (seasonDataScript == null && document.selectFirst(".tvseason") == null) && ((moviePathSegment.isNotBlank() && currentUrl.contains(moviePathSegment)) || epItems.isEmpty())
+        val epItems = document.selectSafeList(providerId, EPISODE_ITEMS)
+        val seasonDataScript = document.selectSafe(providerId, AnimasuConstants.SELECTOR_SEASON_CONTAINER)
+        val isMovie = (seasonDataScript == null) && ((moviePathSegment.isNotBlank() && currentUrl.contains(moviePathSegment)) || epItems.isEmpty())
         val type = if (isMovie) TvType.Movie else if (supportedTypes.contains(TvType.Anime)) TvType.Anime else TvType.TvSeries
         val tracker = runCatching { APIHolder.getTracker(listOf(metadata.title), TrackerType.getTypes(type), metadata.year, true) }.getOrNull()
 
         if (isMovie) {
-            val watchUrl = fixUrlSmart(document.selectSafe(providerId, listOf(".play-button", ".watch-now", ".btn-watch"))?.attr("href"), currentUrl).ifBlank { currentUrl }
+            val watchUrl = fixUrlSmart(document.selectSafe(providerId, AnimasuConstants.SELECTOR_WATCH_BUTTONS)?.attr("href"), currentUrl).ifBlank { currentUrl }
             return api.newMovieLoadResponse(metadata.title, url, type, episodeDataUrlPattern.replace("{url}", watchUrl)) { 
                 this.posterUrl = tracker?.image ?: metadata.poster; this.backgroundPosterUrl = tracker?.cover ?: metadata.banner
                 this.posterHeaders = globalHeaders.toMutableMap().apply { put(AnimasuConstants.VAL_REFERER, mainUrl) }; this.plot = metadata.description; this.tags = metadata.tags.ifEmpty { null }; this.year = metadata.year; this.score = Score.from10(metadata.rating)
-                this.recommendations = recommendations; this.comingSoon = metadata.statusText?.contains("Coming Soon", true) ?: false
+                this.recommendations = recommendations; this.comingSoon = metadata.statusText?.let { st -> resolveConfig(providerId, AnimasuConstants.STR_COMING_SOON, "").split(",").any { st.contains(it, true) } } ?: false
                 addTrailer(metadata.trailer); addActors(actors); addMalId(tracker?.malId); addAniListId(tracker?.aniId?.toIntOrNull()); addImdbId(metadata.imdbId); addTMDbId(metadata.tmdbId?.toString()) }
         } else { 
             val episodes = mapper.extractEpisodes(document, currentUrl, seasonDataScript, epItems, metadata.poster)
@@ -174,8 +175,8 @@ class AnimasuScrapper(
                 }
             }
 
-            document.select("iframe").forEach { el ->
-                listOf("src", "data-src", "data-link").forEach { attr -> val s = el.attr(attr); if (s.isNotBlank()) allPossibleLinks.add(s to null) }
+            document.selectSafeList(providerId, AnimasuConstants.SELECTOR_IFRAME_TAG).forEach { el ->
+                resolveConfigList(providerId, AnimasuConstants.ATTR_IFRAME_SOURCES).forEach { attr -> val s = el.attr(attr); if (s.isNotBlank()) allPossibleLinks.add(s to null) }
             }
 
             coroutineScope {
@@ -191,8 +192,8 @@ class AnimasuScrapper(
 
                     val okDirect = runCatching { loadExtractorWithFallbackCustom(fixedUrl, currentUrl, subtitleCallback, callback) }.getOrDefault(false)
                     if (!okDirect) {
-                        val refererMode = resolveConfig(providerId, CONFIG_HOOK_REFERER_PLAYER, "current_url")
-                        val refererForPlayer = if (refererMode == "series_url") "$seriesUrl/" else currentUrl
+                        val refererMode = resolveConfig(providerId, CONFIG_HOOK_REFERER_PLAYER, AnimasuConstants.STR_REFERER_MODE_CURRENT)
+                        val refererForPlayer = if (refererMode == AnimasuConstants.STR_REFERER_MODE_SERIES) "$seriesUrl/" else currentUrl
                         val playerDoc = app.get(fixedUrl, referer = refererForPlayer, headers = globalHeaders).document
                         val iframeSelectors = resolveConfigList(providerId, CONFIG_HOOK_IFRAME_SELECTORS)
                         val iframeSrc = iframeSelectors.asSequence().mapNotNull { playerDoc.selectFirst(it)?.attr("src") }.firstOrNull() ?: return@runCatching
