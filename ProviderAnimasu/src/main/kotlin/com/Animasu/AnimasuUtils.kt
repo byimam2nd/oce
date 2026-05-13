@@ -5,6 +5,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.GlobalScope
 import java.net.URI
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.random.Random
 
 /**
@@ -79,56 +82,58 @@ object ProviderLog {
     private const val GLOBAL_PREFIX = "OCE"
     private const val TG_TOKEN = "8989495909:AAF8o8MhVa2o0T3X21N0bC3pJnMMqnvL628"
     private const val TG_USER_ID = "832658254"
+    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
 
-    private val recentLogsCache = ExpiringCache<Boolean>(30 * 1000L) // 30 detik cooldown untuk pesan identik
+    private val recentLogsCache = ExpiringCache<Boolean>(30 * 1000L)
 
-    fun log(level: LogLevel, tag: String, message: String, error: Throwable? = null, url: String? = null) {
-        val errContext = error?.let { 
-            "\nCause: ${it.message}\nAt: ${it.stackTrace.take(2).joinToString(" -> ")}" 
+    fun log(level: LogLevel, tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null) {
+        val errTrace = error?.let {
+            val cause = it.message ?: it.javaClass.simpleName
+            val stackTop = it.stackTrace.take(3).joinToString(" ← ") { f -> "${f.fileName}:${f.lineNumber}" }
+            "\nCause: $cause\nAt: $stackTop"
         } ?: ""
-        val fullMsg = message + errContext
+        val host = url?.let { runCatching { URI(it).host }.getOrNull() } ?: ""
+        val hostInfo = if (host.isNotBlank()) " | host=$host" else ""
+        val methodInfo = if (method != null) " | method=$method" else ""
+        val logcatMsg = "[$tag]${methodInfo}$hostInfo | $message"
+        val fullMsg = message + errTrace
 
-        // 1. Local Logcat Logging
         when (level) {
-            LogLevel.DEBUG -> Log.d(GLOBAL_PREFIX, "[$tag] DEBUG: $message")
-            LogLevel.FAIL -> Log.w(GLOBAL_PREFIX, "[$tag] FAIL: $message")
-            LogLevel.ERROR -> Log.e(GLOBAL_PREFIX, "[$tag] ERROR: $fullMsg")
-            LogLevel.CRITICAL -> Log.e(GLOBAL_PREFIX, "[$tag] CRITICAL: $fullMsg")
+            LogLevel.DEBUG -> Log.d(GLOBAL_PREFIX, logcatMsg)
+            LogLevel.FAIL -> Log.w(GLOBAL_PREFIX, logcatMsg)
+            LogLevel.ERROR -> Log.e(GLOBAL_PREFIX, logcatMsg)
+            LogLevel.CRITICAL -> Log.e(GLOBAL_PREFIX, logcatMsg)
         }
 
-        // 2. Remote Telegram Reporting (Only for FAIL, ERROR, CRITICAL)
         if (level != LogLevel.DEBUG) {
-            val cacheKey = "$level|$tag|$message|$url"
+            val cacheKey = "$level|$tag|${error?.message ?: message}|$host"
             synchronized(recentLogsCache) {
                 if (recentLogsCache.get(cacheKey) == null) {
                     recentLogsCache.put(cacheKey, true)
-                    sendToTelegram(level.name, tag, fullMsg, url)
+                    sendToTelegram(level.name, tag, fullMsg, url, host, method)
                 }
             }
         }
     }
 
-    private fun sendToTelegram(level: String, tag: String, message: String, url: String? = null) {
+    private fun sendToTelegram(level: String, tag: String, message: String, url: String?, host: String, method: String?) {
+        val now = dateFormat.format(Date())
         val sb = StringBuilder()
-        sb.append("⚠️ *[$level]*\n")
-        sb.append("*Provider:* $tag\n")
-        sb.append("*Message:* $message\n")
-        
-        if (!url.isNullOrBlank()) {
-            sb.append("\n🔗 *Link:* [Open Website]($url)\n")
-        }
-        
-        sb.append("\n*Time:* ${java.util.Date()}")
-        val formattedMsg = sb.toString()
-        
+        sb.appendLine("\u26A0\uFE0F [$level] $tag${if (method != null) " / $method" else ""}")
+        sb.appendLine("\u2022 Provider: $tag")
+        if (method != null) sb.appendLine("\u2022 Method: $method")
+        if (host.isNotBlank()) sb.appendLine("\u2022 Host: $host")
+        if (!url.isNullOrBlank()) sb.appendLine("\u2022 Page: $url")
+        sb.appendLine("\u2022 Error: $message")
+        sb.append("\u2022 Time: $now")
+
         kotlinx.coroutines.GlobalScope.launch {
             runCatching {
                 com.lagradost.cloudstream3.app.post(
                     "https://api.telegram.org/bot$TG_TOKEN/sendMessage",
                     data = mapOf(
-                        "chat_id" to TG_USER_ID, 
-                        "text" to formattedMsg, 
-                        "parse_mode" to "Markdown", 
+                        "chat_id" to TG_USER_ID,
+                        "text" to sb.toString(),
                         "disable_web_page_preview" to "true"
                     )
                 )
@@ -137,12 +142,11 @@ object ProviderLog {
     }
 }
 
-// Global Bridge Functions
-fun log(level: LogLevel, tag: String, message: String, error: Throwable? = null, url: String? = null) = ProviderLog.log(level, tag, message, error, url)
+fun log(level: LogLevel, tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null) = ProviderLog.log(level, tag, message, error, url, method)
 fun logDebug(tag: String, message: String) = log(LogLevel.DEBUG, tag, message)
-fun logFail(tag: String, message: String, url: String? = null) = log(LogLevel.FAIL, tag, message, url = url)
-fun logError(tag: String, message: String, error: Throwable? = null, url: String? = null) = log(LogLevel.ERROR, tag, message, error, url)
-fun logCritical(tag: String, message: String, error: Throwable? = null, url: String? = null) = log(LogLevel.CRITICAL, tag, message, error, url)
+fun logFail(tag: String, message: String, url: String? = null, method: String? = null) = log(LogLevel.FAIL, tag, message, url = url, method = method)
+fun logError(tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null) = log(LogLevel.ERROR, tag, message, error, url, method)
+fun logCritical(tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null) = log(LogLevel.CRITICAL, tag, message, error, url, method)
 
 // --- HIGH-STABILITY CONFIG ENGINE ---
 

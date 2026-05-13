@@ -86,7 +86,7 @@ class PencurimovieMapper(
             val missing = mutableListOf<String>()
             if (title == "Unknown Title") missing.add("Title")
             if (poster.isBlank()) missing.add("Poster")
-            logFail(providerId, "Metadata Integrity Failure: Missing ${missing.joinToString(" & ")}", url = currentUrl)
+            logFail(providerId, "Metadata Integrity Failure: Missing ${missing.joinToString(" & ")}", url = currentUrl, method = "extractMetadata")
         }
 
         val banner = document.selectFirstSafe(providerId, LOAD_BANNER, "LOAD_BANNER")?.safeExtractImage(ATTR_IMAGE)

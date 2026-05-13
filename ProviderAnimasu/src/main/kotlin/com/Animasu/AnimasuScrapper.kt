@@ -81,7 +81,7 @@ class AnimasuScrapper(
             val home = document.selectSafe(providerId, SEARCH_ITEMS, "SEARCH_ITEMS").mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() }
             newHomePageResponse(list = HomePageList(name = request.name, list = home, isHorizontalImages = isHorizontal), hasNext = home.isNotEmpty())
         }.getOrElse { e -> 
-            logFail(providerId, "MainPage Fetch Failure on ${request.name}: ${e.message}", url = url)
+            logFail(providerId, "MainPage Fetch Failure on ${request.name}: ${e.message}", url = url, method = "getMainPage")
             newHomePageResponse(request.name, emptyList(), false) 
         }
     }
@@ -105,7 +105,7 @@ class AnimasuScrapper(
                 }
                 results
             }.getOrElse { e -> 
-                logFail(providerId, "JSON Search Execution Failed for '$query': ${e.message}", url = url)
+                logFail(providerId, "JSON Search Execution Failed for '$query': ${e.message}", url = url, method = "search")
                 emptyList() 
             }
         }
@@ -211,7 +211,7 @@ class AnimasuScrapper(
             }
 
             if (allPossibleLinks.isEmpty()) {
-                logFail(providerId, "No media links or iframes found for: $data", url = data)
+                logFail(providerId, "No media links or iframes found for: $data", url = data, method = "loadLinks")
             }
 
             coroutineScope {
@@ -263,7 +263,7 @@ class AnimasuScrapper(
                 }.getOrElse { e -> logDebug(providerId, "Link Processor Error on $raw: ${e.message}") } } }.awaitAll()
             }
             true
-        }.getOrElse { e -> logCritical(providerId, "LoadLinks Critical Failure on data: $data", e, url = data); false }
+        }.getOrElse { e -> logCritical(providerId, "LoadLinks Critical Failure on data: $data", e, url = data, method = "loadLinks"); false }
     }
 
     private suspend fun getHtmlParsed(url: String, referer: String? = null, skipCache: Boolean = false): Document {
