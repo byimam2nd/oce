@@ -190,33 +190,6 @@ subprojects {
             }
         }
     }
-    }
-
-    // ============================================
-    // DETEKT CONFIGURATION
-    // ============================================
-    configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {
-        buildUponDefaultConfig = true
-        allRules = false
-        autoCorrect = true
-        config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
-        baseline = file("$rootDir/config/detekt/baseline.yml")
-
-        parallel = true
-        debug = false
-
-        source = objects.fileCollection().from(
-            "src/main/java",
-            "src/main/kotlin"
-        )
-
-        reports {
-            html.required.set(true)
-            xml.required.set(true)
-            txt.required.set(true)
-            sarif.required.set(false)
-        }
-    }
 }
 
 tasks.register<Delete>("clean") {
