@@ -13,7 +13,7 @@
 [![Maintained](https://img.shields.io/badge/Status-Active-00b894?style=for-the-badge)](https://github.com/byimam2nd/oce/graphs/commit-activity)
 
 <p align="center">
-  <b>OCE adalah jembatan digital yang menghubungkan Anda dengan hiburan tanpa batas melalui ekosistem yang stabil, cerdas, dan transparan.</b>
+  <b>OCE adalah jembatan digital yang menghubungkan Anda dengan hiburan tanpa batas melalui ekosistem yang stabil, modular, dan transparan.</b>
   <br><br>
   <a href="#-filosofi-kami">Filosofi</a> •
   <a href="#-fitur-utama">Fitur Utama</a> •
@@ -32,7 +32,7 @@ Dunia hiburan digital berkembang begitu cepat, namun stabilitas seringkali terab
 
 Kami percaya bahwa akses terhadap informasi dan hiburan haruslah:
 1.  **Resilien:** Tetap teguh meskipun struktur sumber berubah.
-2.  **Transparan:** Membangun di atas pondasi open-source yang jujur.
+2.  **Modular:** Logika yang terisolasi untuk skalabilitas tanpa batas.
 3.  **Humanis:** Dirancang untuk kemudahan manusia, bukan sekadar mesin.
 
 ---
@@ -44,14 +44,14 @@ Mengapa OCE menjadi pilihan utama bagi ribuan pengguna CloudStream?
 ### **🚀 Performa Tanpa Kompromi**
 Setiap baris kode dioptimalkan untuk mengurangi latensi. Kami meminimalkan request yang tidak perlu untuk memastikan pemuatan data secepat kilat.
 
+### **🧩 Arsitektur Modular (Clean Code)**
+Logika scraping, transformasi data, dan adapter Cloudstream dipisahkan secara ketat. Ini memudahkan pengembangan fitur baru tanpa risiko regresi pada modul lain.
+
 ### **🛡️ Sistem Audit "Nuclear"**
-Keamanan dan stabilitas adalah prioritas. Sistem kami melakukan audit otomatis harian untuk mendeteksi perubahan sekecil apa pun pada website sumber. Kami memperbaiki masalah bahkan sebelum Anda menyadarinya.
+Sistem kami melakukan audit otomatis harian untuk mendeteksi perubahan sekecil apa pun pada website sumber. Kami memperbaiki masalah bahkan sebelum Anda menyadarinya.
 
 ### **🇮🇩 Fokus pada Kedekatan**
 Kami memahami komunitas Indonesia. Itulah mengapa kami mengkurasi sumber-sumber terbaik dengan dukungan bahasa lokal yang kaya dan akurat.
-
-### **💎 Arsitektur Berbasis Blueprint**
-Menggunakan sistem sinkronisasi terpusat, setiap peningkatan fitur pada satu ekstensi akan secara otomatis diterapkan ke seluruh ekosistem OCE. Konsistensi adalah kunci kualitas kami.
 
 ---
 
@@ -66,13 +66,11 @@ Sangat disarankan untuk mendapatkan rilis stabil terbaru secara otomatis.
     ```text
     https://github.com/byimam2nd/oce/raw/master/repo.json
     ```
-    *(Tautan ini akan selalu mengarahkan Anda ke rilis stabil terbaru kami)*
 
 2.  **Salin Tautan Pengujian (Beta/Testing):**
     ```text
     https://github.com/byimam2nd/oce/raw/master/repo-beta.json
     ```
-    *(Gunakan ini jika Anda ingin mencoba fitur terbaru sebelum rilis resmi)*
 
 3.  Buka **CloudStream** ➡️ **Settings** ➡️ **Extensions**.
 4.  Pilih **Add Repository**, beri nama `OCE`, dan tempelkan salah satu tautan di atas.
@@ -81,13 +79,15 @@ Sangat disarankan untuk mendapatkan rilis stabil terbaru secara otomatis.
 
 ## ⚙️ Ekosistem Teknis & Otomatisasi
 
-Dibalik tampilan yang sederhana, OCE ditenagai oleh mesin yang sangat terorganisir. Kami memisahkan logika utama (Blueprint) dari implementasi akhir untuk efisiensi maksimal.
+Dibalik tampilan yang sederhana, OCE ditenagai oleh mesin yang sangat terorganisir dengan **Arsitektur Modular V2.2.0**.
 
-### **1. Dual-Workflow Distribution**
-Kami menggunakan sistem distribusi dua jalur untuk menjamin stabilitas pengguna:
-- **Jalur Stable (Production):** Didistribusikan melalui GitHub Releases. File `.cs3` diproteksi dan di-versioning secara ketat.
-- **Jalur Beta (Development):** Diperbarui secara otomatis setiap kali ada perubahan kode di branch master.
+### **1. Modular Component Map**
+- **Scrapper:** Mengelola alur koneksi dan orkestrasi scraping.
+- **Mapper:** Mengubah elemen HTML mentah menjadi data terstruktur.
+- **Cloudstream Adapter:** Jembatan murni antara mesin internal dan aplikasi.
+- **HTML Constants:** Pusat kontrol selector berbasis *Owner Tagging*.
 
+### **2. Dual-Workflow Distribution**
 ```mermaid
 graph TD
     A[Master Code] --> B{GitHub Actions}
@@ -95,41 +95,21 @@ graph TD
     B -->|Manual Tag / Release| D[GitHub Releases - STABLE]
     D --> E[End Users]
 ```
-*(Diagram konseptual alur distribusi kode kami)*
-
-### **2. Quality Assurance Pipeline**
-Setiap commit melalui proses validasi ketat menggunakan skrip audit selektor yang canggih. Jika audit gagal, build tidak akan dikirimkan ke pengguna. Inilah janji kami untuk stabilitas.
 
 ---
 
 ## 🎖️ Credits & Penghargaan Spesial
 
-Proyek ini adalah hasil kolaborasi dan inspirasi dari para pionir di bidangnya. Hormat kami kepada:
-
-- **[CloudStream Team & Community](https://github.com/recloudstream)** - Pencipta ekosistem yang luar biasa ini.
-- **[Phisher](https://github.com/Phisher98)** - Mentor arsitektural yang memberikan standar logika penyedia konten yang solid.
-- **[ExtCloud](https://github.com/recloudstream/cloudstream-extensions)** - Referensi profesional dalam pengembangan ekstensi modern.
-
----
-
-## 📈 Perkembangan Proyek (Star History)
-
-Dukungan Anda melalui **Star** bukan sekadar angka bagi kami; itu adalah bahan bakar yang memotivasi kami untuk terus berinovasi dan menjaga resiliensi ekosistem ini.
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=byimam2nd/oce&type=Date&theme=dark" />
-  <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=byimam2nd/oce&type=Date" />
-  <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=byimam2nd/oce&type=Date" />
-</picture>
+Hormat kami kepada:
+- **[CloudStream Team & Community](https://github.com/recloudstream)**
+- **[Phisher](https://github.com/Phisher98)**
+- **[ExtCloud](https://github.com/recloudstream/cloudstream-extensions)**
 
 ---
 
 ## 🤝 Bergabung & Berkontribusi
 
-Kami selalu terbuka untuk pikiran-pikiran cerdas. Anda dapat berkontribusi melalui:
-- **Pelaporan Bug:** Beritahu kami jika ada sesuatu yang tidak bekerja melalui [Issues](https://github.com/byimam2nd/oce/issues).
-- **Diskusi:** Bagikan ide Anda untuk pengembangan fitur masa depan.
-- **Dukungan Moral:** Berikan **Star ⭐** pada repository ini jika OCE membantu hari-hari Anda.
+Kami selalu terbuka untuk pikiran-pikiran cerdas. Anda dapat berkontribusi melalui [Issues](https://github.com/byimam2nd/oce/issues) atau memberikan **Star ⭐** jika OCE membantu hari-hari Anda.
 
 **Ingin mendukung operasional kami?**
 - ☕ [Buy Me A Coffee](https://buymeacoffee.com/imam2nd)
@@ -139,9 +119,7 @@ Kami selalu terbuka untuk pikiran-pikiran cerdas. Anda dapat berkontribusi melal
 
 ## ⚖️ Lisensi & Tanggung Jawab
 
-Proyek ini dilindungi oleh lisensi **GNU GPLv3**. 
-
-**Disclaimer Penting:** OCE adalah proyek independen. Kami tidak menyimpan, mengunggah, atau memiliki file video apa pun. Kami menyediakan alat pencarian cerdas untuk mengakses konten publik yang tersedia di internet. Penggunaan alat ini sepenuhnya merupakan tanggung jawab pengguna. Harap gunakan dengan bijak dan hargai karya para kreator asli.
+Proyek ini dilindungi oleh lisensi **GNU GPLv3**. Penggunaan alat ini sepenuhnya merupakan tanggung jawab pengguna. Harap gunakan dengan bijak dan hargai karya para kreator asli.
 
 ---
 <div align="center">

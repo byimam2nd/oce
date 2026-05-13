@@ -1,82 +1,60 @@
-# 🧠 Panduan Pembelajaran Mendalam Proyek OCE
+# 🧠 Panduan Pembelajaran Arsitektur Modular OCE
 
-Selamat datang di jantung **Open Cloudstream Extensions (OCE)**. Dokumen ini dirancang untuk membantu Anda memahami arsitektur, alur kerja, dan logika sistem kami secara mendetail dari tingkat tinggi hingga ke baris kode.
+Dokumen ini menjelaskan struktur internal **Arsitektur Modular V2.2.0** yang digunakan dalam proyek OCE untuk memastikan skalabilitas dan kemudahan pemeliharaan.
 
 ---
 
-## 🗺️ Peta Navigasi Proyek
+## 🗺️ Peta Navigasi Modular
 
-Untuk memahami OCE, Anda harus melihatnya sebagai sebuah **Pabrik (Blueprint)** dan **Produk (Provider Modules)**.
-
-### 1. Arsitektur Sentralisasi (The Blueprint)
-Inti dari proyek ini bukan berada di folder provider masing-masing, melainkan di folder:
+Sistem kami memecah tanggung jawab besar menjadi komponen-komponen kecil yang terisolasi di dalam folder:
 📂 **`BaseHtmlProvider/`**
 
-Ini adalah "Blueprint" atau cetakan utama. Mengapa ini penting?
-- **Efisiensi:** Jika ada bug pada mesin pencarian, kita hanya perlu memperbaikinya di sini satu kali, dan perbaikan akan tersebar ke semua provider.
-- **Konsistensi:** Seluruh provider akan memiliki perilaku dan performa yang sama karena menggunakan logika yang identik.
+### 1. Scrapper (Logika Koneksi & Alur)
+📄 **`ProviderScrapper.kt`**
+- **Tanggung Jawab:** Mengelola *request* HTTP, orkestrasi pencarian, pemuatan halaman, dan penanganan tautan (*loadLinks*).
+- **Karakteristik:** Berisi alur kerja algoritmik. Tidak mengandung selector CSS secara langsung.
 
-### 2. Hub Konfigurasi (The Nerve Center)
-📂 **`BaseHtmlProvider/ProviderConstants.kt`**
+### 2. Mapper (Logika Transformasi Data)
+📄 **`ProviderMapper.kt`**
+- **Tanggung Jawab:** Mengubah elemen HTML mentah (`Jsoup Element`) menjadi objek data Cloudstream (`SearchResponse`, `Episode`, dll).
+- **Karakteristik:** Fokus pada parsing data dan pembersihan teks (termasuk *deduplication*).
 
-Jika `BaseHtmlProvider` adalah ototnya, maka `ProviderConstants` adalah sistem sarafnya. Di sinilah semua data spesifik situs disimpan:
-- **Owner Tagging:** Perhatikan pola `ProviderID:::Value` (Contoh: `Anichin:::https://anichin.cafe`). Ini memungkinkan satu variabel digunakan oleh banyak provider dengan nilai yang berbeda.
-- **CSS Selectors:** Jika sebuah situs mengubah tampilannya, Anda hanya perlu memperbarui selektor CSS di sini.
+### 3. Cloudstream Adapter (Jembatan API)
+📄 **`ProviderCloudstream.kt`**
+- **Tanggung Jawab:** Implementasi `MainAPI`. Bertindak sebagai pusat konfigurasi provider (nama, URL, tipe konten).
+- **Karakteristik:** Sangat tipis. Hanya mendelegasikan panggilan ke `Scrapper`.
 
-### 3. Mesin Ekstraksi (The Harvester)
-📂 **`BaseHtmlProvider/ProviderEkstraktors.kt`**
+### 4. HTML Constants (Pusat Kontrol)
+📄 **`ProviderHTMLConstants.kt`**
+- **Tanggung Jawab:** Menyimpan seluruh selector CSS, pola Regex, dan metadata spesifik provider.
+- **Sistem:** Menggunakan **Owner Tagging** (`ProviderID:::Value`) untuk memungkinkan ribuan konfigurasi dalam satu tempat.
 
-File ini berisi logika untuk "memanen" link video dari berbagai server hosting.
-- **Deep Scanning:** Memahami bagaimana sistem mencari link video secara otomatis di dalam kode HTML yang kompleks.
-- **Extractor Registry:** Memahami daftar extractor yang didukung secara lokal.
-
----
-
-## ⚙️ Alur Kerja Teknis (The Engine Room)
-
-### 1. Proses Sinkronisasi
-Sistem kami menggunakan skrip otomatis untuk menyalin kode dari Blueprint ke Provider.
-- **Skrip:** `scripts/sync_providers.py`
-- **Logika:** Skrip ini membaca file di `BaseHtmlProvider`, mengubah nama package, dan mengganti nama class sesuai dengan target provider (misal: `TemplatesProvider` menjadi `Anichin`).
-- **Aturan Emas:** Jangan pernah mengedit folder `ProviderAnichin/` dsb secara langsung, karena perubahan Anda akan tertimpa saat sinkronisasi berjalan.
-
-### 2. CI/CD & Distribusi
-Bagaimana kode Anda sampai ke tangan pengguna?
-- **Jalur Beta:** Setiap kali Anda push ke branch `master`, workflow `.github/workflows/ci-cd.yml` akan mem-build plugin dan mengirimkannya ke branch `builds`.
-- **Jalur Stable:** Saat Anda membuat Tag Git (misal `v1.0.0`), workflow `release.yml` akan membuat rilis resmi di GitHub.
+### 5. Ekstraktor & Utilitas
+📄 **`ProviderEkstraktors.kt`**: Logika untuk memanen link video langsung dari host (OkRu, Dailymotion, dll).
+📄 **`ProviderUtils.kt`**: Fungsi pembantu global seperti pembersih judul, penanganan kualitas, dan *logging*.
 
 ---
 
-## 🔬 Cara Mempelajari Kode Secara Detail
+## ⚙️ Prinsip Kerja (The Engine Room)
 
-### Langkah 1: Pahami MainAPI Lifecycle
-Buka `BaseHtmlProvider/Provider.kt` dan pelajari fungsi-fungsi ini secara berurutan:
-1.  `getMainPage()`: Bagaimana data halaman depan diambil dan diproses.
-2.  `search()`: Logika pencarian (termasuk pencarian berbasis JSON).
-3.  `load()`: Bagaimana metadata (judul, poster, episode) diekstrak secara rekursif.
-4.  `loadLinks()`: Tahap akhir dimana link video diambil menggunakan pipeline ekstraktor.
+### 1. Single Responsibility Principle (SRP)
+Setiap file hanya memiliki satu alasan untuk berubah. Jika ada masalah pada tampilan judul, Anda hanya perlu melihat `ProviderMapper`. Jika ada masalah pada koneksi, periksa `ProviderScrapper`.
 
-### Langkah 2: Pelajari Pipeline Metadata
-Lihat fungsi `extractMetadata` di `Provider.kt`. Perhatikan bagaimana sistem mencoba mengambil data dari berbagai tempat (meta tags, info box, dsb) secara fleksibel.
+### 2. Site-Agnostic Engine
+Logika inti tidak pernah mengetahui alamat website yang sedang diproses. Seluruh data tersebut disuntikkan melalui `Constants` atau properti di `Adapter`.
 
-### Langkah 3: Pelajari Sistem Ekstraksi
-Buka `ProviderEkstraktors.kt` dan perhatikan class `MasterLinkGenerator`. Pahami bagaimana kualitas video dideteksi secara otomatis dari pola URL.
+### 3. Automated Synchronization
+Jangan pernah menyentuh folder `ProviderAnichin/`, `ProviderAnimasu/`, dll. Folder tersebut adalah hasil "cetakan" otomatis dari skrip `scripts/sync_providers.py`. Seluruh pengembangan WAJIB dilakukan di folder `BaseHtmlProvider/`.
 
 ---
 
-## 🛠️ Alat Bantu Pengembangan
+## 🔬 Cara Mempelajari Pipeline Data
 
-- **Gradle:** Gunakan `./gradlew make` untuk membangun seluruh proyek secara lokal.
-- **Logcat:** Saat pengujian di Android, gunakan tag `[ProviderName]` untuk memantau aktivitas provider Anda.
-- **Python:** Pahami skrip sinkronisasi jika Anda ingin menambahkan provider baru yang berbasis blueprint yang sama.
-
----
-
-## 📚 Kesimpulan
-
-Proyek OCE bukan sekadar koleksi script, melainkan sebuah **Sistem Manajemen Ekstensi**. Kunci utama pembelajarannya adalah memahami bahwa **Logika (BaseHtmlProvider) + Data (Constants) = Extension (.cs3)**.
-
-Jika Anda memahami `BaseHtmlProvider`, Anda telah menguasai 90% dari seluruh proyek ini.
+1.  **Start:** `ProviderCloudstream.search()` dipanggil oleh Cloudstream.
+2.  **Execution:** Adapter memanggil `scrapper.search()`.
+3.  **Extraction:** Scrapper mengambil HTML dan memanggil `mapper.toSearchResult()`.
+4.  **Mapping:** Mapper mengambil data menggunakan selector dari `HTMLConstants` dan melakukan pembersihan teks.
+5.  **Return:** Data bersih dikembalikan ke UI aplikasi.
 
 ---
-*Dokumentasi ini dibuat untuk memastikan setiap kontributor baru dapat memahami kompleksitas OCE dengan cepat dan tepat.*
+*Dokumentasi ini memastikan setiap pengembang dapat berkontribusi pada arsitektur yang stabil dan profesional.*
