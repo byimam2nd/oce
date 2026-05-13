@@ -1,10 +1,10 @@
 [
     {
         "iconUrl": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjD5KTf3taknWZ6YLFfkHAvDCoeC79LCjfh1T5VsBajkI0hFV4afH6WBwDeiHrGtkYKaRMX4pAWa_M2kG8LXefpk8g6Ug35PnJyXpiro5lPw8tcXMPA_6RFcRw3dYQkoZgXDdjiMdHde2k8ZfwTlazvlVerXAhdrLDNAeo5NysoU-CScOAcVmsosVl_cA/s1600/NewLogo.png",
-        "fileHash": "sha256-111d368deeea06fbbeb757ade1d5bb233ae793f92811e74d74f00b3c3a0337ab",
+        "fileHash": "sha256-e66da4727f78a0637214269f30e5847ba12a5432ca0a1f09dd49c2d0941568c9",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 109241,
+        "fileSize": 109240,
         "status": 1,
         "language": "id",
         "authors": [
@@ -21,10 +21,10 @@
     },
     {
         "iconUrl": "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://v1.animasu.top&size=%size%",
-        "fileHash": "sha256-a91cb84429250c1bb5c6b96751aff5af42c32e97f3e2ec018978536e4989c8f7",
+        "fileHash": "sha256-512ffeefc1f24f7d9fd99fdbacd252ea90227f50740c591d2d1e5a2db7929daa",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 109265,
+        "fileSize": 109257,
         "status": 1,
         "language": "id",
         "authors": [
@@ -44,10 +44,10 @@
     },
     {
         "iconUrl": "https://raw.githubusercontent.com/Kohi-den/extensions-source/927f9c68fd64ce52f6212ae633d0f0585eca3545/src/en/donghuastream/res/mipmap-xxxhdpi/ic_launcher.png",
-        "fileHash": "sha256-a47063758dfce203fc2cd68dc4b63d74c4116a8e0992fcfa0e2817a6eb016443",
+        "fileHash": "sha256-fe0961dfc4a756e87f3b62c9272d88514bd372f18c2fcfe2047afc7f4563fe0f",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 109704,
+        "fileSize": 109698,
         "status": 1,
         "language": "id",
         "authors": [
@@ -108,10 +108,10 @@
     },
     {
         "iconUrl": "https://www.google.com/s2/favicons?domain=89.124.116.48&sz=%size%",
-        "fileHash": "sha256-6caeee63b1198fa5d7977e2f1b8d7c16f7e16f6c45b462ad70d3897b8e7e1155",
+        "fileHash": "sha256-08ab54909f33f1671679180ae4c6d7d5a994a39e4b691d5e1037c9b68a7c5c85",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 109707,
+        "fileSize": 109699,
         "status": 1,
         "language": "id",
         "authors": [
@@ -130,10 +130,10 @@
     },
     {
         "iconUrl": "https://www.google.com/s2/favicons?domain=d21.team&sz=%size%",
-        "fileHash": "sha256-70dc54b11be93bf3782016cb4cd0d35e2e94a06bddab21dcd89ddb19c126d723",
+        "fileHash": "sha256-0fc5cf0b3137302f89cab23d9ee7c6fe8d7cf22d5fa57c4f859961c4dc29e6c7",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 109708,
+        "fileSize": 109686,
         "status": 1,
         "language": "id",
         "authors": [
@@ -173,10 +173,10 @@
     },
     {
         "iconUrl": "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://ww03.pencurimovie.bond&size=%size%",
-        "fileHash": "sha256-e93fc37483d9adf1d13e5e92bc6ac889c585edbc74ed6be2f09bd33d39797a20",
+        "fileHash": "sha256-97b42514a1514e0057181aaa13da529143072c062f617513fa56d8759725799a",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 109656,
+        "fileSize": 109669,
         "status": 1,
         "language": "id",
         "authors": [
@@ -194,7 +194,7 @@
     },
     {
         "iconUrl": "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://v1.samehadaku.how&size=%size%",
-        "fileHash": "sha256-83f6c3b9df6358d16c4ce7d542c7a190086e8e73366ab4b63ef73797738c7232",
+        "fileHash": "sha256-85ea095839ad779304659324fb8b810210660a13a38eb951de63663d6dd468b4",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
         "fileSize": 109553,
