@@ -35,8 +35,11 @@ def print_header():
 
 def safe_replace(content, mapping):
     for old, new in mapping.items():
-        pattern = re.compile(rf'\b{re.escape(old)}\b')
-        content = pattern.sub(new, content)
+        if old == "baseprovider":
+            content = content.replace(old, new)
+        else:
+            pattern = re.compile(rf'\b{re.escape(old)}\b')
+            content = pattern.sub(new, content)
     return content
 
 def apply_change(target_path, new_content):
