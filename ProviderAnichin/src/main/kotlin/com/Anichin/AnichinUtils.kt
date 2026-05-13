@@ -98,10 +98,12 @@ object ProviderLog {
 
         // 2. Remote Telegram Reporting (Only for FAIL, ERROR, CRITICAL)
         if (level != LogLevel.DEBUG) {
-            val cacheKey = "$level|$tag|$message"
-            if (recentLogsCache.get(cacheKey) == null) {
-                sendToTelegram(level.name, tag, fullMsg, url)
-                recentLogsCache.put(cacheKey, true)
+            val cacheKey = "$level|$tag|$message|$url"
+            synchronized(recentLogsCache) {
+                if (recentLogsCache.get(cacheKey) == null) {
+                    recentLogsCache.put(cacheKey, true)
+                    sendToTelegram(level.name, tag, fullMsg, url)
+                }
             }
         }
     }
