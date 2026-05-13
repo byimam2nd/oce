@@ -54,7 +54,7 @@ class SamehadakuMapper(
             val base = baseUrl ?: mainUrl
             val titleEl = element.selectSafe(providerId, SEARCH_TITLE) ?: element.parent()?.selectSafe(providerId, SEARCH_TITLE) ?: element.selectFirst("h2, h3")
             val rawTitle = titleEl?.text()?.trim() ?: titleEl?.attrSafe(providerId, ATTR_IMAGE) ?: titleEl?.attr("title") ?: return null
-            val title = rawTitle.safeCleanBloat(rawTitle, BLOAT_REGEX)
+            val title = rawTitle.safeCleanBloat(rawTitle, BLOAT_REGEX).safeDeduplicate()
             val hrefEl = element.selectSafe(providerId, SEARCH_HREF) ?: element.selectFirst("a") ?: element.parent()?.selectFirst("a")
             var href = fixUrlSmart(hrefEl?.attr("href"), base)
             val cleanRegex = resolveConfig(providerId, SamehadakuConstants.CONFIG_HREF_CLEAN_REGEXPS, "")

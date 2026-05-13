@@ -77,31 +77,49 @@ fun String.safeCleanBloat(original: String, regex: Regex): String {
 
 fun String.safeDeduplicate(): String {
     if (this.isBlank()) return this
-    // Normalize spaces to single space and trim
-    val s = this.replace(Regex("\\s+"), " ").trim()
     
-    // Case 1: Exact string repeat "Title Title"
-    val mid = s.length / 2
-    if (s.length >= 6 && s.length % 2 == 0) {
-        val s1 = s.substring(0, mid).trim()
-        val s2 = s.substring(mid).trim()
-        if (s1.equals(s2, ignoreCase = true)) return s1
+    // Step 1: Normalize separators and spaces
+    // Replace " - ", " | ", " : " with a consistent pipe for easier splitting or just normalize spaces
+    var s = this.replace(Regex("\\s+"), " ").trim()
+    
+    // Case 1: Detect and fix common separators used in duplication (e.g. "Title - Title")
+    val separators = listOf(" - ", " | ", " : ", " – ", " — ")
+    for (sep in separators) {
+        if (s.contains(sep)) {
+            val parts = s.split(sep)
+            if (parts.size == 2 && parts[0].trim().equals(parts[1].trim(), ignoreCase = true)) {
+                return parts[0].trim()
+            }
+        }
+    }
+
+    // Case 2: Exact string repeat "Title Title"
+    if (s.length >= 6) {
+        val mid = s.length / 2
+        if (s.length % 2 == 0) {
+            val s1 = s.substring(0, mid).trim()
+            val s2 = s.substring(mid).trim()
+            if (s1.equals(s2, ignoreCase = true)) return s1
+        }
+        // Fuzzy mid check (offset by 1 for spaces)
+        val s1_alt = s.substring(0, mid).trim()
+        val s2_alt = s.substring(mid + 1).trim()
+        if (s1_alt.equals(s2_alt, ignoreCase = true)) return s1_alt
     }
     
-    // Case 2: Word-based repeat "Word1 Word2 Word1 Word2"
-    val parts = s.split(" ").filter { it.isNotBlank() }
-    if (parts.size >= 2 && parts.size % 2 == 0) {
-        val half = parts.size / 2
-        val firstHalf = parts.subList(0, half).joinToString(" ")
-        val secondHalf = parts.subList(half, parts.size).joinToString(" ")
+    // Case 3: Word-based repeat "Word1 Word2 Word1 Word2"
+    val words = s.split(" ").filter { it.isNotBlank() }
+    if (words.size >= 2 && words.size % 2 == 0) {
+        val half = words.size / 2
+        val firstHalf = words.subList(0, half).joinToString(" ")
+        val secondHalf = words.subList(half, words.size).joinToString(" ")
         if (firstHalf.equals(secondHalf, ignoreCase = true)) return firstHalf
     }
-    
-    // Case 3: Fuzzy check for common repetitions (e.g. "Title - Title")
-    if (s.contains(" - ")) {
-        val split = s.split(" - ")
-        if (split.size == 2 && split[0].trim().equals(split[1].trim(), ignoreCase = true)) return split[0].trim()
-    }
+
+    // Case 4: Sequence repeat like "Title 2 Title 2" (handles numbers)
+    val pattern = Regex("""^(.*?)\s+\1$""", RegexOption.IGNORE_CASE)
+    val match = pattern.find(s)
+    if (match != null) return match.groupValues[1].trim()
 
     return s
 }
