@@ -1,4 +1,4 @@
-package com.Donghuastream
+package com.baseprovider
 
 import com.lagradost.api.Log
 import kotlinx.coroutines.delay

@@ -4,6 +4,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
+import org.jsoup.select.Elements
 import com.Donghuastream.DonghuastreamConstants.SEARCH_TITLE
 import com.Donghuastream.DonghuastreamConstants.BLOAT_REGEX
 import com.Donghuastream.DonghuastreamConstants.SEARCH_HREF
@@ -81,7 +82,7 @@ class DonghuastreamMapper(
         val poster = document.selectFirstSafe(providerId, LOAD_POSTER)?.safeExtractImage(ATTR_IMAGE) ?: ""
         val banner = document.selectFirstSafe(providerId, LOAD_BANNER)?.safeExtractImage(ATTR_IMAGE)
         val description = document.selectFirstSafe(providerId, LOAD_DESC)?.text()?.trim() ?: ""
-        val infoText = document.selectFirstSafe(providerId, LOAD_INFO_BOX).text()
+        val infoText = document.selectFirstSafe(providerId, LOAD_INFO_BOX)?.text() ?: ""
         val year = infoText.safeExtractYear() ?: run {
             val selector = resolveConfig(providerId, CONFIG_HOOK_YEAR_SELECTOR, "")
             val regexStr = resolveConfig(providerId, CONFIG_HOOK_YEAR_EXTRACTOR, "")
@@ -91,7 +92,7 @@ class DonghuastreamMapper(
         return MetadataPackage(
             title = title, poster = poster, banner = banner, description = description, 
             year = year, statusText = statusText,
-            tags = document.selectFirstSafe(providerId, LOAD_TAGS).map { it.text() },
+            tags = document.selectSafe(providerId, LOAD_TAGS).map { it.text() },
             rating = document.selectFirstSafe(providerId, LOAD_RATING)?.text(),
             status = if (statusText?.contains(ongoingKeyword, true) == true) ShowStatus.Ongoing else ShowStatus.Completed,
             imdbId = document.selectFirstSafe(providerId, DonghuastreamConstants.SELECTOR_IMDB_EXTERNAL)?.attrSafe(providerId, ATTR_HREF)?.split("/")?.filter { it.startsWith("tt") }?.firstOrNull(),

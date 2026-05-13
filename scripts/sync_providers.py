@@ -16,7 +16,8 @@ FILES_TO_SYNC = {
     "ProviderCloudstream.kt": "{name}.kt",
     "ProviderExtractors.kt": "{name}Ekstraktors.kt",
     "ProviderPlugin.kt": "{name}Plugin.kt",
-    "ProviderUtils.kt": "{name}Utils.kt",
+    "BaseProviderHelpers.kt": "{name}Utils.kt",
+    "ProviderParser.kt": "{name}Parser.kt",
     "ProviderHTMLConstants.kt": "{name}Constants.kt",
     "ProviderScrapper.kt": "{name}Scrapper.kt",
     "ProviderMapper.kt": "{name}Mapper.kt",
@@ -30,7 +31,7 @@ class Colors:
 
 def print_header():
     print(f"{Colors.HEADER}{Colors.BOLD}==================================================")
-    print(f"      BASE HTML PROVIDER SYNC ENGINE v7.0 (TOTAL)")
+    print(f"      BASE HTML PROVIDER SYNC ENGINE v7.1 (TOTAL)")
     print(f"=================================================={Colors.ENDC}")
 
 def safe_replace(content, mapping):
@@ -61,7 +62,8 @@ def sync_provider(name):
         "ProviderCloudstream": name,
         "ProviderHTMLConstants": f"{name}Constants",
         "ProviderExtractors": f"{name}Ekstraktors",
-        "ProviderUtils": f"{name}Utils",
+        "BaseProviderHelpers": f"{name}Utils",
+        "ProviderParser": f"{name}Parser",
         "ProviderScrapper": f"{name}Scrapper",
         "ProviderMapper": f"{name}Mapper",
         "ProviderModels": f"{name}Models",

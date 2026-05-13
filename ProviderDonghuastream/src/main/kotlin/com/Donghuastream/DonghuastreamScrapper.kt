@@ -16,6 +16,7 @@ import kotlinx.coroutines.sync.withPermit
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
+import org.jsoup.select.Elements
 import org.json.JSONObject
 import com.Donghuastream.DonghuastreamConstants.DEFAULT_TIMEOUT
 import com.Donghuastream.DonghuastreamConstants.SEARCH_ITEMS
@@ -77,7 +78,7 @@ class DonghuastreamScrapper(
 
             val document = getHtmlParsed(url)
             val isHorizontal = resolveConfig(providerId, DonghuastreamConstants.CONFIG_HOOK_IS_HORIZONTAL, "false").toBoolean() && request.name.contains("Episode Terbaru", true)
-            val home = document.selectFirstSafe(providerId, SEARCH_ITEMS).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() }
+            val home = document.selectSafe(providerId, SEARCH_ITEMS).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() }
             newHomePageResponse(list = HomePageList(name = request.name, list = home, isHorizontalImages = isHorizontal), hasNext = home.isNotEmpty())
         }.getOrElse { e -> 
             logError(providerId, "MainPage Failure: ${e.message}")
@@ -107,7 +108,7 @@ class DonghuastreamScrapper(
         return coroutineScope { (1..searchPageLimit).map { page -> async { runCatching { 
                         val url = searchPathPattern.replace("{baseUrl}", baseUrl).replace("{page}", page.toString()).replace("{query}", encodedQuery)
                         val document = getHtmlParsed(url, refer)
-                        document.selectFirstSafe(providerId, SEARCH_ITEMS).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() } }.getOrElse { e -> logDebug(providerId, "Search Page $page Error: ${e.message}"); emptyList() } } }.awaitAll().flatten().distinctBy { it.url } }
+                        document.selectSafe(providerId, SEARCH_ITEMS).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() } }.getOrElse { e -> logDebug(providerId, "Search Page $page Error: ${e.message}"); emptyList() } } }.awaitAll().flatten().distinctBy { it.url } }
     }
 
     suspend fun load(url: String): LoadResponse { return loadRecursive(url, 0) }
@@ -123,8 +124,8 @@ class DonghuastreamScrapper(
         val metadata = mapper.extractMetadata(document, currentUrl)
         
         val (recommendations, actors) = coroutineScope {
-            val recs = async { document.selectFirstSafe(providerId, LOAD_RECOMMEND).mapNotNull { mapper.toSearchResult(it, currentUrl) } }
-            val acts = async { document.selectFirstSafe(providerId, ACTOR_ITEMS).mapNotNull { 
+            val recs = async { document.selectSafe(providerId, LOAD_RECOMMEND).mapNotNull { mapper.toSearchResult(it, currentUrl) } }
+            val acts = async { document.selectSafe(providerId, ACTOR_ITEMS).mapNotNull { 
                 val n = it.selectFirstSafe(providerId, ACTOR_NAME)?.text()?.trim() ?: ""
                 val p = it.selectFirst("img")?.safeExtractImage(ATTR_IMAGE) ?: ""
                 if (n.isNotBlank() && n.length < 100) Actor(n, p) else null 
@@ -132,7 +133,7 @@ class DonghuastreamScrapper(
             recs.await() to acts.await()
         }
         
-        val epItems = document.selectFirstSafe(providerId, EPISODE_ITEMS)
+        val epItems = document.selectSafe(providerId, EPISODE_ITEMS)
         val seasonDataScript = document.selectFirstSafe(providerId, DonghuastreamConstants.SELECTOR_SEASON_CONTAINER)
         val isMovie = (seasonDataScript == null) && ((moviePathSegment.isNotBlank() && currentUrl.contains(moviePathSegment)) || epItems.isEmpty())
         val type = if (isMovie) TvType.Movie else if (supportedTypes.contains(TvType.Anime)) TvType.Anime else TvType.TvSeries
@@ -177,7 +178,7 @@ class DonghuastreamScrapper(
                 }
             }
 
-            document.selectFirstSafe(providerId, DonghuastreamConstants.SELECTOR_IFRAME_TAG).forEach { el ->
+            document.selectSafe(providerId, DonghuastreamConstants.SELECTOR_IFRAME_TAG).forEach { el ->
                 resolveConfigList(providerId, DonghuastreamConstants.ATTR_IFRAME_SOURCES).forEach { attr -> val s = el.attr(attr); if (s.isNotBlank()) allPossibleLinks.add(s to null) }
             }
 

@@ -41,6 +41,10 @@ import com.Donghuastream.DonghuastreamConstants.STR_SERIES
 
 open class Donghuastream : MainAPI() {
 
+    protected val providerId: String by lazy { 
+        this::class.java.simpleName.replace("Provider", "").replace(Regex("[^a-zA-Z0-9]"), "")
+    }
+
     init {
         logDebug(providerId, "Initializing BaseProvider Engine V2.2.0")
     }
@@ -48,12 +52,8 @@ open class Donghuastream : MainAPI() {
     // Cache untuk mempercepat akses konfigurasi (O(1))
     private val configCache = mutableMapOf<Int, String>()
     private val configListCache = mutableMapOf<Int, List<String>>()
-...
-    protected val providerId: String by lazy { 
-        this::class.java.simpleName.replace("Provider", "").replace(Regex("[^a-zA-Z0-9]"), "")
-    }
 
-    override var name = getCached(CONFIG_NAMES, "Base HTML Provider")
+    private fun getCached(configKey: Int, default: String): String {
     override var mainUrl = getCached(CONFIG_MAIN_URLS, "https://example.com")
     open var seriesUrl = getCached(CONFIG_SERIES_URLS, mainUrl).let { if (it.isBlank()) mainUrl else it }
     open var searchUrl = getCached(CONFIG_SEARCH_URLS, mainUrl).let { if (it.isBlank()) mainUrl else it }
