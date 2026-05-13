@@ -221,8 +221,8 @@ class AnichinScrapper(
                         if (lk21 != null) lk21
                         else {
                             val dec = raw.safeDecode()
-                            if (dec.contains("iframe")) Jsoup.parse(dec).selectFirst("iframe")?.attr("src") ?: raw
-                            else if (dec.startsWith("http") || dec.startsWith("//") || dec.startsWith("/")) dec else raw
+                            if (dec.contains("iframe")) Jsoup.parse(dec).selectFirst("iframe")?.attr("src") ?: ""
+                            else if (dec.startsWith("http") || dec.startsWith("//") || dec.startsWith("/")) dec else ""
                         }
                     } else raw
 

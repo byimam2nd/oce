@@ -377,6 +377,7 @@ suspend fun decryptLk21PlayerUrl(encrypted: String): String? {
             var scope = cachedLk21Scope
             if (scope == null) {
                 scope = ctx.initStandardObjects()
+                ctx.optimizationLevel = -1
                 ScriptableObject.putProperty(scope, "window", scope)
                 ScriptableObject.putProperty(scope, "globalThis", scope)
                 ScriptableObject.putProperty(scope, "navigator", ctx.newObject(scope))
