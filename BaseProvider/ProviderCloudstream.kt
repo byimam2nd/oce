@@ -39,7 +39,7 @@ import com.baseprovider.ProviderHTMLConstants.STR_SERIES
  * Seluruh logika pemetaan berada di ProviderMapper.
  */
 
-open class TemplatesProvider : MainAPI() {
+open class ProviderCloudstream : MainAPI() {
 
     init {
         logDebug(providerId, "Initializing BaseProvider Engine V2.2.0")

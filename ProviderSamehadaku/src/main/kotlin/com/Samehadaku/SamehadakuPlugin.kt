@@ -8,7 +8,7 @@ class TemplatesProviderPlugin: BasePlugin() {
     override fun load() {
         registerMainAPI(Samehadaku())
         
-        // Register specific extractors for Samehadaku
+        // Register specific extractors for TemplatesProvider
         SamehadakuEkstraktors.list.forEach { extractor ->
             registerExtractorAPI(extractor)
         }

@@ -58,7 +58,7 @@ def sync_provider(name):
 
     ops = 0
     mapping = {
-        "TemplatesProvider": name,
+        "ProviderCloudstream": name,
         "ProviderHTMLConstants": f"{name}Constants",
         "ProviderEkstraktors": f"{name}Ekstraktors",
         "ProviderUtils": f"{name}Utils",

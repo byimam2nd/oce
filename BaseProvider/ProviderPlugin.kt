@@ -6,7 +6,7 @@ import com.lagradost.cloudstream3.plugins.BasePlugin
 @CloudstreamPlugin
 class TemplatesProviderPlugin: BasePlugin() {
     override fun load() {
-        registerMainAPI(TemplatesProvider())
+        registerMainAPI(ProviderCloudstream())
         
         // Register specific extractors for TemplatesProvider
         ProviderEkstraktors.list.forEach { extractor ->

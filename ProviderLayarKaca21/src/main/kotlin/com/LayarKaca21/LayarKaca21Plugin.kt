@@ -8,7 +8,7 @@ class TemplatesProviderPlugin: BasePlugin() {
     override fun load() {
         registerMainAPI(LayarKaca21())
         
-        // Register specific extractors for LayarKaca21
+        // Register specific extractors for TemplatesProvider
         LayarKaca21Ekstraktors.list.forEach { extractor ->
             registerExtractorAPI(extractor)
         }

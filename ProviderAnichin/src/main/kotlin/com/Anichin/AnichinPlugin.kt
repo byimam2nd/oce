@@ -8,7 +8,7 @@ class TemplatesProviderPlugin: BasePlugin() {
     override fun load() {
         registerMainAPI(Anichin())
         
-        // Register specific extractors for Anichin
+        // Register specific extractors for TemplatesProvider
         AnichinEkstraktors.list.forEach { extractor ->
             registerExtractorAPI(extractor)
         }

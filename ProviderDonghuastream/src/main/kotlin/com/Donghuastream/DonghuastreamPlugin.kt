@@ -8,7 +8,7 @@ class TemplatesProviderPlugin: BasePlugin() {
     override fun load() {
         registerMainAPI(Donghuastream())
         
-        // Register specific extractors for Donghuastream
+        // Register specific extractors for TemplatesProvider
         DonghuastreamEkstraktors.list.forEach { extractor ->
             registerExtractorAPI(extractor)
         }

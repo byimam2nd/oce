@@ -8,7 +8,7 @@ class TemplatesProviderPlugin: BasePlugin() {
     override fun load() {
         registerMainAPI(Pencurimovie())
         
-        // Register specific extractors for Pencurimovie
+        // Register specific extractors for TemplatesProvider
         PencurimovieEkstraktors.list.forEach { extractor ->
             registerExtractorAPI(extractor)
         }

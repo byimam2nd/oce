@@ -8,7 +8,7 @@ class TemplatesProviderPlugin: BasePlugin() {
     override fun load() {
         registerMainAPI(Animasu())
         
-        // Register specific extractors for Animasu
+        // Register specific extractors for TemplatesProvider
         AnimasuEkstraktors.list.forEach { extractor ->
             registerExtractorAPI(extractor)
         }

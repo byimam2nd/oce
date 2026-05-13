@@ -8,7 +8,7 @@ class TemplatesProviderPlugin: BasePlugin() {
     override fun load() {
         registerMainAPI(IndoDrama21())
         
-        // Register specific extractors for IndoDrama21
+        // Register specific extractors for TemplatesProvider
         IndoDrama21Ekstraktors.list.forEach { extractor ->
             registerExtractorAPI(extractor)
         }
