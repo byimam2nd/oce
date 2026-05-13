@@ -1,10 +1,10 @@
 [
     {
         "iconUrl": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjD5KTf3taknWZ6YLFfkHAvDCoeC79LCjfh1T5VsBajkI0hFV4afH6WBwDeiHrGtkYKaRMX4pAWa_M2kG8LXefpk8g6Ug35PnJyXpiro5lPw8tcXMPA_6RFcRw3dYQkoZgXDdjiMdHde2k8ZfwTlazvlVerXAhdrLDNAeo5NysoU-CScOAcVmsosVl_cA/s1600/NewLogo.png",
-        "fileHash": "sha256-e66da4727f78a0637214269f30e5847ba12a5432ca0a1f09dd49c2d0941568c9",
+        "fileHash": "sha256-aa10cf54e25d09c500834cdb6f89b25f5573d23b6099388b8503d10268d07390",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 109240,
+        "fileSize": 1681,
         "status": 1,
         "language": "id",
         "authors": [
@@ -21,10 +21,10 @@
     },
     {
         "iconUrl": "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://v1.animasu.top&size=%size%",
-        "fileHash": "sha256-512ffeefc1f24f7d9fd99fdbacd252ea90227f50740c591d2d1e5a2db7929daa",
+        "fileHash": "sha256-5dc10bf1294c9438092a466e1c5ef50ff0a15deeeeef13475da670a6c8f4e872",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 109257,
+        "fileSize": 1680,
         "status": 1,
         "language": "id",
         "authors": [
@@ -44,10 +44,10 @@
     },
     {
         "iconUrl": "https://raw.githubusercontent.com/Kohi-den/extensions-source/927f9c68fd64ce52f6212ae633d0f0585eca3545/src/en/donghuastream/res/mipmap-xxxhdpi/ic_launcher.png",
-        "fileHash": "sha256-fe0961dfc4a756e87f3b62c9272d88514bd372f18c2fcfe2047afc7f4563fe0f",
+        "fileHash": "sha256-8fa275ca6e6a0da7e14b07d8b28a88b63a93f64c051de4ff3b924b44c073c58f",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 109698,
+        "fileSize": 1686,
         "status": 1,
         "language": "id",
         "authors": [
@@ -108,10 +108,10 @@
     },
     {
         "iconUrl": "https://www.google.com/s2/favicons?domain=89.124.116.48&sz=%size%",
-        "fileHash": "sha256-08ab54909f33f1671679180ae4c6d7d5a994a39e4b691d5e1037c9b68a7c5c85",
+        "fileHash": "sha256-943601e5f361b150635733a55f4b1c998cd7024a62aec7b4e94af727fd5a185f",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 109699,
+        "fileSize": 1690,
         "status": 1,
         "language": "id",
         "authors": [
@@ -130,10 +130,10 @@
     },
     {
         "iconUrl": "https://www.google.com/s2/favicons?domain=d21.team&sz=%size%",
-        "fileHash": "sha256-0fc5cf0b3137302f89cab23d9ee7c6fe8d7cf22d5fa57c4f859961c4dc29e6c7",
+        "fileHash": "sha256-c90e87f1c36aced81cfd06292532d3710aa537ee8040f7b6a6cd0fc38b463792",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 109686,
+        "fileSize": 1693,
         "status": 1,
         "language": "id",
         "authors": [
@@ -173,10 +173,10 @@
     },
     {
         "iconUrl": "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://ww03.pencurimovie.bond&size=%size%",
-        "fileHash": "sha256-97b42514a1514e0057181aaa13da529143072c062f617513fa56d8759725799a",
+        "fileHash": "sha256-751477e10dd4203e3f005be29c1d0584809b62a914d7c4e23681bf3601b4ab3c",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 109669,
+        "fileSize": 1687,
         "status": 1,
         "language": "id",
         "authors": [
@@ -194,10 +194,10 @@
     },
     {
         "iconUrl": "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://v1.samehadaku.how&size=%size%",
-        "fileHash": "sha256-85ea095839ad779304659324fb8b810210660a13a38eb951de63663d6dd468b4",
+        "fileHash": "sha256-3b19b0bb8cd952a0f1104a398c013bcafacdd4c09f120b1fa18c17d80d758d78",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 109553,
+        "fileSize": 1684,
         "status": 1,
         "language": "id",
         "authors": [
@@ -215,5 +215,20 @@
         "description": "\u26e9\ufe0f Samehadaku - Streaming Anime Subtitle Indonesia dengan kualitas tinggi dan update tercepat!",
         "url": "https://raw.githubusercontent.com/byimam2nd/oce/builds/ProviderSamehadaku.cs3",
         "name": "ProviderSamehadaku"
+    },
+    {
+        "fileHash": "sha256-71c4182f3e259207a8043846c2788853e378f8af44a98b801a85c54bd9dcd951",
+        "apiVersion": 1,
+        "repositoryUrl": "https://github.com/dummy/dummy",
+        "fileSize": 109790,
+        "status": 3,
+        "authors": [
+            "dummy"
+        ],
+        "version": -1,
+        "internalName": "ProviderBase",
+        "description": "Shared library for HTML providers",
+        "url": "https://raw.githubusercontent.com/dummy/dummy/builds/ProviderBase.cs3",
+        "name": "ProviderBase"
     }
 ]
