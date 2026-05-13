@@ -1,4 +1,4 @@
-package com.basehtmlprovider
+package com.baseprovider
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
@@ -17,19 +17,19 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import org.json.JSONObject
-import com.basehtmlprovider.ProviderHTMLConstants.DEFAULT_TIMEOUT
-import com.basehtmlprovider.ProviderHTMLConstants.SEARCH_ITEMS
-import com.basehtmlprovider.ProviderHTMLConstants.BLOAT_REGEX
-import com.basehtmlprovider.ProviderHTMLConstants.FOLLOW_LINK_SELECTOR
-import com.basehtmlprovider.ProviderHTMLConstants.LOAD_RECOMMEND
-import com.basehtmlprovider.ProviderHTMLConstants.ACTOR_ITEMS
-import com.basehtmlprovider.ProviderHTMLConstants.ACTOR_NAME
-import com.basehtmlprovider.ProviderHTMLConstants.ATTR_IMAGE
-import com.basehtmlprovider.ProviderHTMLConstants.EPISODE_ITEMS
-import com.basehtmlprovider.ProviderHTMLConstants.LINK_OPTIONS
-import com.basehtmlprovider.ProviderHTMLConstants.DOWNLOAD_ITEMS
-import com.basehtmlprovider.ProviderHTMLConstants.CONFIG_HOOK_REFERER_PLAYER
-import com.basehtmlprovider.ProviderHTMLConstants.CONFIG_HOOK_IFRAME_SELECTORS
+import com.baseprovider.ProviderHTMLConstants.DEFAULT_TIMEOUT
+import com.baseprovider.ProviderHTMLConstants.SEARCH_ITEMS
+import com.baseprovider.ProviderHTMLConstants.BLOAT_REGEX
+import com.baseprovider.ProviderHTMLConstants.FOLLOW_LINK_SELECTOR
+import com.baseprovider.ProviderHTMLConstants.LOAD_RECOMMEND
+import com.baseprovider.ProviderHTMLConstants.ACTOR_ITEMS
+import com.baseprovider.ProviderHTMLConstants.ACTOR_NAME
+import com.baseprovider.ProviderHTMLConstants.ATTR_IMAGE
+import com.baseprovider.ProviderHTMLConstants.EPISODE_ITEMS
+import com.baseprovider.ProviderHTMLConstants.LINK_OPTIONS
+import com.baseprovider.ProviderHTMLConstants.DOWNLOAD_ITEMS
+import com.baseprovider.ProviderHTMLConstants.CONFIG_HOOK_REFERER_PLAYER
+import com.baseprovider.ProviderHTMLConstants.CONFIG_HOOK_IFRAME_SELECTORS
 
 /**
  * SCRAPING ORCHESTRATOR LAYER

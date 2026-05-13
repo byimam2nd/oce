@@ -1,4 +1,4 @@
-package com.basehtmlprovider
+package com.baseprovider
 
 import com.lagradost.cloudstream3.ShowStatus
 

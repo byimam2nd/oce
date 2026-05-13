@@ -62,7 +62,7 @@ def sync_provider(name):
         "ProviderScrapper": f"{name}Scrapper",
         "ProviderMapper": f"{name}Mapper",
         "ProviderModels": f"{name}Models",
-        "basehtmlprovider": name
+        "baseprovider": name
     }
 
     for src_file, target_template in FILES_TO_SYNC.items():

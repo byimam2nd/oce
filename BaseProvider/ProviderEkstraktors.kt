@@ -1,4 +1,4 @@
-package com.basehtmlprovider
+package com.baseprovider
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.api.Log
