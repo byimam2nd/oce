@@ -239,7 +239,7 @@ fun resolveConfigList(providerId: String, list: List<String>): List<String> {
     return result
 }
 
-fun Element.selectSafe(providerId: String, selectors: List<String>): Element? {
+fun Element.selectFirstSafe(providerId: String, selectors: List<String>): Element? {
     if (selectors.isEmpty()) return null
     for (s in selectors) { if (!s.contains(":::")) continue
         val owners = s.substringBefore(":::"); if (owners.split(",").contains(providerId)) {
@@ -253,7 +253,7 @@ fun Element.selectSafe(providerId: String, selectors: List<String>): Element? {
     return null
 }
 
-fun Element.selectSafeList(providerId: String, selectors: List<String>): org.jsoup.select.Elements {
+fun Element.selectSafe(providerId: String, selectors: List<String>): org.jsoup.select.Elements {
     if (selectors.isEmpty()) return org.jsoup.select.Elements()
     for (s in selectors) { if (!s.contains(":::")) continue
         val owners = s.substringBefore(":::"); if (owners.split(",").contains(providerId)) {

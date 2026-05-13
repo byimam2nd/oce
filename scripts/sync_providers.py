@@ -14,7 +14,7 @@ SRC_DIR = TEMPLATE_DIR
 # Full overwrite sync for all core logic and constants
 FILES_TO_SYNC = {
     "ProviderCloudstream.kt": "{name}.kt",
-    "ProviderEkstraktors.kt": "{name}Ekstraktors.kt",
+    "ProviderExtractors.kt": "{name}Ekstraktors.kt",
     "ProviderPlugin.kt": "{name}Plugin.kt",
     "ProviderUtils.kt": "{name}Utils.kt",
     "ProviderHTMLConstants.kt": "{name}Constants.kt",
@@ -60,7 +60,7 @@ def sync_provider(name):
     mapping = {
         "ProviderCloudstream": name,
         "ProviderHTMLConstants": f"{name}Constants",
-        "ProviderEkstraktors": f"{name}Ekstraktors",
+        "ProviderExtractors": f"{name}Ekstraktors",
         "ProviderUtils": f"{name}Utils",
         "ProviderScrapper": f"{name}Scrapper",
         "ProviderMapper": f"{name}Mapper",

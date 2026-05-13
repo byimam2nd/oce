@@ -77,7 +77,7 @@ class PencurimovieScrapper(
 
             val document = getHtmlParsed(url)
             val isHorizontal = resolveConfig(providerId, PencurimovieConstants.CONFIG_HOOK_IS_HORIZONTAL, "false").toBoolean() && request.name.contains("Episode Terbaru", true)
-            val home = document.selectSafeList(providerId, SEARCH_ITEMS).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() }
+            val home = document.selectFirstSafe(providerId, SEARCH_ITEMS).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() }
             newHomePageResponse(list = HomePageList(name = request.name, list = home, isHorizontalImages = isHorizontal), hasNext = home.isNotEmpty())
         }.getOrElse { e -> 
             logError(providerId, "MainPage Failure: ${e.message}")
@@ -107,7 +107,7 @@ class PencurimovieScrapper(
         return coroutineScope { (1..searchPageLimit).map { page -> async { runCatching { 
                         val url = searchPathPattern.replace("{baseUrl}", baseUrl).replace("{page}", page.toString()).replace("{query}", encodedQuery)
                         val document = getHtmlParsed(url, refer)
-                        document.selectSafeList(providerId, SEARCH_ITEMS).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() } }.getOrElse { e -> logDebug(providerId, "Search Page $page Error: ${e.message}"); emptyList() } } }.awaitAll().flatten().distinctBy { it.url } }
+                        document.selectFirstSafe(providerId, SEARCH_ITEMS).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() } }.getOrElse { e -> logDebug(providerId, "Search Page $page Error: ${e.message}"); emptyList() } } }.awaitAll().flatten().distinctBy { it.url } }
     }
 
     suspend fun load(url: String): LoadResponse { return loadRecursive(url, 0) }
@@ -117,29 +117,29 @@ class PencurimovieScrapper(
         val currentUrl = url
         if (depth < 2) { 
             val follow = resolveConfigList(providerId, FOLLOW_LINK_SELECTOR)
-            if (follow.isNotEmpty()) { val nextAnchor = document.selectSafe(providerId, follow); val nextHref = nextAnchor?.attr("href")
+            if (follow.isNotEmpty()) { val nextAnchor = document.selectFirstSafe(providerId, follow); val nextHref = nextAnchor?.attr("href")
                 if (!nextHref.isNullOrBlank()) { val nextUrl = fixUrlSmart(nextHref, currentUrl); if (nextUrl != currentUrl && nextUrl != url) return loadRecursive(nextUrl, depth + 1) } } }
 
         val metadata = mapper.extractMetadata(document, currentUrl)
         
         val (recommendations, actors) = coroutineScope {
-            val recs = async { document.selectSafeList(providerId, LOAD_RECOMMEND).mapNotNull { mapper.toSearchResult(it, currentUrl) } }
-            val acts = async { document.selectSafeList(providerId, ACTOR_ITEMS).mapNotNull { 
-                val n = it.selectSafe(providerId, ACTOR_NAME)?.text()?.trim() ?: ""
+            val recs = async { document.selectFirstSafe(providerId, LOAD_RECOMMEND).mapNotNull { mapper.toSearchResult(it, currentUrl) } }
+            val acts = async { document.selectFirstSafe(providerId, ACTOR_ITEMS).mapNotNull { 
+                val n = it.selectFirstSafe(providerId, ACTOR_NAME)?.text()?.trim() ?: ""
                 val p = it.selectFirst("img")?.safeExtractImage(ATTR_IMAGE) ?: ""
                 if (n.isNotBlank() && n.length < 100) Actor(n, p) else null 
             } }
             recs.await() to acts.await()
         }
         
-        val epItems = document.selectSafeList(providerId, EPISODE_ITEMS)
-        val seasonDataScript = document.selectSafe(providerId, PencurimovieConstants.SELECTOR_SEASON_CONTAINER)
+        val epItems = document.selectFirstSafe(providerId, EPISODE_ITEMS)
+        val seasonDataScript = document.selectFirstSafe(providerId, PencurimovieConstants.SELECTOR_SEASON_CONTAINER)
         val isMovie = (seasonDataScript == null) && ((moviePathSegment.isNotBlank() && currentUrl.contains(moviePathSegment)) || epItems.isEmpty())
         val type = if (isMovie) TvType.Movie else if (supportedTypes.contains(TvType.Anime)) TvType.Anime else TvType.TvSeries
         val tracker = runCatching { APIHolder.getTracker(listOf(metadata.title), TrackerType.getTypes(type), metadata.year, true) }.getOrElse { e -> logDebug(providerId, "Tracker Fetch Warning: ${e.message}"); null }
 
         if (isMovie) {
-            val watchUrl = fixUrlSmart(document.selectSafe(providerId, PencurimovieConstants.SELECTOR_WATCH_BUTTONS)?.attr("href"), currentUrl).ifBlank { currentUrl }
+            val watchUrl = fixUrlSmart(document.selectFirstSafe(providerId, PencurimovieConstants.SELECTOR_WATCH_BUTTONS)?.attr("href"), currentUrl).ifBlank { currentUrl }
             return api.newMovieLoadResponse(metadata.title, url, type, episodeDataUrlPattern.replace("{url}", watchUrl)) { 
                 this.posterUrl = tracker?.image ?: metadata.poster; this.backgroundPosterUrl = tracker?.cover ?: metadata.banner
                 this.posterHeaders = globalHeaders.toMutableMap().apply { put(PencurimovieConstants.VAL_REFERER, mainUrl) }; this.plot = metadata.description; this.tags = metadata.tags.ifEmpty { null }; this.year = metadata.year; this.score = Score.from10(metadata.rating)
@@ -177,7 +177,7 @@ class PencurimovieScrapper(
                 }
             }
 
-            document.selectSafeList(providerId, PencurimovieConstants.SELECTOR_IFRAME_TAG).forEach { el ->
+            document.selectFirstSafe(providerId, PencurimovieConstants.SELECTOR_IFRAME_TAG).forEach { el ->
                 resolveConfigList(providerId, PencurimovieConstants.ATTR_IFRAME_SOURCES).forEach { attr -> val s = el.attr(attr); if (s.isNotBlank()) allPossibleLinks.add(s to null) }
             }
 

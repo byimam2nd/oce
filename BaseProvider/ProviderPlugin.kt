@@ -9,7 +9,7 @@ class TemplatesProviderPlugin: BasePlugin() {
         registerMainAPI(ProviderCloudstream())
         
         // Register specific extractors for TemplatesProvider
-        ProviderEkstraktors.list.forEach { extractor ->
+        ProviderExtractors.list.forEach { extractor ->
             registerExtractorAPI(extractor)
         }
     }

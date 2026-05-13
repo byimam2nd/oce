@@ -175,7 +175,7 @@ suspend fun loadExtractorWithFallbackCustom(
     }
 
     val urlDomain = url.removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
-    val matchingExtractors = ProviderEkstraktors.list.filter { extractor ->
+    val matchingExtractors = ProviderExtractors.list.filter { extractor ->
         val extractorDomain = extractor.mainUrl.removePrefix("http://").removePrefix("https://").replace("www.", "").lowercase()
         urlDomain.contains(extractorDomain)
     }
@@ -324,7 +324,7 @@ class ShortIcu : ExtractorApi() {
 // REGION 5: EXTRACTORS REGISTRY
 // ============================================
 
-object ProviderEkstraktors {
+object ProviderExtractors {
     val list = listOf(
         Dailymotion(), Odnoklassniki(), Rumble(), StreamRuby(), Svanila(), Svilla(), 
         ByseSX(), Hownetwork(), Cloudhownetwork(),
