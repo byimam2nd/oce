@@ -192,7 +192,10 @@ class LayarKaca21Scrapper(
             resolveConfigList(providerId, LINK_OPTIONS).forEach { selector ->
                 document.select(selector).forEach { container ->
                     val anchors = container.select("a")
-                    if (anchors.isNotEmpty()) anchors.forEach { a -> allPossibleLinks.add(a.attr("href") to a.text()) }
+                    if (anchors.isNotEmpty()) anchors.forEach { a -> 
+                        val link = a.attr("data-url").ifBlank { a.attr("href") }
+                        allPossibleLinks.add(link to a.text()) 
+                    }
                     else { val raw = container.attrSafe(providerId, attrValueSelectors, "ATTR_VALUE") ?: container.attr("href") ?: ""; if (raw.isNotBlank()) allPossibleLinks.add(raw to container.text()) }
                 }
             }
@@ -214,9 +217,13 @@ class LayarKaca21Scrapper(
             coroutineScope {
                 allPossibleLinks.filter { it.first.isNotBlank() }.map { (raw, label) -> async { runCatching {
                     val decodedRaw = if (!raw.startsWith("http") && !raw.startsWith("//") && !raw.startsWith("/") && raw.safeIsBase64()) {
-                        val dec = raw.safeDecode()
-                        if (dec.contains("iframe")) Jsoup.parse(dec).selectFirst("iframe")?.attr("src") ?: raw
-                        else if (dec.startsWith("http") || dec.startsWith("//") || dec.startsWith("/")) dec else raw
+                        val lk21 = decryptLk21PlayerUrl(raw)
+                        if (lk21 != null) lk21
+                        else {
+                            val dec = raw.safeDecode()
+                            if (dec.contains("iframe")) Jsoup.parse(dec).selectFirst("iframe")?.attr("src") ?: raw
+                            else if (dec.startsWith("http") || dec.startsWith("//") || dec.startsWith("/")) dec else raw
+                        }
                     } else raw
 
                     val fixedUrl = fixUrlSmart(decodedRaw, currentUrl).safeHttpsify().unpackPacked()

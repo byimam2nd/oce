@@ -284,7 +284,7 @@ object AnimasuConstants {
     val LINK_OPTIONS = listOf(
         "Animasu:::.mobius > .mirror > option", 
         "Anichin,Donghuastream:::option[data-index], option[value]", 
-        "LayarKaca21,IndoDrama21:::ul#player-list > li, div.player-nav select option, ul.muvipro-player-tabs li a", 
+        "LayarKaca21,IndoDrama21:::ul#player-list > li, select#player-select option, div.player-nav select option, ul.muvipro-player-tabs li a", 
         "Pencurimovie:::div.player_nav a, div.player_nav strong, div.player_nav span, ul.list-server li",
         "GLOBAL:::select.mirror option"
     )
