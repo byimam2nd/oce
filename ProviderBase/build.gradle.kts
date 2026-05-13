@@ -1,13 +1,6 @@
 plugins {
     id("com.android.library")
     id("kotlin-android")
-    id("com.lagradost.cloudstream3.gradle")
-}
-
-cloudstream {
-    setRepo("https://github.com/dummy/dummy")
-    authors = listOf("dummy")
-    description = "Shared library for HTML providers"
 }
 
 android {
@@ -25,8 +18,6 @@ android {
 }
 
 dependencies {
-    val cloudstream by configurations
-    cloudstream("com.lagradost:cloudstream3:pre-release")
     implementation(kotlin("stdlib"))
     implementation("com.github.Blatzar:NiceHttp:0.4.16")
     implementation("org.jsoup:jsoup:1.22.1")
