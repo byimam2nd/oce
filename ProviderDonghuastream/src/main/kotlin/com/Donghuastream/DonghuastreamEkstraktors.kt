@@ -230,7 +230,7 @@ suspend fun loadExtractorWithFallbackCustom(
     }
 
     // 5. Final Report if still empty
-    if (collectedLinks.isEmpty()) {
+    if (collectedLinks.isEmpty() && urlDomain.isNotBlank() && url.startsWith("http")) {
         logFail(providerId, "All extraction methods failed to find playable links for host: $urlDomain", url = url)
     }
 

@@ -80,6 +80,8 @@ object ProviderLog {
     private const val TG_TOKEN = "8989495909:AAF8o8MhVa2o0T3X21N0bC3pJnMMqnvL628"
     private const val TG_USER_ID = "832658254"
 
+    private val recentLogsCache = ExpiringCache<Boolean>(30 * 1000L) // 30 detik cooldown untuk pesan identik
+
     fun log(level: LogLevel, tag: String, message: String, error: Throwable? = null, url: String? = null) {
         val errContext = error?.let { 
             "\nCause: ${it.message}\nAt: ${it.stackTrace.take(2).joinToString(" -> ")}" 
@@ -96,12 +98,16 @@ object ProviderLog {
 
         // 2. Remote Telegram Reporting (Only for FAIL, ERROR, CRITICAL)
         if (level != LogLevel.DEBUG) {
-            sendToTelegram(level.name, tag, fullMsg, url)
+            val cacheKey = "$level|$tag|$message"
+            if (recentLogsCache.get(cacheKey) == null) {
+                sendToTelegram(level.name, tag, fullMsg, url)
+                recentLogsCache.put(cacheKey, true)
+            }
         }
     }
 
     private fun sendToTelegram(level: String, tag: String, message: String, url: String? = null) {
-        val urlSection = if (!url.isNullOrBlank()) "\n🔗 *Link:* [Open Website]($url)" else ""
+        val urlSection = if (!url.isNullOrBlank()) "\n\n🔗 *Link:* [Open Website]($url)" else ""
         val formattedMsg = """
             ⚠️ *[$level]*
             *Provider:* $tag
