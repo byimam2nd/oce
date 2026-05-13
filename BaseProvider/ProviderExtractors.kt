@@ -165,6 +165,7 @@ suspend fun loadExtractorWithFallbackCustom(
     url: String,
     referer: String? = null,
     subtitleCallback: (SubtitleFile) -> Unit,
+    headers: Map<String, String>? = null,
     callback: (ExtractorLink) -> Unit
 ): Boolean {
     val collectedLinks = mutableListOf<ExtractorLink>()
@@ -208,18 +209,18 @@ suspend fun loadExtractorWithFallbackCustom(
     
     // 3. Direct Link Generation
     if (collectedLinks.isEmpty() && (url.contains(".mp4") || url.contains(".m3u8") || url.contains(".mkv") || url.contains(".mpd"))) {
-        MasterLinkGenerator.createSmartLink("Direct", url, referer, callback = internalCallback)
+        MasterLinkGenerator.createSmartLink("Direct", url, referer, headers = headers, callback = internalCallback)
     }
 
     // 4. Deep Scanning: Mencari link video di dalam kode HTML host
     if (collectedLinks.isEmpty()) {
         runCatching {
-            val response = app.get(url, referer = referer).text
+            val response = app.get(url, referer = referer, headers = headers ?: emptyMap()).text
             val urls = CompiledRegexPatterns.extractAllVideoUrls(response)
             val filtered = CompiledRegexPatterns.filterMasterM3u8(urls)
             if (filtered.isNotEmpty()) {
                 filtered.forEach { videoUrl ->
-                    MasterLinkGenerator.createSmartLink("DeepScan", videoUrl, url, callback = internalCallback)
+                    MasterLinkGenerator.createSmartLink("DeepScan", videoUrl, url, headers = headers, callback = internalCallback)
                 }
             } else {
                 logDebug(providerId, "DeepScan found no video URLs in HTML source of $url")

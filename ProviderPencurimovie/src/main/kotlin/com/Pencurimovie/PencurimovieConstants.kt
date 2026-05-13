@@ -29,7 +29,7 @@ object PencurimovieConstants {
         "Anichin:::https://anichin.cafe",
         "Animasu:::https://v1.animasu.top",
         "Donghuastream:::https://donghuastream.org",
-        "LayarKaca21:::https://lk21.de",
+        "LayarKaca21:::https://tv10.lk21official.cc",
         "IndoDrama21:::http://89.124.116.48",
         "Pencurimovie:::https://ww73.pencurimovie.bond",
         "Samehadaku:::https://v1.samehadaku.how",
@@ -37,7 +37,7 @@ object PencurimovieConstants {
     )
 
     val CONFIG_SERIES_URLS = listOf(
-        "LayarKaca21:::https://series.lk21.de",
+        "LayarKaca21:::https://tv10.lk21official.cc/nontondrama",
         "GLOBAL:::"
     )
 
@@ -91,7 +91,7 @@ object PencurimovieConstants {
     val CONFIG_MOVIE_PATH_SEGMENTS = listOf(
         "Anichin:::-movie-",
         "Donghuastream:::-movie-",
-        "LayarKaca21:::/movie/",
+        "LayarKaca21:::/",
         "IndoDrama21:::/movie/",
         "Pencurimovie:::/movies/",
         "Samehadaku:::/movie/",
@@ -99,7 +99,7 @@ object PencurimovieConstants {
     )
 
     val CONFIG_TV_PATH_SEGMENTS = listOf(
-        "LayarKaca21:::/series/",
+        "LayarKaca21:::/nontondrama/",
         "IndoDrama21:::/series/",
         "Pencurimovie:::/series/",
         "Samehadaku:::/anime/",
@@ -119,6 +119,9 @@ object PencurimovieConstants {
     val CONFIG_SEARCH_JSON_POSTER_PREFIXES = listOf("LayarKaca21:::https://static-jpg.lk21.party/wp-content/uploads/", "GLOBAL:::")
     val CONFIG_SEARCH_JSON_TYPES = listOf("LayarKaca21:::type", "GLOBAL:::type")
 
+    val CONFIG_AJAX_PLAYER_URLS = listOf("LayarKaca21:::https://youlike.lk21.party/index.php", "GLOBAL:::")
+    val SELECTOR_JSON_DATA = listOf("LayarKaca21:::script#watch-history-data", "GLOBAL:::")
+    
     val CONFIG_USE_DOCUMENT_LARGE = listOf(
         "LayarKaca21:::true",
         "IndoDrama21:::true",
@@ -155,12 +158,12 @@ object PencurimovieConstants {
     ).joinToString(";")
 
     private val LAYARKACA21_MAIN = listOf(
-        "https://lk21.de/populer/page/|Film Terpopuler",
-        "https://lk21.de/rating/page/|Film Berdasarkan IMDb Rating",
-        "https://lk21.de/most-commented/page/|Film Dengan Komentar Terbanyak",
-        "https://series.lk21.de/latest-series/page/|Series Terbaru",
-        "https://series.lk21.de/series/asian/page/|Film Asian Terbaru",
-        "https://lk21.de/latest/page/|Film Upload Terbaru"
+        "https://tv10.lk21official.cc/populer/page/|Film Terpopuler",
+        "https://tv10.lk21official.cc/rating/page/|Film Berdasarkan IMDb Rating",
+        "https://tv10.lk21official.cc/most-commented/page/|Film Dengan Komentar Terbanyak",
+        "https://tv10.lk21official.cc/nontondrama?page=latest-series|Series Terbaru",
+        "https://tv10.lk21official.cc/nontondrama?page=series/asian|Film Asian Terbaru",
+        "https://tv10.lk21official.cc/latest/page/|Film Upload Terbaru"
     ).joinToString(";")
 
     private val INDODRAMA21_MAIN = listOf(

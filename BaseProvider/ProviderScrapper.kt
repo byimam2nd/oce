@@ -167,7 +167,28 @@ class ProviderScrapper(
             val attrValueSelectors = resolveConfigList(providerId, ProviderHTMLConstants.ATTR_VALUE)
             val allPossibleLinks = mutableSetOf<Pair<String, String?>>()
 
-            // AGGRESSIVE GATHERING V12
+            // 1. AJAX PLAYER FETCHING (NEW - For LK21 & Similar)
+            val ajaxUrl = resolveConfig(providerId, ProviderHTMLConstants.CONFIG_AJAX_PLAYER_URLS, "")
+            val jsonDataSelector = resolveConfigList(providerId, ProviderHTMLConstants.SELECTOR_JSON_DATA)
+            if (ajaxUrl.isNotBlank() && jsonDataSelector.isNotEmpty()) {
+                jsonDataSelector.asSequence().mapNotNull { document.selectFirst(it) }.firstOrNull()?.let { el ->
+                    runCatching {
+                        val json = JSONObject(el.data())
+                        val id = json.optString("id")
+                        if (id.isNotBlank()) {
+                            logDebug(providerId, "Fetching AJAX players for ID: $id from $ajaxUrl")
+                            val res = app.post(ajaxUrl, data = mapOf("id" to id), headers = globalHeaders, referer = currentUrl).document
+                            res.select("li, a, option").forEach { item ->
+                                val label = item.text().trim()
+                                val raw = item.attrSafe(providerId, attrValueSelectors, "ATTR_VALUE") ?: item.attr("href") ?: ""
+                                if (raw.isNotBlank()) allPossibleLinks.add(raw to label)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 2. AGGRESSIVE GATHERING V12
             resolveConfigList(providerId, LINK_OPTIONS).forEach { selector ->
                 document.select(selector).forEach { container ->
                     val anchors = container.select("a")
@@ -191,8 +212,7 @@ class ProviderScrapper(
             }
 
             coroutineScope {
-                val semaphore = Semaphore(3)
-                allPossibleLinks.filter { it.first.isNotBlank() }.map { (raw, label) -> async { semaphore.withPermit { runCatching {
+                allPossibleLinks.filter { it.first.isNotBlank() }.map { (raw, label) -> async { runCatching {
                     val decodedRaw = if (!raw.startsWith("http") && !raw.startsWith("//") && !raw.startsWith("/") && raw.safeIsBase64()) {
                         val dec = raw.safeDecode()
                         if (dec.contains("iframe")) Jsoup.parse(dec).selectFirst("iframe")?.attr("src") ?: raw
@@ -202,21 +222,38 @@ class ProviderScrapper(
                     val fixedUrl = fixUrlSmart(decodedRaw, currentUrl).safeHttpsify().unpackPacked()
                     if (fixedUrl.isBlank()) return@runCatching
 
-                    val okDirect = runCatching { loadExtractorWithFallbackCustom(fixedUrl, currentUrl, subtitleCallback, callback) }.getOrDefault(false)
+                    logDebug(providerId, "Processing link: $fixedUrl (label: $label)")
+
+                    val okDirect = runCatching { loadExtractorWithFallbackCustom(fixedUrl, currentUrl, subtitleCallback, headers = globalHeaders, callback = callback) }.getOrDefault(false)
                     if (!okDirect) {
                         val refererMode = resolveConfig(providerId, CONFIG_HOOK_REFERER_PLAYER, ProviderHTMLConstants.STR_REFERER_MODE_CURRENT)
                         val refererForPlayer = if (refererMode == ProviderHTMLConstants.STR_REFERER_MODE_SERIES) "$seriesUrl/" else currentUrl
+                        
+                        logDebug(providerId, "Direct extraction failed, trying manual iframe fetch for: $fixedUrl (Referer: $refererForPlayer)")
+                        
                         val playerDoc = app.get(fixedUrl, referer = refererForPlayer, headers = globalHeaders).document
                         val iframeSelectors = resolveConfigList(providerId, CONFIG_HOOK_IFRAME_SELECTORS)
-                        val iframeSrc = iframeSelectors.asSequence().mapNotNull { playerDoc.selectFirst(it)?.attr("src") }.firstOrNull() ?: return@runCatching
+                        val iframeAttributes = resolveConfigList(providerId, ProviderHTMLConstants.ATTR_IFRAME_SOURCES)
+                        
+                        val iframeEl = iframeSelectors.asSequence().mapNotNull { playerDoc.selectFirst(it) }.firstOrNull()
+                        if (iframeEl == null) {
+                            logDebug(providerId, "No iframe found on player page: $fixedUrl")
+                            return@runCatching
+                        }
+                        
+                        val iframeSrc = iframeAttributes.asSequence().mapNotNull { iframeEl.attr(it).ifBlank { null } }.firstOrNull() ?: return@runCatching
+                        
                         val finalIframe = fixUrlSmart(iframeSrc, fixedUrl)
                         val refererForExtractor = getBaseUrl(fixedUrl)
-                        val okRecursive = runCatching { loadExtractorWithFallbackCustom(finalIframe, refererForExtractor, subtitleCallback, callback) }.getOrDefault(false)
+                        
+                        logDebug(providerId, "Found iframe: $finalIframe, extracting...")
+                        
+                        val okRecursive = runCatching { loadExtractorWithFallbackCustom(finalIframe, refererForExtractor, subtitleCallback, headers = globalHeaders, callback = callback) }.getOrDefault(false)
                         if (!okRecursive && (finalIframe.contains(".mp4") || finalIframe.contains(".m3u8") || finalIframe.contains(".mkv") || finalIframe.contains(".mpd"))) {
-                            MasterLinkGenerator.createSmartLink(label ?: name, finalIframe, refererForExtractor, callback = callback)
+                            MasterLinkGenerator.createSmartLink(label ?: name, finalIframe, refererForExtractor, headers = globalHeaders, callback = callback)
                         }
                     }
-                }.getOrElse { e -> logDebug(providerId, "Link Processor Error: ${e.message}") } } } }.awaitAll()
+                }.getOrElse { e -> logDebug(providerId, "Link Processor Error on $raw: ${e.message}") } } }.awaitAll()
             }
             true
         }.getOrElse { e -> logCritical(providerId, "LoadLinks Critical Failure on data: $data", e, url = data); false }
