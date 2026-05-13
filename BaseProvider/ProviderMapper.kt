@@ -80,6 +80,15 @@ class ProviderMapper(
         val rawTitle = document.selectFirstSafe(providerId, LOAD_TITLE)?.text() ?: "Unknown Title"
         val title = rawTitle.safeCleanBloat(rawTitle, BLOAT_REGEX).safeDeduplicate()
         val poster = document.selectFirstSafe(providerId, LOAD_POSTER)?.safeExtractImage(ATTR_IMAGE) ?: ""
+        
+        // --- METADATA INTEGRITY CHECK ---
+        if (title == "Unknown Title" || poster.isBlank()) {
+            val missing = mutableListOf<String>()
+            if (title == "Unknown Title") missing.add("Title")
+            if (poster.isBlank()) missing.add("Poster")
+            logFail(providerId, "Metadata Integrity Failure: Missing ${missing.joinToString(" & ")}", url = currentUrl)
+        }
+
         val banner = document.selectFirstSafe(providerId, LOAD_BANNER)?.safeExtractImage(ATTR_IMAGE)
         val description = document.selectFirstSafe(providerId, LOAD_DESC)?.text()?.trim() ?: ""
         val infoText = document.selectFirstSafe(providerId, LOAD_INFO_BOX)?.text() ?: ""
