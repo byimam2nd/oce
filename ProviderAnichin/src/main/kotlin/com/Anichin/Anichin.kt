@@ -53,7 +53,7 @@ open class Anichin : MainAPI() {
     private val configCache = mutableMapOf<Int, String>()
     private val configListCache = mutableMapOf<Int, List<String>>()
 
-    private fun getCached(configKey: Int, default: String): String {
+    override var name = getCached(CONFIG_NAMES, "Base HTML Provider")
     override var mainUrl = getCached(CONFIG_MAIN_URLS, "https://example.com")
     open var seriesUrl = getCached(CONFIG_SERIES_URLS, mainUrl).let { if (it.isBlank()) mainUrl else it }
     open var searchUrl = getCached(CONFIG_SEARCH_URLS, mainUrl).let { if (it.isBlank()) mainUrl else it }
