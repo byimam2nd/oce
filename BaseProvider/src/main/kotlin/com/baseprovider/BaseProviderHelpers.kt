@@ -130,7 +130,7 @@ object ProviderLog {
             LogLevel.CRITICAL -> Log.e(GLOBAL_PREFIX, logcatMsg)
         }
 
-        if (level != LogLevel.DEBUG) {
+        if (level != LogLevel.DEBUG && level != LogLevel.SUCCESS) {
             sendToTelegram(level.name, tag, fullMsg, url, host, method, ft, selectors)
         }
     }
