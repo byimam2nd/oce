@@ -76,6 +76,19 @@ suspend fun <T> executeWithRetry(
 
 // --- CENTRALIZED LOGGING SYSTEM ---
 
+private val markdownV2Escape = mapOf(
+    '\\' to "\\\\", '_' to "\\_", '*' to "\\*", '[' to "\\[", ']' to "\\]",
+    '(' to "\\(", ')' to "\\)", '~' to "\\~", '`' to "\\`", '>' to "\\>",
+    '#' to "\\#", '+' to "\\+", '-' to "\\-", '=' to "\\=", '|' to "\\|",
+    '{' to "\\{", '}' to "\\}", '.' to "\\.", '!' to "\\!"
+)
+
+fun String.escapeMarkdownV2(): String = buildString {
+    for (c in this@escapeMarkdownV2) {
+        append(markdownV2Escape[c] ?: c.toString())
+    }
+}
+
 enum class LogLevel { DEBUG, FAIL, ERROR, CRITICAL }
 
 object ProviderLog {
@@ -118,14 +131,20 @@ object ProviderLog {
 
     private fun sendToTelegram(level: String, tag: String, message: String, url: String?, host: String, method: String?) {
         val now = dateFormat.format(Date())
+        val escapedTag = tag.escapeMarkdownV2()
+        val escapedMethod = method?.escapeMarkdownV2()
+        val escapedHost = host.escapeMarkdownV2()
+        val escapedUrl = url?.escapeMarkdownV2()
+        val escapedMsg = message.escapeMarkdownV2()
+
         val sb = StringBuilder()
-        sb.appendLine("\u26A0\uFE0F [$level] $tag${if (method != null) " / $method" else ""}")
-        sb.appendLine("\u2022 Provider: $tag")
-        if (method != null) sb.appendLine("\u2022 Method: $method")
-        if (host.isNotBlank()) sb.appendLine("\u2022 Host: $host")
-        if (!url.isNullOrBlank()) sb.appendLine("\u2022 Page: $url")
-        sb.appendLine("\u2022 Error: $message")
-        sb.append("\u2022 Time: $now")
+        sb.appendLine("\u26A0\uFE0F *[$level]* $escapedTag${if (escapedMethod != null) " / $escapedMethod" else ""}")
+        sb.appendLine("\u2502 \u2022 Provider: $escapedTag")
+        if (escapedMethod != null) sb.appendLine("\u2502 \u2022 Method: $escapedMethod")
+        if (escapedHost.isNotBlank()) sb.appendLine("\u2502 \u2022 Host: $escapedHost")
+        if (!escapedUrl.isNullOrBlank()) sb.appendLine("\u2502 \u2022 Page: $escapedUrl")
+        sb.appendLine("\u2502 \u2022 Error: $escapedMsg")
+        sb.append("\u2514 \u2022 Time: $now")
 
         kotlinx.coroutines.GlobalScope.launch {
             runCatching {
@@ -134,6 +153,7 @@ object ProviderLog {
                     data = mapOf(
                         "chat_id" to TG_USER_ID,
                         "text" to sb.toString(),
+                        "parse_mode" to "MarkdownV2",
                         "disable_web_page_preview" to "true"
                     )
                 )
