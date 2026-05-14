@@ -230,11 +230,24 @@ object ProviderHTMLConstants {
     ).joinToString(";")
 
     private val SAMEHADAKU_MAIN = listOf(
-        "page/|Episode Terbaru",
-        "anime/?status=&type=TV&order=update&page=|TV Terbaru",
-        "anime/?status=&type=TV&order=popular&page=|TV Populer",
-        "anime/?status=&type=OVA&order=title&page=|OVA",
-        "anime/?status=&type=Movie&order=title&page=|Movie"
+        "page/|Latest Episodes",
+        "anime/?status=&type=TV&order=update&page=|TV Latest",
+        "anime/?status=&type=TV&order=popular&page=|TV Popular",
+        "anime/?status=ongoing&type=TV&order=update&page=|TV Ongoing",
+        "anime/?status=completed&type=TV&order=update&page=|TV Completed",
+        "anime/?status=&type=ONA&order=update&page=|ONA Latest",
+        "anime/?status=&type=OVA&order=update&page=|OVA Latest",
+        "anime/?status=&type=&order=popular&page=|All Popular",
+        "genres/action/page/|Action",
+        "genres/adventure/page/|Adventure",
+        "genres/comedy/page/|Comedy",
+        "genres/drama/page/|Drama",
+        "genres/fantasy/page/|Fantasy",
+        "genres/horror/page/|Horror",
+        "genres/isekai/page/|Isekai",
+        "genres/romance/page/|Romance",
+        "genres/sci-fi/page/|Sci-Fi",
+        "genres/slice-of-life/page/|Slice of Life"
     ).joinToString(";")
 
     private val GLOBAL_MAIN = listOf(
