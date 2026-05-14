@@ -78,6 +78,19 @@ suspend fun <T> executeWithRetry(
 
 // --- CENTRALIZED LOGGING SYSTEM ---
 
+enum class FailureType(val label: String) {
+    UNKNOWN("N/A"),
+    SELECTOR_FAILURE("SELECTOR"),
+    EXTRACTOR_FAILURE("EXTRACTOR"),
+    SHORTLINK_FAILURE("SHORTLINK"),
+    NETWORK_FAILURE("NETWORK"),
+    CLOUDFLARE_FAILURE("CLOUDFLARE"),
+    EMPTY_RESPONSE("EMPTY"),
+    INVALID_IFRAME("IFRAME"),
+    METADATA_FAILURE("METADATA"),
+    CANCELLED("CANCELLED")
+}
+
 enum class LogLevel { DEBUG, FAIL, ERROR, CRITICAL }
 
 object ProviderLog {
@@ -88,20 +101,23 @@ object ProviderLog {
 
     private val sentMessages = java.util.concurrent.ConcurrentHashMap<String, Int>()
 
-    fun log(level: LogLevel, tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null) {
+    fun log(level: LogLevel, tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null, type: FailureType? = null) {
         val errTrace = error?.let {
             buildString {
+                val cause = it.message ?: it.javaClass.simpleName
                 append("\n")
-                append("Cause : ${it.message ?: it.javaClass.simpleName}\n")
+                append("Cause : $cause\n")
                 it.stackTrace.take(3).forEachIndexed { index, frame ->
                     append("Stack ${index + 1}: ${frame.fileName}:${frame.lineNumber}\n")
                 }
             }
         } ?: ""
         val host = url?.let { runCatching { URI(it).host }.getOrNull() } ?: ""
+        val ft = type ?: if (host.contains("short.")) FailureType.SHORTLINK_FAILURE else FailureType.UNKNOWN
         val hostInfo = if (host.isNotBlank()) " | host=$host" else ""
         val methodInfo = if (method != null) " | method=$method" else ""
-        val logcatMsg = "[$tag]${methodInfo}$hostInfo | $message"
+        val typeInfo = " | type=${ft.label}"
+        val logcatMsg = "[$tag]${methodInfo}$typeInfo$hostInfo | $message"
         val fullMsg = message + errTrace
 
         when (level) {
@@ -112,11 +128,11 @@ object ProviderLog {
         }
 
         if (level != LogLevel.DEBUG) {
-            sendToTelegram(level.name, tag, fullMsg, url, host, method)
+            sendToTelegram(level.name, tag, fullMsg, url, host, method, ft)
         }
     }
 
-    private fun sendToTelegram(level: String, tag: String, message: String, url: String?, host: String, method: String?) {
+    private fun sendToTelegram(level: String, tag: String, message: String, url: String?, host: String, method: String?, type: FailureType) {
         val now = dateFormat.format(Date())
         val emoji = when (level) {
             "FAIL" -> "\u26A0\uFE0F"
@@ -124,11 +140,24 @@ object ProviderLog {
             "CRITICAL" -> "\uD83D\uDD25"
             else -> "\u2139\uFE0F"
         }
+        val typeEmoji = when (type) {
+            FailureType.SELECTOR_FAILURE -> "\uD83D\uDD0D"
+            FailureType.EXTRACTOR_FAILURE -> "\uD83D\uDD17"
+            FailureType.SHORTLINK_FAILURE -> "\uD83D\uDD17"
+            FailureType.NETWORK_FAILURE -> "\uD83C\uDF10"
+            FailureType.CLOUDFLARE_FAILURE -> "\u2601\uFE0F"
+            FailureType.EMPTY_RESPONSE -> "\uD83D\uDD04"
+            FailureType.INVALID_IFRAME -> "\uD83D\uDDBC\uFE0F"
+            FailureType.METADATA_FAILURE -> "\uD83D\uDCCB"
+            FailureType.CANCELLED -> "\u23F9\uFE0F"
+            FailureType.UNKNOWN -> "\u2753"
+        }
 
         val body = buildString {
             append("$emoji [$level] $tag")
             if (method != null) append(" / $method")
             append("\n\n")
+            append("Type     : $typeEmoji ${type.label}\n")
             append("Provider : $tag\n")
             if (method != null) append("Method   : $method\n")
             if (host.isNotBlank()) append("Host     : $host\n")
@@ -170,11 +199,11 @@ object ProviderLog {
     }
 }
 
-fun log(level: LogLevel, tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null) = ProviderLog.log(level, tag, message, error, url, method)
+fun log(level: LogLevel, tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null, type: FailureType? = null) = ProviderLog.log(level, tag, message, error, url, method, type)
 fun logDebug(tag: String, message: String) = log(LogLevel.DEBUG, tag, message)
-fun logFail(tag: String, message: String, url: String? = null, method: String? = null) = log(LogLevel.FAIL, tag, message, url = url, method = method)
-fun logError(tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null) = log(LogLevel.ERROR, tag, message, error, url, method)
-fun logCritical(tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null) = log(LogLevel.CRITICAL, tag, message, error, url, method)
+fun logFail(tag: String, message: String, url: String? = null, method: String? = null, type: FailureType? = null) = log(LogLevel.FAIL, tag, message, url = url, method = method, type = type)
+fun logError(tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null, type: FailureType? = null) = log(LogLevel.ERROR, tag, message, error, url, method, type)
+fun logCritical(tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null, type: FailureType? = null) = log(LogLevel.CRITICAL, tag, message, error, url, method, type)
 
 // --- HIGH-STABILITY CONFIG ENGINE ---
 

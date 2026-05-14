@@ -81,7 +81,7 @@ class ProviderScrapper(
             val home = document.selectSafe(providerId, SEARCH_ITEMS, "SEARCH_ITEMS").mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() }
             newHomePageResponse(list = HomePageList(name = request.name, list = home, isHorizontalImages = isHorizontal), hasNext = home.isNotEmpty())
         }.getOrElse { e -> 
-            logFail(providerId, "MainPage Fetch Failure on ${request.name}: ${e.message}", url = url, method = "getMainPage")
+            logFail(providerId, "MainPage Fetch Failure on ${request.name}: ${e.message}", url = url, method = "getMainPage", type = FailureType.NETWORK_FAILURE)
             newHomePageResponse(request.name, emptyList(), false) 
         }
     }
@@ -105,7 +105,7 @@ class ProviderScrapper(
                 }
                 results
             }.getOrElse { e -> 
-                logFail(providerId, "JSON Search Execution Failed for '$query': ${e.message}", url = url, method = "search")
+                logFail(providerId, "JSON Search Execution Failed for '$query': ${e.message}", url = url, method = "search", type = FailureType.NETWORK_FAILURE)
                 emptyList() 
             }
         }
@@ -211,7 +211,7 @@ class ProviderScrapper(
             }
 
             if (allPossibleLinks.isEmpty()) {
-                logFail(providerId, "No media links or iframes found for: $data", url = data, method = "loadLinks")
+                logFail(providerId, "No media links or iframes found for: $data", url = data, method = "loadLinks", type = FailureType.SELECTOR_FAILURE)
             }
 
             coroutineScope {
@@ -263,7 +263,10 @@ class ProviderScrapper(
                 }.getOrElse { e -> logDebug(providerId, "Link Processor Error on $raw: ${e.message}") } } }.awaitAll()
             }
             true
-        }.getOrElse { e -> logCritical(providerId, "LoadLinks Critical Failure on data: $data", e, url = data, method = "loadLinks"); false }
+        }.getOrElse { e -> 
+            val ft = if (e.message?.contains("cancel", true) == true) FailureType.CANCELLED else FailureType.NETWORK_FAILURE
+            logCritical(providerId, "LoadLinks Critical Failure on data: $data", e, url = data, method = "loadLinks", type = ft); false
+        }
     }
 
     private suspend fun getHtmlParsed(url: String, referer: String? = null, skipCache: Boolean = false): Document {
