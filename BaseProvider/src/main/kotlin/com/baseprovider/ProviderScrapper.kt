@@ -191,8 +191,12 @@ class ProviderScrapper(
             }
 
             // 2. AGGRESSIVE GATHERING V12
-            resolveConfigList(providerId, LINK_OPTIONS).forEach { selector ->
-                document.select(selector).forEach { container ->
+            val linkSelectors = resolveConfigList(providerId, LINK_OPTIONS)
+            logDebug(providerId, "LINK_OPTIONS resolved: ${linkSelectors.joinToString(" | ")}")
+            linkSelectors.forEach { selector ->
+                val matches = document.select(selector)
+                logDebug(providerId, "LINK_OPTIONS selector '$selector' => ${matches.size} match(es)")
+                matches.forEach { container ->
                     val anchors = container.select("a")
                     if (anchors.isNotEmpty()) anchors.forEach { a -> 
                         val link = a.attr("data-url").ifBlank { a.attr("href") }
@@ -203,12 +207,16 @@ class ProviderScrapper(
             }
 
             resolveConfigList(providerId, DOWNLOAD_ITEMS).forEach { selector ->
-                document.select(selector).forEach { container ->
+                val dlMatches = document.select(selector)
+                logDebug(providerId, "DOWNLOAD_ITEMS selector '$selector' => ${dlMatches.size} match(es)")
+                dlMatches.forEach { container ->
                     container.select("a").forEach { a -> val href = a.attr("href"); if (href.isNotBlank()) allPossibleLinks.add(href to a.text()) }
                 }
             }
 
-            document.selectSafe(providerId, ProviderHTMLConstants.SELECTOR_IFRAME_TAG, "SELECTOR_IFRAME_TAG").forEach { el ->
+            val iframeTagMatches = document.selectSafe(providerId, ProviderHTMLConstants.SELECTOR_IFRAME_TAG, "SELECTOR_IFRAME_TAG")
+            logDebug(providerId, "SELECTOR_IFRAME_TAG => ${iframeTagMatches.size} iframe(s)")
+            iframeTagMatches.forEach { el ->
                 resolveConfigList(providerId, ProviderHTMLConstants.ATTR_IFRAME_SOURCES).forEach { attr -> val s = el.attr(attr); if (s.isNotBlank()) allPossibleLinks.add(s to null) }
             }
 
@@ -246,13 +254,19 @@ class ProviderScrapper(
                         val iframeSelectors = resolveConfigList(providerId, CONFIG_HOOK_IFRAME_SELECTORS)
                         val iframeAttributes = resolveConfigList(providerId, ProviderHTMLConstants.ATTR_IFRAME_SOURCES)
                         
+                        logDebug(providerId, "Manual iframe: selectors=$iframeSelectors, attrs=$iframeAttributes")
+                        
                         val iframeEl = iframeSelectors.asSequence().mapNotNull { playerDoc.selectFirst(it) }.firstOrNull()
                         if (iframeEl == null) {
-                            logDebug(providerId, "No iframe found on player page: $fixedUrl")
+                            logFail(providerId, "Manual iframe fetch failed: no iframe found on: $fixedUrl (selectors: ${iframeSelectors.joinToString(", ")})", url = data, method = "loadLinks", type = FailureType.INVALID_IFRAME)
                             return@runCatching
                         }
                         
-                        val iframeSrc = iframeAttributes.asSequence().mapNotNull { iframeEl.attr(it).ifBlank { null } }.firstOrNull() ?: return@runCatching
+                        val iframeSrc = iframeAttributes.asSequence().mapNotNull { iframeEl.attr(it).ifBlank { null } }.firstOrNull() 
+                        if (iframeSrc == null) {
+                            logFail(providerId, "Manual iframe fetch failed: iframe has no src on: $fixedUrl", url = data, method = "loadLinks", type = FailureType.INVALID_IFRAME)
+                            return@runCatching
+                        }
                         
                         val finalIframe = fixUrlSmart(iframeSrc, fixedUrl)
                         val refererForExtractor = getBaseUrl(fixedUrl)

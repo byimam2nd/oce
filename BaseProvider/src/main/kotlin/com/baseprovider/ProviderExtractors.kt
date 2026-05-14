@@ -184,6 +184,12 @@ suspend fun loadExtractorWithFallbackCustom(
         urlDomain.contains(extractorDomain)
     }
 
+    if (matchingExtractors.isEmpty()) {
+        logDebug(providerId, "No matching extractor for host: $urlDomain")
+    } else {
+        logDebug(providerId, "Matching extractors for $urlDomain: ${matchingExtractors.joinToString(", ") { it.name }}")
+    }
+
     // 1. Jalankan extractor lokal yang cocok secara paralel (max 3 thread)
     if (matchingExtractors.isNotEmpty()) {
         coroutineScope {
