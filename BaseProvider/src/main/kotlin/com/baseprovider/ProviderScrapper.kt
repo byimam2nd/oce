@@ -14,6 +14,9 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
+import org.jsoup.nodes.Element
+import org.jsoup.select.Elements
 import org.json.JSONObject
 import java.util.concurrent.atomic.AtomicInteger
 import com.baseprovider.ProviderHTMLConstants.DEFAULT_TIMEOUT
