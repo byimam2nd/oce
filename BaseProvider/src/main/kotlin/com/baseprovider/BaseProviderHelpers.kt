@@ -97,7 +97,7 @@ object ProviderLog {
     private const val TG_USER_ID = "832658254"
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
 
-    private val recentLogsCache = ExpiringCache<Boolean>(30 * 1000L)
+    private val sentMessages = java.util.concurrent.ConcurrentHashMap<String, Int>()
 
     fun log(level: LogLevel, tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null) {
         val errTrace = error?.let {
@@ -119,18 +119,12 @@ object ProviderLog {
         }
 
         if (level != LogLevel.DEBUG) {
-            val cacheKey = "$level|$tag|${error?.message ?: message}|$host"
-            synchronized(recentLogsCache) {
-                if (recentLogsCache.get(cacheKey) == null) {
-                    recentLogsCache.put(cacheKey, true)
-                    sendToTelegram(level.name, tag, fullMsg, url, host, method)
-                }
-            }
+            sendToTelegram(level.name, tag, fullMsg, url, host, method)
         }
     }
 
     private fun sendToTelegram(level: String, tag: String, message: String, url: String?, host: String, method: String?) {
-        val now = dateFormat.format(Date())
+        val now = dateFormat.format(Date()).escapeMarkdownV2()
         val escapedTag = tag.escapeMarkdownV2()
         val escapedMethod = method?.escapeMarkdownV2()
         val escapedHost = host.escapeMarkdownV2()
@@ -139,31 +133,49 @@ object ProviderLog {
 
         val sb = StringBuilder()
         sb.appendLine("\uD83D\uDD25 *\\[$level\\]* $escapedTag${if (escapedMethod != null) " / $escapedMethod" else ""}")
-
         val lines = mutableListOf<String>()
         lines += "Provider: $escapedTag"
         if (escapedMethod != null) lines += "Method: $escapedMethod"
         if (escapedHost.isNotBlank()) lines += "Host: $escapedHost"
         if (!escapedUrl.isNullOrBlank()) lines += "Page: $escapedUrl"
         lines += "Error: $escapedMsg"
-        lines += "Time: ${now.escapeMarkdownV2()}"
-
+        lines += "Time: $now"
         for (i in 0 until lines.size - 1) {
             sb.appendLine("\u251C ${lines[i]}")
         }
         if (lines.isNotEmpty()) sb.append("\u2514 ${lines.last()}")
 
+        val key = "$level|$tag|$host"
+        val text = sb.toString()
+
         kotlinx.coroutines.GlobalScope.launch {
             runCatching {
-                com.lagradost.cloudstream3.app.post(
-                    "https://api.telegram.org/bot$TG_TOKEN/sendMessage",
-                    data = mapOf(
-                        "chat_id" to TG_USER_ID,
-                        "text" to sb.toString(),
-                        "parse_mode" to "Markdown",
-                        "disable_web_page_preview" to "true"
+                val existingId = sentMessages[key]
+                if (existingId != null) {
+                    com.lagradost.cloudstream3.app.post(
+                        "https://api.telegram.org/bot$TG_TOKEN/editMessageText",
+                        data = mapOf(
+                            "chat_id" to TG_USER_ID,
+                            "message_id" to existingId,
+                            "text" to text,
+                            "parse_mode" to "Markdown",
+                            "disable_web_page_preview" to "true"
+                        )
                     )
-                )
+                } else {
+                    val resp = com.lagradost.cloudstream3.app.post(
+                        "https://api.telegram.org/bot$TG_TOKEN/sendMessage",
+                        data = mapOf(
+                            "chat_id" to TG_USER_ID,
+                            "text" to text,
+                            "parse_mode" to "Markdown",
+                            "disable_web_page_preview" to "true"
+                        )
+                    ).text
+                    val msgId = org.json.JSONObject(resp)
+                        .getJSONObject("result").getInt("message_id")
+                    sentMessages[key] = msgId
+                }
             }
         }
     }
