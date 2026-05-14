@@ -88,9 +88,13 @@ object ProviderLog {
 
     fun log(level: LogLevel, tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null) {
         val errTrace = error?.let {
-            val cause = it.message ?: it.javaClass.simpleName
-            val stackTop = it.stackTrace.take(3).joinToString(" ← ") { f -> "${f.fileName}:${f.lineNumber}" }
-            "\nCause: $cause\nAt: $stackTop"
+            buildString {
+                append("\n")
+                append("Cause : ${it.message ?: it.javaClass.simpleName}\n")
+                it.stackTrace.take(3).forEachIndexed { index, frame ->
+                    append("Stack ${index + 1}: ${frame.fileName}:${frame.lineNumber}\n")
+                }
+            }
         } ?: ""
         val host = url?.let { runCatching { URI(it).host }.getOrNull() } ?: ""
         val hostInfo = if (host.isNotBlank()) " | host=$host" else ""
@@ -124,12 +128,12 @@ object ProviderLog {
             if (method != null) append(" / $method")
             append("\n\n")
             append("<pre>")
-            append("\u251C Provider: $tag\n")
-            if (method != null) append("\u251C Method: $method\n")
-            if (host.isNotBlank()) append("\u251C Host: $host\n")
-            if (!url.isNullOrBlank()) append("\u251C Page: $url\n")
-            append("\u251C Error: $message\n")
-            append("\u2514 Time: $now")
+            append("Provider : $tag\n")
+            if (method != null) append("Method   : $method\n")
+            if (host.isNotBlank()) append("Host     : $host\n")
+            if (!url.isNullOrBlank()) append("Page     : $url\n")
+            append("Error    : $message\n")
+            append("Time     : $now")
             append("</pre>")
         }
 
