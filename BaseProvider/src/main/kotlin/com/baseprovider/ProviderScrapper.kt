@@ -143,6 +143,8 @@ class ProviderScrapper(
         val type = if (isMovie) TvType.Movie else if (supportedTypes.contains(TvType.Anime)) TvType.Anime else TvType.TvSeries
         val tracker = runCatching { APIHolder.getTracker(listOf(metadata.title), TrackerType.getTypes(type), metadata.year, true) }.getOrElse { e -> logDebug(providerId, "Tracker Fetch Warning: ${e.message}"); null }
 
+        logSuccess(providerId, "Loaded page: ${metadata.title} (${if (isMovie) "Movie" else "Series"}, tags=${metadata.tags?.size ?: 0})", url = currentUrl, method = "load")
+
         if (isMovie) {
             val watchUrl = fixUrlSmart(document.selectFirstSafe(providerId, ProviderHTMLConstants.SELECTOR_WATCH_BUTTONS, "SELECTOR_WATCH_BUTTONS")?.attr("href"), currentUrl).ifBlank { currentUrl }
             return api.newMovieLoadResponse(metadata.title, url, type, episodeDataUrlPattern.replace("{url}", watchUrl)) { 
@@ -212,6 +214,8 @@ class ProviderScrapper(
 
             if (allPossibleLinks.isEmpty()) {
                 logFail(providerId, "No media links or iframes found for: $data", url = data, method = "loadLinks", type = FailureType.SELECTOR_FAILURE)
+            } else {
+                logSuccess(providerId, "Found ${allPossibleLinks.size} potential link(s) from selectors", url = data, method = "loadLinks")
             }
 
             coroutineScope {

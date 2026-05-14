@@ -79,6 +79,7 @@ suspend fun <T> executeWithRetry(
 // --- CENTRALIZED LOGGING SYSTEM ---
 
 enum class FailureType(val label: String) {
+    SUCCESS("SUCCESS"),
     UNKNOWN("N/A"),
     SELECTOR_FAILURE("SELECTOR"),
     EXTRACTOR_FAILURE("EXTRACTOR"),
@@ -91,7 +92,7 @@ enum class FailureType(val label: String) {
     CANCELLED("CANCELLED")
 }
 
-enum class LogLevel { DEBUG, FAIL, ERROR, CRITICAL }
+enum class LogLevel { DEBUG, SUCCESS, FAIL, ERROR, CRITICAL }
 
 object ProviderLog {
     private const val GLOBAL_PREFIX = "OCE"
@@ -135,12 +136,14 @@ object ProviderLog {
     private fun sendToTelegram(level: String, tag: String, message: String, url: String?, host: String, method: String?, type: FailureType) {
         val now = dateFormat.format(Date())
         val emoji = when (level) {
+            "SUCCESS" -> "\u2705"
             "FAIL" -> "\u26A0\uFE0F"
             "ERROR" -> "\u274C"
             "CRITICAL" -> "\uD83D\uDD25"
             else -> "\u2139\uFE0F"
         }
         val typeEmoji = when (type) {
+            FailureType.SUCCESS -> "\u2705"
             FailureType.SELECTOR_FAILURE -> "\uD83D\uDD0D"
             FailureType.EXTRACTOR_FAILURE -> "\uD83D\uDD17"
             FailureType.SHORTLINK_FAILURE -> "\uD83D\uDD17"
@@ -204,6 +207,7 @@ fun logDebug(tag: String, message: String) = log(LogLevel.DEBUG, tag, message)
 fun logFail(tag: String, message: String, url: String? = null, method: String? = null, type: FailureType? = null) = log(LogLevel.FAIL, tag, message, url = url, method = method, type = type)
 fun logError(tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null, type: FailureType? = null) = log(LogLevel.ERROR, tag, message, error, url, method, type)
 fun logCritical(tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null, type: FailureType? = null) = log(LogLevel.CRITICAL, tag, message, error, url, method, type)
+fun logSuccess(tag: String, message: String, url: String? = null, method: String? = null) = log(LogLevel.SUCCESS, tag, message, url = url, method = method, type = FailureType.SUCCESS)
 
 // --- HIGH-STABILITY CONFIG ENGINE ---
 
