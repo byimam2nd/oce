@@ -114,8 +114,9 @@ object ProviderLog {
         val now = dateFormat.format(Date())
 
         val sb = StringBuilder()
-        // *bold* untuk level, [ dan ] tidak perlu escape di Markdown biasa
-        sb.appendLine("\uD83D\uDD25 *[$level]* $tag${if (method != null) " / $method" else ""}")
+        sb.append("\uD83D\uDD25 *[$level]* $tag")
+        if (method != null) sb.append(" / $method")
+        sb.append("\n")
         val lines = mutableListOf<String>()
         lines += "Provider: $tag"
         if (method != null) lines += "Method: $method"
@@ -124,7 +125,7 @@ object ProviderLog {
         lines += "Error: $message"
         lines += "Time: $now"
         for (i in 0 until lines.size - 1) {
-            sb.appendLine("\u251C ${lines[i]}")
+            sb.append("\u251C ${lines[i]}\n")
         }
         if (lines.isNotEmpty()) sb.append("\u2514 ${lines.last()}")
 
