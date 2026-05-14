@@ -432,14 +432,10 @@ class AnichinStream : ExtractorApi() {
     override val requiresReferer = true
 
     override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
-        val response = app.get(url, referer = referer)
-        val decoded = findPackedJsInPage(response.text)?.let { (p, k, b) -> decodePackedJs(p, k, b) } ?: return
-        val fileMatch = Regex("""file\s*:\s*"([^"]+)""").find(decoded)
-        if (fileMatch != null) {
-            val fileUrl = fileMatch.groupValues[1]
-            val finalUrl = if (fileUrl.startsWith("http")) fileUrl else fixUrlSmart(fileUrl, mainUrl)
-            MasterLinkGenerator.createSmartLink(this.name, finalUrl, referer ?: mainUrl, callback = callback)
-        }
+        // Extract video ID from URL (?id=xxx)
+        val id = Regex("[?&]id=([^&]+)").find(url)?.groupValues?.get(1) ?: return
+        val videoUrl = "$mainUrl/hls/$id.m3u8"
+        MasterLinkGenerator.createSmartLink(this.name, videoUrl, referer ?: mainUrl, callback = callback)
     }
 }
 
