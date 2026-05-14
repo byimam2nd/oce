@@ -361,48 +361,6 @@ class StreamHG : ExtractorApi() {
     }
 }
 
-class MegaPlay : ExtractorApi() {
-    override var name = "MegaPlay"
-    override var mainUrl = "https://megaplay.buzz"
-    override val requiresReferer = false
-
-    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
-        val id = app.get(url).document.selectFirst("#megaplay-player")?.attr("data-id") ?: return
-        val apiUrl = "$mainUrl/stream/getSources?id=$id&id=$id"
-        val json = JSONObject(app.get(apiUrl).text)
-        val m3u8 = json.optJSONObject("sources")?.optString("file") ?: return
-        MasterLinkGenerator.createSmartLink(this.name, m3u8, mainUrl, callback = callback)
-    }
-}
-
-class AWSStream : ExtractorApi() {
-    override var name = "AWSStream"
-    override var mainUrl = "https://z.awstream.net"
-    override val requiresReferer = true
-
-    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
-        val hash = url.substringAfterLast("/")
-        val apiUrl = "$mainUrl/player/index.php?data=$hash&do=getVideo"
-        val response = app.post(apiUrl, headers = mapOf("x-requested-with" to "XMLHttpRequest"), data = mapOf("hash" to hash, "r" to mainUrl))
-        val videoSrc = JSONObject(response.text).optString("videoSource")
-        if (videoSrc.isNotBlank()) MasterLinkGenerator.createSmartLink(this.name, videoSrc, "", callback = callback)
-    }
-}
-
-class LuluStream : ExtractorApi() {
-    override var name = "LuluStream"
-    override var mainUrl = "https://luluvdo.com"
-    override val requiresReferer = true
-
-    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
-        val filecode = url.substringAfterLast("/")
-        val post = app.post("$mainUrl/dl", data = mapOf("op" to "embed", "file_code" to filecode, "auto" to "1", "referer" to (referer ?: "")))
-        val script = post.document.selectFirst("script:containsData(vplayer)")?.data() ?: return
-        val link = Regex("""file:"(.*)"""").find(script)?.groupValues?.get(1) ?: return
-        MasterLinkGenerator.createSmartLink(this.name, link, mainUrl, callback = callback)
-    }
-}
-
 open class MegaPlay : ExtractorApi() {
     override var name = "MegaPlay"
     override var mainUrl = "https://megaplay.buzz"
