@@ -179,6 +179,28 @@ object ProviderHTMLConstants {
         "country/china|Film China Terupdate"
     ).joinToString(";")
 
+    private val DUTAMOVIE21_MAIN = listOf(
+        "category/box-office/page/%d/|Box Office",
+        "category/serial-tv/page/%d/|TV Series",
+        "action/page/%d/|Action",
+        "adventure/page/%d/|Adventure",
+        "animation/page/%d/|Animation",
+        "comedy/page/%d/|Comedy",
+        "crime/page/%d/|Crime",
+        "drama/page/%d/|Drama",
+        "fantasy/page/%d/|Fantasy",
+        "horror/page/%d/|Horror",
+        "mystery/page/%d/|Mystery",
+        "romance/page/%d/|Romance",
+        "science-fiction/page/%d/|Sci-Fi",
+        "thriller/page/%d/|Thriller",
+        "country/china/page/%d/|China",
+        "country/indonesia/page/%d/|Indonesia",
+        "country/korea/page/%d/|Korea",
+        "country/philippines/page/%d/|Philippines",
+        "country/thailand/page/%d/|Thailand"
+    ).joinToString(";")
+
     private val PENCURIMOVIE_MAIN = listOf(
         "movies|Latest Movies",
         "series|TV Series",
@@ -204,7 +226,8 @@ object ProviderHTMLConstants {
         "Animasu:::$ANIMASU_MAIN",
         "Donghuastream:::$DONGHUASTREAM_MAIN",
         "LayarKaca21:::$LAYARKACA21_MAIN",
-        "Dutamovie21,IndoDrama21:::$INDODRAMA21_MAIN",
+        "IndoDrama21:::$INDODRAMA21_MAIN",
+        "Dutamovie21:::$DUTAMOVIE21_MAIN",
         "Pencurimovie:::$PENCURIMOVIE_MAIN",
         "Samehadaku:::$SAMEHADAKU_MAIN",
         "GLOBAL:::$GLOBAL_MAIN"
