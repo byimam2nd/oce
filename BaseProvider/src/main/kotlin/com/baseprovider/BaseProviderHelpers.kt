@@ -138,13 +138,20 @@ object ProviderLog {
         val escapedMsg = message.escapeMarkdownV2()
 
         val sb = StringBuilder()
-        sb.appendLine("\u26A0\uFE0F *[$level]* $escapedTag${if (escapedMethod != null) " / $escapedMethod" else ""}")
-        sb.appendLine("\u2502 \u2022 Provider: $escapedTag")
-        if (escapedMethod != null) sb.appendLine("\u2502 \u2022 Method: $escapedMethod")
-        if (escapedHost.isNotBlank()) sb.appendLine("\u2502 \u2022 Host: $escapedHost")
-        if (!escapedUrl.isNullOrBlank()) sb.appendLine("\u2502 \u2022 Page: $escapedUrl")
-        sb.appendLine("\u2502 \u2022 Error: $escapedMsg")
-        sb.append("\u2514 \u2022 Time: $now")
+        sb.appendLine("\uD83D\uDD25 *[$level]* $escapedTag${if (escapedMethod != null) " / $escapedMethod" else ""}")
+
+        val lines = mutableListOf<String>()
+        lines += "Provider: $escapedTag"
+        if (escapedMethod != null) lines += "Method: $escapedMethod"
+        if (escapedHost.isNotBlank()) lines += "Host: $escapedHost"
+        if (!escapedUrl.isNullOrBlank()) lines += "Page: $escapedUrl"
+        lines += "Error: $escapedMsg"
+        lines += "Time: $now"
+
+        for (i in 0 until lines.size - 1) {
+            sb.appendLine("\u251C ${lines[i]}")
+        }
+        if (lines.isNotEmpty()) sb.append("\u2514 ${lines.last()}")
 
         kotlinx.coroutines.GlobalScope.launch {
             runCatching {
