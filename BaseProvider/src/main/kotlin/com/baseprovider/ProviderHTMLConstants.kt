@@ -223,7 +223,7 @@ object ProviderHTMLConstants {
         "LayarKaca21:::h3, h2, a[title]", 
         "IndoDrama21:::h2.entry-title a, .entry-title a",
         "Samehadaku:::h2, .entry-title a, .title", 
-        "Anichin,Donghuastream:::.tt, div.bsx h2, a[title], a", 
+        "Anichin,Donghuastream:::div.bsx h2, .tt, a[title], a", 
         "Animasu:::div.tt", 
         "Pencurimovie:::a[oldtitle], a[title]", 
         "GLOBAL:::h3, h2, .title"
@@ -275,8 +275,8 @@ object ProviderHTMLConstants {
     val LOAD_TRAILER = listOf("LayarKaca21,IndoDrama21:::ul.action-left > li:nth-child(3) > a, .gmr-trailer-popup", "Samehadaku:::iframe[src*=\"youtube\"], .trailer a", "GLOBAL:::div.trailer iframe")
     val LOAD_RECOMMEND = listOf("LayarKaca21:::div#gmr-related-load article, div.related-post article", "IndoDrama21:::div.gmr-grid article, div.gmr-related-title + .row article", "Samehadaku:::div.relat ul li, .relat article, .related-post article", "Anichin,Donghuastream,Animasu:::.listupd article, .listupd .bsx, .related-post article, .relat article", "Pencurimovie:::.mlw-related .ml-item, #related-items .ml-item", "GLOBAL:::div.related article, .recommendations article")
 
-    val EPISODE_ITEMS = listOf("Animasu:::ul#daftarepisode > li", "Samehadaku:::div.lstepsiode ul li, .eplister li", "Pencurimovie:::div.tvseason div.les-content a", "Anichin,Donghuastream:::.eplister li", "GLOBAL:::.ep-list li")
-    val EPISODE_HREF = listOf("Samehadaku:::a", "LayarKaca21,IndoDrama21:::a", "Pencurimovie:::a", "Anichin,Donghuastream:::.eplister li > a", "GLOBAL:::a")
+    val EPISODE_ITEMS = listOf("Animasu:::ul#daftarepisode > li", "Samehadaku:::div.lstepsiode ul li, .eplister li", "Pencurimovie:::div.tvseason div.les-content a", "Anichin:::.episodelist li", "Donghuastream:::.episodelist li", "GLOBAL:::.ep-list li")
+    val EPISODE_HREF = listOf("Samehadaku:::a", "LayarKaca21,IndoDrama21:::a", "Pencurimovie:::a", "Anichin:::.episodelist li > a", "Donghuastream:::.episodelist li > a", "GLOBAL:::a")
     val EPISODE_TITLE = listOf("Samehadaku:::a, .epl-title", "Anichin,Donghuastream:::.epl-title", "Animasu:::a", "GLOBAL:::.title")
     val EPISODE_NUM = listOf("Anichin,Donghuastream:::.epl-num", "GLOBAL:::.ep-num")
     val EPISODE_DESC = listOf("GLOBAL:::.ep-desc")
