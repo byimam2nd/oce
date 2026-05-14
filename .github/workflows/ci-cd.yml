@@ -97,10 +97,10 @@ jobs:
 
       - name: Inject Build Timestamp
         run: |
-          TS=$(date +'%Y-%m-%d %H:%M')
-          echo "Injecting timestamp: $TS UTC"
+          TS=$(TZ='Asia/Jakarta' date +'%Y-%m-%d %H:%M')
+          echo "Injecting timestamp: $TS WIB"
           for f in "$GITHUB_WORKSPACE/src/Provider"*/build.gradle.kts; do
-            sed -i "s|description = \"|description = \"[Build $TS UTC] |" "$f"
+            sed -i "s|description = \"|description = \"[Build $TS WIB] |" "$f"
           done
           echo "✅ Timestamp injected into all providers"
 
