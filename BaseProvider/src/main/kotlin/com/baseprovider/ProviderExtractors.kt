@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.*
-import com.lagradost.cloudstream3.extractors.helper.JwPlayerHelper
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import kotlinx.coroutines.async
@@ -324,12 +323,15 @@ class Minochinos : ExtractorApi() {
 
     override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
         val response = app.get(url, referer = referer)
-        val script = if (!getPacked(response.text).isNullOrEmpty()) {
-            getAndUnpack(response.text)
+        val text = response.text
+        val packed = findPackedJsInPage(text)
+        val unpacked = if (packed != null) {
+            decodePackedJs(packed.first, packed.second, packed.third)
         } else {
-            response.document.selectFirst("script:containsData(sources:)")?.data()
-        } ?: return
-        JwPlayerHelper.extractStreamLinks(script, name, mainUrl, callback, subtitleCallback)
+            response.document.selectFirst("script:containsData(sources:)")?.data() ?: return
+        }
+        val urls = CompiledRegexPatterns.extractAllVideoUrls(unpacked)
+        CompiledRegexPatterns.filterMasterM3u8(urls).forEach { MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback) }
     }
 }
 class Vidhide : ExtractorApi() { override var name = "Vidhide"; override var mainUrl = "https://vidhide.com"; override val requiresReferer = true }
