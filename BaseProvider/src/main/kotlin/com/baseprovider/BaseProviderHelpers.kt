@@ -149,33 +149,33 @@ object ProviderLog {
         val text = sb.toString()
 
         kotlinx.coroutines.GlobalScope.launch {
-            runCatching {
-                val existingId = sentMessages[key]
-                if (existingId != null) {
+            val existingId = sentMessages[key]
+            if (existingId != null) {
+                runCatching {
                     com.lagradost.cloudstream3.app.post(
-                        "https://api.telegram.org/bot$TG_TOKEN/editMessageText",
+                        "https://api.telegram.org/bot$TG_TOKEN/deleteMessage",
                         data = mapOf(
                             "chat_id" to TG_USER_ID,
-                            "message_id" to existingId.toString(),
-                            "text" to text,
-                            "parse_mode" to "Markdown",
-                            "disable_web_page_preview" to "true"
+                            "message_id" to existingId.toString()
                         )
                     )
-                } else {
-                    val resp = com.lagradost.cloudstream3.app.post(
-                        "https://api.telegram.org/bot$TG_TOKEN/sendMessage",
-                        data = mapOf(
-                            "chat_id" to TG_USER_ID,
-                            "text" to text,
-                            "parse_mode" to "Markdown",
-                            "disable_web_page_preview" to "true"
-                        )
-                    ).text
-                    val msgId = org.json.JSONObject(resp)
-                        .getJSONObject("result").getInt("message_id")
-                    sentMessages[key] = msgId
                 }
+            }
+            runCatching {
+                val resp = com.lagradost.cloudstream3.app.post(
+                    "https://api.telegram.org/bot$TG_TOKEN/sendMessage",
+                    data = mapOf(
+                        "chat_id" to TG_USER_ID,
+                        "text" to text,
+                        "parse_mode" to "Markdown",
+                        "disable_web_page_preview" to "true"
+                    )
+                ).text
+                val msgId = org.json.JSONObject(resp)
+                    .getJSONObject("result").getInt("message_id")
+                sentMessages[key] = msgId
+            }
+        }
             }
         }
     }
