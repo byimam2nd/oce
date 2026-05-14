@@ -413,14 +413,15 @@ open class StreamRuby : ExtractorApi() {
         var urls = CompiledRegexPatterns.extractAllVideoUrls(response.text)
         if (urls.isEmpty()) {
             val decoded = findPackedJsInPage(response.text)?.let { (p, k, b) -> decodePackedJs(p, k, b) } ?: response.text
-            urls = CompiledRegexPatterns.extractAllVideoUrls(decoded)
-            if (urls.isEmpty()) {
-                val fileMatch = Regex("""file\s*:\s*"([^"]+)""").find(decoded)
-                if (fileMatch != null) {
-                    val fileUrl = fileMatch.groupValues[1]
-                    if (fileUrl.startsWith("http")) urls = setOf(fileUrl)
+            val fileMatch = Regex("""file\s*:\s*"([^"]+)""").find(decoded)
+            if (fileMatch != null) {
+                val fileUrl = fileMatch.groupValues[1]
+                if (fileUrl.startsWith("http")) {
+                    MasterLinkGenerator.createSmartLink(this.name, fileUrl, mainUrl, callback = callback)
+                    return
                 }
             }
+            urls = CompiledRegexPatterns.extractAllVideoUrls(decoded)
         }
         CompiledRegexPatterns.filterMasterM3u8(urls).forEach { MasterLinkGenerator.createSmartLink(this.name, it, mainUrl, callback = callback) }
     }
