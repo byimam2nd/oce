@@ -124,17 +124,15 @@ object ProviderLog {
         }
 
         val body = buildString {
-            append("$emoji <b>[$level]</b> $tag")
+            append("$emoji [$level] $tag")
             if (method != null) append(" / $method")
             append("\n\n")
-            append("<pre>")
             append("Provider : $tag\n")
             if (method != null) append("Method   : $method\n")
             if (host.isNotBlank()) append("Host     : $host\n")
             if (!url.isNullOrBlank()) append("Page     : $url\n")
             append("Error    : $message\n")
             append("Time     : $now")
-            append("</pre>")
         }
 
         val key = "$level|$tag|$host"
@@ -158,7 +156,6 @@ object ProviderLog {
                     data = mapOf(
                         "chat_id" to TG_USER_ID,
                         "text" to body,
-                        "parse_mode" to "HTML",
                         "disable_web_page_preview" to "true"
                     )
                 ).text
