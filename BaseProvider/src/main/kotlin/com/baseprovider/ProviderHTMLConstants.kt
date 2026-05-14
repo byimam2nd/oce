@@ -336,7 +336,7 @@ object ProviderHTMLConstants {
         "Anichin,Donghuastream:::option[data-index], option[value]", 
         "Samehadaku:::option[value]",
         "LayarKaca21:::ul#player-list > li",
-        "IndoDrama21:::ul.muvipro-player-tabs li a",
+        "Dutamovie21,IndoDrama21:::ul.muvipro-player-tabs li a",
         "Pencurimovie:::div.player_nav a, div.player_nav strong, div.player_nav span, ul.list-server li",
     )
     val DOWNLOAD_ITEMS = listOf("Samehadaku:::div#downloadb li", "GLOBAL:::.dl-list a")
