@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.*
+import com.lagradost.cloudstream3.extractors.helper.JwPlayerHelper
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import kotlinx.coroutines.async
@@ -316,8 +317,34 @@ class Ultrahd : ExtractorApi() { override var name = "Ultrahd"; override var mai
 class Vtbe : ExtractorApi() { override var name = "Vtbe"; override var mainUrl = "https://vtbe.com"; override val requiresReferer = true }
 class wishfast : ExtractorApi() { override var name = "wishfast"; override var mainUrl = "https://wishfast.to"; override val requiresReferer = true }
 
-class Minochinos : ExtractorApi() { override var name = "Minochinos"; override var mainUrl = "https://minochinos.com"; override val requiresReferer = true }
+class Minochinos : ExtractorApi() { 
+    override var name = "Minochinos"; 
+    override var mainUrl = "https://minochinos.com"; 
+    override val requiresReferer = true
+
+    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
+        val response = app.get(url, referer = referer)
+        val script = if (!getPacked(response.text).isNullOrEmpty()) {
+            getAndUnpack(response.text)
+        } else {
+            response.document.selectFirst("script:containsData(sources:)")?.data()
+        } ?: return
+        JwPlayerHelper.extractStreamLinks(script, name, mainUrl, callback, subtitleCallback)
+    }
+}
 class Vidhide : ExtractorApi() { override var name = "Vidhide"; override var mainUrl = "https://vidhide.com"; override val requiresReferer = true }
+class PlayPutarIn : ExtractorApi() {
+    override var name = "PlayPutarIn"
+    override var mainUrl = "https://play.putar.in"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
+        val targetUrl = url.substringAfter("?url=").let { java.net.URLDecoder.decode(it, "UTF-8") }
+        if (targetUrl.isNotBlank() && targetUrl.startsWith("http")) {
+            loadExtractorWithFallbackCustom(targetUrl, url, subtitleCallback, callback = callback, providerTag = this.name)
+        }
+    }
+}
 class ShortIcu : ExtractorApi() { 
     override var name = "ShortIcu"
     override var mainUrl = "https://short.icu"
@@ -349,7 +376,7 @@ object ProviderExtractors {
         ByseSX(), Hownetwork(), Cloudhownetwork(),
         PlayStreamplay(), AnichinStream(), AbyssPlayer(), Filedon(), BloggerVideo(),
         Ultrahd(), Vtbe(), wishfast(),
-        Minochinos(), Vidhide(), ShortIcu(),
+        Minochinos(), Vidhide(), ShortIcu(), PlayPutarIn(),
         Lk21PlayerPage()
     )
 }
