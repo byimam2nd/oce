@@ -316,7 +316,25 @@ class Svilla : StreamRuby() { override var name = "svilla"; override var mainUrl
 class Cloudhownetwork : Hownetwork() { override var mainUrl = "https://cloud.hownetwork.xyz" }
 class Ultrahd : ExtractorApi() { override var name = "Ultrahd"; override var mainUrl = "https://ultrahd.to"; override val requiresReferer = true }
 class Vtbe : ExtractorApi() { override var name = "Vtbe"; override var mainUrl = "https://vtbe.com"; override val requiresReferer = true }
-class wishfast : ExtractorApi() { override var name = "wishfast"; override var mainUrl = "https://wishfast.to"; override val requiresReferer = true }
+class wishfast : ExtractorApi() { 
+    override var name = "wishfast"; 
+    override var mainUrl = "https://wishfast.to"; 
+    override val requiresReferer = true
+
+    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
+        val response = app.get(url, referer = referer)
+        val text = response.text
+        val packed = findPackedJsInPage(text)
+        if (packed != null) {
+            val unpacked = decodePackedJs(packed.first, packed.second, packed.third)
+            val urls = CompiledRegexPatterns.extractAllVideoUrls(unpacked)
+            CompiledRegexPatterns.filterMasterM3u8(urls).forEach { MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback) }
+        } else {
+            val urls = CompiledRegexPatterns.extractAllVideoUrls(text)
+            CompiledRegexPatterns.filterMasterM3u8(urls).forEach { MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback) }
+        }
+    }
+}
 
 class Minochinos : ExtractorApi() { 
     override var name = "Minochinos"; 
