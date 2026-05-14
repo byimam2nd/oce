@@ -135,39 +135,20 @@ object ProviderLog {
     }
 
     private fun sendToTelegram(level: String, tag: String, message: String, url: String?, host: String, method: String?, type: FailureType) {
-        val now = dateFormat.format(Date())
         val emoji = when (level) {
             "SUCCESS" -> "\u2705"
-            "FAIL" -> "\u26A0\uFE0F"
+            "FAIL" -> "\u274C"
             "ERROR" -> "\u274C"
             "CRITICAL" -> "\uD83D\uDD25"
             else -> "\u2139\uFE0F"
         }
-        val typeEmoji = when (type) {
-            FailureType.SUCCESS -> "\u2705"
-            FailureType.SELECTOR_FAILURE -> "\uD83D\uDD0D"
-            FailureType.EXTRACTOR_FAILURE -> "\uD83D\uDD17"
-            FailureType.SHORTLINK_FAILURE -> "\uD83D\uDD17"
-            FailureType.NETWORK_FAILURE -> "\uD83C\uDF10"
-            FailureType.CLOUDFLARE_FAILURE -> "\u2601\uFE0F"
-            FailureType.EMPTY_RESPONSE -> "\uD83D\uDD04"
-            FailureType.INVALID_IFRAME -> "\uD83D\uDDBC\uFE0F"
-            FailureType.METADATA_FAILURE -> "\uD83D\uDCCB"
-            FailureType.CANCELLED -> "\u23F9\uFE0F"
-            FailureType.UNKNOWN -> "\u2753"
-        }
+        val urlInfo = url?.let { if (it.length > 80) it.take(77) + "..." else it } ?: ""
+        val methodInfo = method ?: ""
 
-        val body = buildString {
-            append("$emoji [$level] $tag")
-            if (method != null) append(" / $method")
-            append("\n\n")
-            append("Type     : $typeEmoji ${type.label}\n")
-            append("Provider : $tag\n")
-            if (method != null) append("Method   : $method\n")
-            if (host.isNotBlank()) append("Host     : $host\n")
-            if (!url.isNullOrBlank()) append("Page     : $url\n")
-            append("Error    : $message\n")
-            append("Time     : $now")
+        val body = if (level == "SUCCESS") {
+            "$emoji[Sukses]$tag/$methodInfo/$message/$urlInfo"
+        } else {
+            "$emoji[$level]$tag/$methodInfo/$message/$urlInfo\nMessage: $message"
         }
 
         val key = "$level|$tag|$host"
