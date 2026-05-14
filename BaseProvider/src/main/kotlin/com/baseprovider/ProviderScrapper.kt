@@ -173,7 +173,8 @@ class ProviderScrapper(
             val ajaxUrl = resolveConfig(providerId, ProviderHTMLConstants.CONFIG_AJAX_PLAYER_URLS, "")
             val jsonDataSelector = resolveConfigList(providerId, ProviderHTMLConstants.SELECTOR_JSON_DATA)
             if (ajaxUrl.isNotBlank() && jsonDataSelector.isNotEmpty()) {
-                jsonDataSelector.asSequence().mapNotNull { document.selectFirst(it) }.firstOrNull()?.let { el ->
+                for (sel in jsonDataSelector) {
+                    val el = document.selectFirst(sel) ?: continue
                     runCatching {
                         val json = JSONObject(el.data())
                         val id = json.optString("id")

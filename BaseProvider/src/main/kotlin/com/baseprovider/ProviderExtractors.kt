@@ -22,7 +22,6 @@ import org.json.JSONObject
 import java.net.URI
 import java.util.Base64
 import javax.crypto.Cipher
-import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
