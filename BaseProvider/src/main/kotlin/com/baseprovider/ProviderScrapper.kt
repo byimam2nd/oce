@@ -14,10 +14,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import org.jsoup.Jsoup
-import org.jsoup.nodes.Document
-import org.jsoup.nodes.Element
-import org.jsoup.select.Elements
 import org.json.JSONObject
+import java.util.concurrent.atomic.AtomicInteger
 import com.baseprovider.ProviderHTMLConstants.DEFAULT_TIMEOUT
 import com.baseprovider.ProviderHTMLConstants.SEARCH_ITEMS
 import com.baseprovider.ProviderHTMLConstants.BLOAT_REGEX
@@ -168,6 +166,8 @@ class ProviderScrapper(
             val currentUrl = data
             val attrValueSelectors = resolveConfigList(providerId, ProviderHTMLConstants.ATTR_VALUE)
             val allPossibleLinks = mutableSetOf<Pair<String, String?>>()
+            val videoCount = AtomicInteger(0)
+            val wrappedCallback: (ExtractorLink) -> Unit = { link -> videoCount.incrementAndGet(); callback(link) }
 
             // 1. AJAX PLAYER FETCHING (NEW - For LK21 & Similar)
             val ajaxUrl = resolveConfig(providerId, ProviderHTMLConstants.CONFIG_AJAX_PLAYER_URLS, "")
@@ -220,10 +220,8 @@ class ProviderScrapper(
                 resolveConfigList(providerId, ProviderHTMLConstants.ATTR_IFRAME_SOURCES).flatMap { it.split(",").map { a -> a.trim() } }.forEach { attr -> val s = el.attr(attr); if (s.isNotBlank() && s != "about:blank") allPossibleLinks.add(s to null) }
             }
 
-        if (allPossibleLinks.isEmpty()) {
+            if (allPossibleLinks.isEmpty()) {
                 logFail(providerId, "No media links or iframes found", url = data, method = "loadLinks", type = FailureType.SELECTOR_FAILURE, selectors = linkSelectors.joinToString(", "))
-            } else {
-                logSuccess(providerId, "${allPossibleLinks.size} links", url = data, method = "loadLinks", selectors = linkSelectors.joinToString(", "))
             }
 
             coroutineScope {
@@ -243,7 +241,7 @@ class ProviderScrapper(
 
                     logDebug(providerId, "Processing link: $fixedUrl (label: $label)")
 
-                    val okDirect = runCatching { loadExtractorWithFallbackCustom(fixedUrl, currentUrl, subtitleCallback, headers = globalHeaders, callback = callback, providerTag = providerId) }.getOrDefault(false)
+                    val okDirect = runCatching { loadExtractorWithFallbackCustom(fixedUrl, currentUrl, subtitleCallback, headers = globalHeaders, callback = wrappedCallback, providerTag = providerId) }.getOrDefault(false)
                     if (!okDirect) {
                         val refererMode = resolveConfig(providerId, CONFIG_HOOK_REFERER_PLAYER, ProviderHTMLConstants.STR_REFERER_MODE_CURRENT)
                         val refererForPlayer = if (refererMode == ProviderHTMLConstants.STR_REFERER_MODE_SERIES) "$seriesUrl/" else currentUrl
@@ -273,12 +271,20 @@ class ProviderScrapper(
                         
                         logDebug(providerId, "Found iframe: $finalIframe, extracting...")
                         
-                        val okRecursive = runCatching { loadExtractorWithFallbackCustom(finalIframe, refererForExtractor, subtitleCallback, headers = globalHeaders, callback = callback, providerTag = providerId) }.getOrDefault(false)
+                        val okRecursive = runCatching { loadExtractorWithFallbackCustom(finalIframe, refererForExtractor, subtitleCallback, headers = globalHeaders, callback = wrappedCallback, providerTag = providerId) }.getOrDefault(false)
                         if (!okRecursive && (finalIframe.contains(".mp4") || finalIframe.contains(".m3u8") || finalIframe.contains(".mkv") || finalIframe.contains(".mpd"))) {
-                            MasterLinkGenerator.createSmartLink(label ?: name, finalIframe, refererForExtractor, headers = globalHeaders, callback = callback)
+                            MasterLinkGenerator.createSmartLink(label ?: name, finalIframe, refererForExtractor, headers = globalHeaders, callback = wrappedCallback)
                         }
                     }
                 }.getOrElse { e -> logDebug(providerId, "Link Processor Error on $raw: ${e.message}") } } }.awaitAll()
+            }
+
+            val totalLinks = allPossibleLinks.size
+            val extracted = videoCount.get()
+            if (extracted > 0) {
+                logSuccess(providerId, "$extracted/$totalLinks video(s) extracted", url = data, method = "loadLinks", selectors = linkSelectors.joinToString(", "))
+            } else if (totalLinks > 0) {
+                logFail(providerId, "0/$totalLinks links produced video", url = data, method = "loadLinks", type = FailureType.EXTRACTOR_FAILURE, selectors = linkSelectors.joinToString(", "))
             }
             true
         }.getOrElse { e -> 

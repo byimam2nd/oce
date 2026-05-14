@@ -171,7 +171,8 @@ suspend fun loadExtractorWithFallbackCustom(
     subtitleCallback: (SubtitleFile) -> Unit,
     headers: Map<String, String>? = null,
     callback: (ExtractorLink) -> Unit,
-    providerTag: String = "ExtractorEngine"
+    providerTag: String = "ExtractorEngine",
+    callChain: String = "-"
 ): Boolean {
     val collectedLinks = mutableListOf<ExtractorLink>()
     val seenUrls = mutableSetOf<String>()
@@ -202,7 +203,7 @@ suspend fun loadExtractorWithFallbackCustom(
                     runCatching { 
                         extractor.getUrl(url, referer, subtitleCallback, internalCallback) 
                     }.onFailure { e -> 
-                        logDebug(providerId, "Local Extractor (${extractor.name}) failed for $url: ${e.message}")
+                        logFail(providerId, "Local Extractor (${extractor.name}) failed for $url: ${e.message}", url = url, method = "extractLinks", type = FailureType.EXTRACTOR_FAILURE, selectors = extractor.name)
                     }
                 } }
             }
@@ -214,7 +215,7 @@ suspend fun loadExtractorWithFallbackCustom(
         runCatching { 
             loadExtractor(url, referer, subtitleCallback, internalCallback) 
         }.onFailure { e -> 
-            logDebug(providerId, "Global Extractor failed for $url: ${e.message}")
+            logFail(providerId, "Global Extractor failed for $url: ${e.message}", url = url, method = "extractLinks", type = FailureType.EXTRACTOR_FAILURE, selectors = callChain)
         }
     }
     
@@ -234,21 +235,22 @@ suspend fun loadExtractorWithFallbackCustom(
                     MasterLinkGenerator.createSmartLink("DeepScan", videoUrl, url, headers = headers, callback = internalCallback)
                 }
             } else {
-                logDebug(providerId, "DeepScan found no video URLs in HTML source of $url")
+                logFail(providerId, "DeepScan found no video URLs in HTML source of $url", url = url, method = "extractLinks", type = FailureType.EMPTY_RESPONSE, selectors = callChain)
             }
         }.onFailure { e ->
-            logDebug(providerId, "DeepScan network failure for $url: ${e.message}")
+            logFail(providerId, "DeepScan network failure for $url: ${e.message}", url = url, method = "extractLinks", type = FailureType.NETWORK_FAILURE, selectors = callChain)
         }
     }
 
     // 5. Final Report
         val extractorNames = matchingExtractors.joinToString(", ") { it.name }.ifBlank { "none" }
+        val chainInfo = if (callChain == "-") extractorNames else "$callChain → $extractorNames"
         if (collectedLinks.isEmpty() && urlDomain.isNotBlank() && url.startsWith("http")) {
             val ft = if (urlDomain.contains("short.") || urlDomain.contains("shorte")) FailureType.SHORTLINK_FAILURE
                 else FailureType.EXTRACTOR_FAILURE
-            logFail(providerId, "All extraction methods failed to find playable links for host: $urlDomain", url = url, method = "extractLinks", type = ft, selectors = extractorNames)
+            logFail(providerId, "All extraction methods failed to find playable links for host: $urlDomain", url = url, method = "extractLinks", type = ft, selectors = chainInfo)
         } else if (collectedLinks.isNotEmpty()) {
-            logSuccess(providerId, "${collectedLinks.size} links", url = url, method = "extractLinks", selectors = extractorNames)
+            logSuccess(providerId, "${collectedLinks.size} links", url = url, method = "extractLinks", selectors = chainInfo)
         }
 
     MasterLinkGenerator.refineAndDeliver(collectedLinks, callback)
@@ -533,7 +535,7 @@ class PlayPutarIn : ExtractorApi() {
     override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
         val targetUrl = url.substringAfter("?url=").let { java.net.URLDecoder.decode(it, "UTF-8") }
         if (targetUrl.isNotBlank() && targetUrl.startsWith("http")) {
-            loadExtractorWithFallbackCustom(targetUrl, url, subtitleCallback, callback = callback, providerTag = this.name)
+            loadExtractorWithFallbackCustom(targetUrl, url, subtitleCallback, callback = callback, providerTag = this.name, callChain = "PlayPutarIn")
         }
     }
 }
@@ -670,7 +672,7 @@ class PlayStreamplay : ExtractorApi() {
         doc.select("iframe[src]").forEach { iframe ->
             val src = iframe.attr("src")
             if (src.isNotBlank() && !src.contains("ads") && !src.contains("ads?")) {
-                loadExtractorWithFallbackCustom(fixUrlSmart(src, url), url, subtitleCallback, callback = callback, providerTag = name)
+                loadExtractorWithFallbackCustom(fixUrlSmart(src, url), url, subtitleCallback, callback = callback, providerTag = name, callChain = "PlayStreamplay")
             }
         }
     }
@@ -730,7 +732,7 @@ class BloggerVideo : ExtractorApi() {
         doc.select("video source[src], video[src], iframe[src]").forEach { el ->
             val src = el.attr("src")
             if (src.isNotBlank() && (src.contains(".mp4") || src.contains(".m3u8") || src.contains("youtube"))) {
-                loadExtractorWithFallbackCustom(src, url, subtitleCallback, callback = callback, providerTag = name)
+                loadExtractorWithFallbackCustom(src, url, subtitleCallback, callback = callback, providerTag = name, callChain = "BloggerVideo")
             }
         }
     }
@@ -793,7 +795,7 @@ class Lk21PlayerPage : ExtractorApi() {
         doc.select("iframe").forEach { iframe ->
             val src = iframe.attr("src")
             if (src.isNotBlank()) {
-                loadExtractorWithFallbackCustom(src, url, subtitleCallback, callback = callback, providerTag = "Lk21Player")
+                loadExtractorWithFallbackCustom(src, url, subtitleCallback, callback = callback, providerTag = "Lk21Player", callChain = "Lk21Player")
             }
         }
     }
