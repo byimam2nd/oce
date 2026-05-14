@@ -215,7 +215,7 @@ class ProviderScrapper(
             }
 
             coroutineScope {
-                allPossibleLinks.filter { it.first.isNotBlank() }.map { (raw, label) -> async { runCatching {
+                allPossibleLinks.filter { it.first.isNotBlank() && !it.first.startsWith("#") }.map { (raw, label) -> async { runCatching {
                     val decodedRaw = if (!raw.startsWith("http") && !raw.startsWith("//") && !raw.startsWith("/") && raw.safeIsBase64()) {
                         val lk21 = decryptLk21PlayerUrl(raw)
                         if (lk21 != null) lk21
