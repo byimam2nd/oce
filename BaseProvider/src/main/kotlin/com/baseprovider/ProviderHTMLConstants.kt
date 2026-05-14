@@ -223,13 +223,13 @@ object ProviderHTMLConstants {
         "LayarKaca21:::h3, h2, a[title]", 
         "IndoDrama21:::h2.entry-title a, .entry-title a",
         "Samehadaku:::h2, .entry-title a, .title", 
-        "Anichin,Donghuastream:::div.bsx .tt, div.bsx h2, a[title], a", 
+        "Anichin,Donghuastream:::.tt, div.bsx h2, a[title], a", 
         "Animasu:::div.tt", 
         "Pencurimovie:::a[oldtitle], a[title]", 
         "GLOBAL:::h3, h2, .title"
     )
     
-    val SEARCH_HREF = listOf("LayarKaca21,IndoDrama21:::a", "Anichin,Donghuastream:::div.bsx > a, a", "GLOBAL:::a")
+    val SEARCH_HREF = listOf("LayarKaca21,IndoDrama21:::a", "Anichin,Donghuastream:::a", "GLOBAL:::a")
     
     val SEARCH_POSTER = listOf(
         "Samehadaku:::div.bsx img, div.animposx img, .content-thumb img",
