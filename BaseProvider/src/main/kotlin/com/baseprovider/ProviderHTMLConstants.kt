@@ -273,7 +273,7 @@ object ProviderHTMLConstants {
     val LOAD_STATUS = listOf("Samehadaku:::div.spe span:contains(Status), .spe", "Animasu:::span:contains(Status:) font", "GLOBAL:::.status")
     val LOAD_QUALITY = listOf("GLOBAL:::.quality")
     val LOAD_TRAILER = listOf("LayarKaca21,IndoDrama21:::ul.action-left > li:nth-child(3) > a, .gmr-trailer-popup", "Samehadaku:::iframe[src*=\"youtube\"], .trailer a", "GLOBAL:::div.trailer iframe")
-    val LOAD_RECOMMEND = listOf("LayarKaca21:::div#gmr-related-load article, div.related-post article", "IndoDrama21:::div.gmr-grid article, div.gmr-related-title + .row article", "Samehadaku:::div.relat ul li, .relat article, .related-post article", "Anichin,Donghuastream,Animasu:::.listupd article, .related-post article, .relat article", "Pencurimovie:::.mlw-related .ml-item, #related-items .ml-item", "GLOBAL:::div.related article, .recommendations article")
+    val LOAD_RECOMMEND = listOf("LayarKaca21:::div#gmr-related-load article, div.related-post article", "IndoDrama21:::div.gmr-grid article, div.gmr-related-title + .row article", "Samehadaku:::div.relat ul li, .relat article, .related-post article", "Anichin,Donghuastream,Animasu:::.listupd article, .listupd .bsx, .related-post article, .relat article", "Pencurimovie:::.mlw-related .ml-item, #related-items .ml-item", "GLOBAL:::div.related article, .recommendations article")
 
     val EPISODE_ITEMS = listOf("Animasu:::ul#daftarepisode > li", "Samehadaku:::div.lstepsiode ul li, .eplister li", "Pencurimovie:::div.tvseason div.les-content a", "Anichin,Donghuastream:::.eplister li", "GLOBAL:::.ep-list li")
     val EPISODE_HREF = listOf("Samehadaku:::a", "LayarKaca21,IndoDrama21:::a", "Pencurimovie:::a", "Anichin,Donghuastream:::.eplister li > a", "GLOBAL:::a")
