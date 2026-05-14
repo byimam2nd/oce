@@ -353,7 +353,7 @@ object ProviderHTMLConstants {
     val SELECTOR_TMDB_EXTERNAL = listOf("GLOBAL:::a[href*='themoviedb.org/']")
     val SELECTOR_IFRAME_TAG = listOf("GLOBAL:::iframe")
     
-    val ATTR_IFRAME_SOURCES = listOf("GLOBAL:::src, data-src, data-link")
+    val ATTR_IFRAME_SOURCES = listOf("GLOBAL:::src, data-src, data-link, data-litespeed-src")
     
     val STR_COMING_SOON = listOf("GLOBAL:::Coming Soon")
     val STR_REFERER_MODE_SERIES = "series_url"
@@ -388,9 +388,9 @@ object ProviderHTMLConstants {
 
     // --- Attributes ---
     val ATTR_TITLE = listOf("GLOBAL:::title")
-    val ATTR_IMAGE = listOf("GLOBAL:::data-original", "GLOBAL:::data-src", "GLOBAL:::data-lazy-src", "GLOBAL:::src", "GLOBAL:::content")
+    val ATTR_IMAGE = listOf("GLOBAL:::data-original", "GLOBAL:::data-src", "GLOBAL:::data-lazy-src", "GLOBAL:::data-litespeed-src", "GLOBAL:::src", "GLOBAL:::content")
     val ATTR_HREF = listOf("GLOBAL:::href")
-    val ATTR_VALUE = listOf("GLOBAL:::value", "GLOBAL:::data-index", "GLOBAL:::data-id", "GLOBAL:::data-url", "GLOBAL:::data-link")
+    val ATTR_VALUE = listOf("GLOBAL:::value", "GLOBAL:::data-index", "GLOBAL:::data-id", "GLOBAL:::data-url", "GLOBAL:::data-link", "GLOBAL:::data-litespeed-src")
     val ATTR_CONTENT = listOf("GLOBAL:::content")
 
     val BLOAT_REGEX = Regex("(?i)(\\bONA\\b|\\bOngoing\\b|\\bCompleted\\b|\\bSpecial\\b|\\bTAMAT\\b|\\bIndo\\b|\\bFull\\b|\\bSeason\\b|\\bEpisode\\s*\\d*|Subtitle\\s*Indonesia|Nonton|Anime|Movie|TV|Series|Lengkap|HD|Free|\\d{3,4}p|Dual\\s*Audio|\\s*–\\s*|\\s*\\|\\s*)", RegexOption.IGNORE_CASE)
