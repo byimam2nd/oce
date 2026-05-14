@@ -53,14 +53,15 @@ fun Element.selectSafe(providerId: String, selectors: List<String>, constantName
 fun Element.attrSafe(providerId: String, attributes: List<String>, constantName: String? = null): String? {
     for (a in attributes) { if (!a.contains(":::")) continue
         val owners = a.substringBefore(":::"); if (owners.split(",").contains(providerId)) {
-            val attrN = a.substringAfter(":::"); val v = this.attr(attrN); if (v.isNotBlank()) return v
+            val attrN = a.substringAfter(":::"); val v = this.attr(attrN); if (v.isNotBlank() && v != "about:blank") return v
         }
     }
     for (a in attributes) {
         val attrN = if (a.startsWith("GLOBAL:::")) a.substringAfter(":::") else if (!a.contains(":::")) a else continue
-        val v = this.attr(attrN); if (v.isNotBlank()) return v
+        attrN.split(",").map { it.trim() }.forEach { singleAttr ->
+            val v = this.attr(singleAttr); if (v.isNotBlank() && v != "about:blank") return v
+        }
     }
-    // Jika gagal, catat ke log untuk maintenance
     if (constantName != null) {
         logDebug(providerId, "Attribute Constant '$constantName' failed to extract value from ${this.tagName()}")
     }
@@ -72,8 +73,9 @@ fun Element.attrSafe(providerId: String, attributes: List<String>, constantName:
 fun Element.safeExtractImage(attributes: List<String>): String {
     return try {
         attributes.asSequence()
+            .flatMap { it.split(",").map { a -> a.trim() } }
             .map { if (it.contains(":::")) it.substringAfter(":::") else it }
-            .map { attr(it) }.filter { it.isNotBlank() }.firstOrNull()?.split(" ")?.firstOrNull() ?: ""
+            .map { attr(it) }.filter { it.isNotBlank() && it != "about:blank" }.firstOrNull()?.split(" ")?.firstOrNull() ?: ""
     } catch (_: Exception) { "" }
 }
 

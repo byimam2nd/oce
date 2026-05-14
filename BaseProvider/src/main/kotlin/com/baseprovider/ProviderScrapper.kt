@@ -217,7 +217,7 @@ class ProviderScrapper(
             val iframeTagMatches = document.selectSafe(providerId, ProviderHTMLConstants.SELECTOR_IFRAME_TAG, "SELECTOR_IFRAME_TAG")
             logDebug(providerId, "SELECTOR_IFRAME_TAG => ${iframeTagMatches.size} iframe(s)")
             iframeTagMatches.forEach { el ->
-                resolveConfigList(providerId, ProviderHTMLConstants.ATTR_IFRAME_SOURCES).forEach { attr -> val s = el.attr(attr); if (s.isNotBlank()) allPossibleLinks.add(s to null) }
+                resolveConfigList(providerId, ProviderHTMLConstants.ATTR_IFRAME_SOURCES).flatMap { it.split(",").map { a -> a.trim() } }.forEach { attr -> val s = el.attr(attr); if (s.isNotBlank() && s != "about:blank") allPossibleLinks.add(s to null) }
             }
 
         if (allPossibleLinks.isEmpty()) {
@@ -252,7 +252,7 @@ class ProviderScrapper(
                         
                         val playerDoc = app.get(fixedUrl, referer = refererForPlayer, headers = globalHeaders).document
                         val iframeSelectors = resolveConfigList(providerId, CONFIG_HOOK_IFRAME_SELECTORS)
-                        val iframeAttributes = resolveConfigList(providerId, ProviderHTMLConstants.ATTR_IFRAME_SOURCES)
+                        val iframeAttributes = resolveConfigList(providerId, ProviderHTMLConstants.ATTR_IFRAME_SOURCES).flatMap { it.split(",").map { a -> a.trim() } }
                         
                         logDebug(providerId, "Manual iframe: selectors=$iframeSelectors, attrs=$iframeAttributes")
                         
