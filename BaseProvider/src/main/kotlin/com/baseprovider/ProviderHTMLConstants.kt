@@ -201,25 +201,25 @@ object ProviderHTMLConstants {
     ).joinToString(";")
 
     private val DUTAMOVIE21_MAIN = listOf(
-        "category/box-office/page/%d/|Box Office",
-        "category/serial-tv/page/%d/|TV Series",
-        "action/page/%d/|Action",
-        "adventure/page/%d/|Adventure",
-        "animation/page/%d/|Animation",
-        "comedy/page/%d/|Comedy",
-        "crime/page/%d/|Crime",
-        "drama/page/%d/|Drama",
-        "fantasy/page/%d/|Fantasy",
-        "horror/page/%d/|Horror",
-        "mystery/page/%d/|Mystery",
-        "romance/page/%d/|Romance",
-        "science-fiction/page/%d/|Sci-Fi",
-        "thriller/page/%d/|Thriller",
-        "country/china/page/%d/|China",
-        "country/indonesia/page/%d/|Indonesia",
-        "country/korea/page/%d/|Korea",
-        "country/philippines/page/%d/|Philippines",
-        "country/thailand/page/%d/|Thailand"
+        "category/box-office/|Box Office",
+        "category/serial-tv/|TV Series",
+        "action/|Action",
+        "adventure/|Adventure",
+        "animation/|Animation",
+        "comedy/|Comedy",
+        "crime/|Crime",
+        "drama/|Drama",
+        "fantasy/|Fantasy",
+        "horror/|Horror",
+        "mystery/|Mystery",
+        "romance/|Romance",
+        "science-fiction/|Sci-Fi",
+        "thriller/|Thriller",
+        "country/china/|China",
+        "country/indonesia/|Indonesia",
+        "country/korea/|Korea",
+        "country/philippines/|Philippines",
+        "country/thailand/|Thailand"
     ).joinToString(";")
 
     private val PENCURIMOVIE_MAIN = listOf(

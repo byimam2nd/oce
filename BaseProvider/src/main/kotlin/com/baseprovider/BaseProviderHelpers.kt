@@ -187,7 +187,7 @@ object ProviderLog {
     }
 }
 
-fun log(level: LogLevel, tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null, type: FailureType? = null) = ProviderLog.log(level, tag, message, error, url, method, type)
+fun log(level: LogLevel, tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null, type: FailureType? = null, selectors: String = "") = ProviderLog.log(level, tag, message, error, url, method, type, selectors)
 fun logDebug(tag: String, message: String) = log(LogLevel.DEBUG, tag, message)
 fun logFail(tag: String, message: String, url: String? = null, method: String? = null, type: FailureType? = null, selectors: String = "") = log(LogLevel.FAIL, tag, message, url = url, method = method, type = type, selectors = selectors)
 fun logError(tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null, type: FailureType? = null) = log(LogLevel.ERROR, tag, message, error, url, method, type)
