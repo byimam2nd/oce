@@ -20,6 +20,7 @@ object ProviderHTMLConstants {
         "Donghuastream:::Donghuastream",
         "LayarKaca21:::LayarKaca",
         "IndoDrama21:::IndoDrama",
+        "Dutamovie21:::Dutamovie21",
         "Pencurimovie:::Pencurimovie",
         "Samehadaku:::Samehadaku",
         "GLOBAL:::Base HTML Provider"
@@ -31,6 +32,7 @@ object ProviderHTMLConstants {
         "Donghuastream:::https://donghuastream.org",
         "LayarKaca21:::https://tv10.lk21official.cc",
         "IndoDrama21:::http://89.124.116.48",
+        "Dutamovie21:::https://simplycufflinks.com",
         "Pencurimovie:::https://ww73.pencurimovie.bond",
         "Samehadaku:::https://samehadaku.biz",
         "GLOBAL:::https://example.com"
@@ -56,7 +58,8 @@ object ProviderHTMLConstants {
         "Animasu:::Anime,AnimeMovie,OVA",
         "Donghuastream:::Anime",
         "LayarKaca21:::Movie,TvSeries,AsianDrama",
-        "IndoDrama21:::Movie,TvSeries,AsianDrama",
+        "Dutamovie21,IndoDrama21:::Movie,TvSeries,AsianDrama",
+        "Dutamovie21:::Movie,TvSeries,AsianDrama,Anime",
         "Pencurimovie:::Movie,Anime,Cartoon",
         "Samehadaku:::Anime,AnimeMovie,OVA",
         "GLOBAL:::Anime,AnimeMovie,TvSeries,Movie,AsianDrama"
@@ -71,7 +74,8 @@ object ProviderHTMLConstants {
         "Animasu:::{baseUrl}/?s={query}",
         "Donghuastream:::{baseUrl}/pagg/{page}/?s={query}",
         "LayarKaca21:::https://gudangvape.com/search.php?s={query}",
-        "IndoDrama21:::{baseUrl}/page/{page}/?s={query}",
+        "Dutamovie21,IndoDrama21:::{baseUrl}/page/{page}/?s={query}",
+        "Dutamovie21:::{baseUrl}/page/{page}/?s={query}",
         "Pencurimovie:::{baseUrl}/?s={query}",
         "Samehadaku:::{baseUrl}/?s={query}",
         "GLOBAL:::{baseUrl}/page/{page}/?s={query}"
@@ -82,7 +86,8 @@ object ProviderHTMLConstants {
         "Animasu:::{baseUrl}/pencarian/?{data}&halaman={page}",
         "Donghuastream:::{baseUrl}/{data}{page}",
         "LayarKaca21:::{data}{page}",
-        "IndoDrama21:::{baseUrl}/{data}/page/{page}",
+        "Dutamovie21,IndoDrama21:::{baseUrl}/{data}/page/{page}",
+        "Dutamovie21:::{baseUrl}/{data}page/{page}",
         "Pencurimovie:::{baseUrl}/{data}/page/{page}",
         "Samehadaku:::{baseUrl}/{data}{page}",
         "GLOBAL:::{baseUrl}/{data}{page}"
@@ -92,7 +97,7 @@ object ProviderHTMLConstants {
         "Anichin:::-movie-",
         "Donghuastream:::-movie-",
         "LayarKaca21:::/",
-        "IndoDrama21:::/movie/",
+        "Dutamovie21,IndoDrama21:::/movie/",
         "Pencurimovie:::/movies/",
         "Samehadaku:::/movie/",
         "GLOBAL:::/movie/"
@@ -100,15 +105,15 @@ object ProviderHTMLConstants {
 
     val CONFIG_TV_PATH_SEGMENTS = listOf(
         "LayarKaca21:::/nontondrama/",
-        "IndoDrama21:::/series/",
+        "Dutamovie21,IndoDrama21:::/series/",
         "Pencurimovie:::/series/",
         "Samehadaku:::/anime/",
         "GLOBAL:::/anime/"
     )
 
     val CONFIG_EPISODE_DATA_URL_PATTERNS = listOf("GLOBAL:::{url}")
-    val CONFIG_SEARCH_PAGE_LIMITS = listOf("Anichin:::3", "Animasu:::1", "Donghuastream:::3", "LayarKaca21:::1", "IndoDrama21:::1", "GLOBAL:::2")
-    val CONFIG_REVERSE_EPISODES = listOf("LayarKaca21:::false", "IndoDrama21:::false", "Pencurimovie:::false", "GLOBAL:::true")
+    val CONFIG_SEARCH_PAGE_LIMITS = listOf("Anichin:::3", "Animasu:::1", "Donghuastream:::3", "LayarKaca21:::1", "Dutamovie21,IndoDrama21:::1", "GLOBAL:::2")
+    val CONFIG_REVERSE_EPISODES = listOf("LayarKaca21:::false", "Dutamovie21,IndoDrama21:::false", "Pencurimovie:::false", "GLOBAL:::true")
 
     // --- JSON Search Properties ---
     val CONFIG_SEARCH_IS_JSON = listOf("LayarKaca21:::true", "GLOBAL:::false")
@@ -124,7 +129,7 @@ object ProviderHTMLConstants {
     
     val CONFIG_USE_DOCUMENT_LARGE = listOf(
         "LayarKaca21:::true",
-        "IndoDrama21:::true",
+        "Dutamovie21,IndoDrama21:::true",
         "GLOBAL:::false"
     )
 
@@ -199,7 +204,7 @@ object ProviderHTMLConstants {
         "Animasu:::$ANIMASU_MAIN",
         "Donghuastream:::$DONGHUASTREAM_MAIN",
         "LayarKaca21:::$LAYARKACA21_MAIN",
-        "IndoDrama21:::$INDODRAMA21_MAIN",
+        "Dutamovie21,IndoDrama21:::$INDODRAMA21_MAIN",
         "Pencurimovie:::$PENCURIMOVIE_MAIN",
         "Samehadaku:::$SAMEHADAKU_MAIN",
         "GLOBAL:::$GLOBAL_MAIN"
@@ -211,7 +216,7 @@ object ProviderHTMLConstants {
 
     val SEARCH_ITEMS = listOf(
         "LayarKaca21:::article, div.content-main article, div#gmr-main-load article",
-        "IndoDrama21:::article.item, article.item-infinite, div#gmr-main-load article",
+        "Dutamovie21,IndoDrama21:::article.item, article.item-infinite, div#gmr-main-load article",
         "Anichin,Donghuastream:::div.listupd > article",
         "Samehadaku:::div.bsx, .listupd .bsx, div.animposx",
         "Animasu:::div.listupd div.bs",
@@ -221,7 +226,7 @@ object ProviderHTMLConstants {
 
     val SEARCH_TITLE = listOf(
         "LayarKaca21:::h3, h2, a[title]", 
-        "IndoDrama21:::h2.entry-title a, .entry-title a",
+        "Dutamovie21,IndoDrama21:::h2.entry-title a, .entry-title a",
         "Samehadaku:::h2, .entry-title a, .title", 
         "Anichin,Donghuastream:::div.bsx h2, .tt, a[title], a", 
         "Animasu:::div.tt", 
@@ -229,7 +234,7 @@ object ProviderHTMLConstants {
         "GLOBAL:::h3, h2, .title"
     )
     
-    val SEARCH_HREF = listOf("LayarKaca21,IndoDrama21:::a", "Anichin,Donghuastream:::a", "GLOBAL:::a")
+    val SEARCH_HREF = listOf("LayarKaca21,Dutamovie21,IndoDrama21:::a", "Anichin,Donghuastream:::a", "GLOBAL:::a")
     
     val SEARCH_POSTER = listOf(
         "Samehadaku:::div.bsx img, div.animposx img, .content-thumb img",
@@ -237,18 +242,18 @@ object ProviderHTMLConstants {
         "Donghuastream:::div.bsx a img", 
         "Animasu:::div.limit img, img[data-src], .thumb img", 
         "LayarKaca21:::div.poster img, img[data-src], img[src]", 
-        "IndoDrama21:::div.content-thumbnail img, img[data-src], img[src]",
+        "Dutamovie21,IndoDrama21:::div.content-thumbnail img, img[data-src], img[src]",
         "Anichin:::div.bsx img, .ts-post-image, .wp-post-image", 
         "GLOBAL:::img"
     )
     
-    val SEARCH_RATING = listOf("Anichin,Samehadaku:::.rtng, .score, .rating", "LayarKaca21,IndoDrama21:::span.rating, .gmr-rating-item", "GLOBAL:::.rating, .score")
-    val SEARCH_EP_TEXT = listOf("Anichin,Samehadaku:::.eps span, .epx, .bt span.epx", "LayarKaca21,IndoDrama21:::span.episode strong, .gmr-duration-item", "Animasu:::span.epx", "GLOBAL:::.ep, .episode")
+    val SEARCH_RATING = listOf("Anichin,Samehadaku:::.rtng, .score, .rating", "LayarKaca21,Dutamovie21,IndoDrama21:::span.rating, .gmr-rating-item", "GLOBAL:::.rating, .score")
+    val SEARCH_EP_TEXT = listOf("Anichin,Samehadaku:::.eps span, .epx, .bt span.epx", "LayarKaca21,Dutamovie21,IndoDrama21:::span.episode strong, .gmr-duration-item", "Animasu:::span.epx", "GLOBAL:::.ep, .episode")
 
-    val LOAD_TITLE = listOf("LayarKaca21:::div.movie-info h1, h1.entry-title", "IndoDrama21:::h1.entry-title, div.movie-info h1", "Animasu:::h1[itemprop=headline], div.infox h1", "Pencurimovie:::div.mvic-desc h3", "Anichin,Donghuastream,Samehadaku:::h1.entry-title, h1.title, .entry-title h1", "GLOBAL:::h1")
+    val LOAD_TITLE = listOf("LayarKaca21:::div.movie-info h1, h1.entry-title", "Dutamovie21,IndoDrama21:::h1.entry-title, div.movie-info h1", "Animasu:::h1[itemprop=headline], div.infox h1", "Pencurimovie:::div.mvic-desc h3", "Anichin,Donghuastream,Samehadaku:::h1.entry-title, h1.title, .entry-title h1", "GLOBAL:::h1")
     val LOAD_POSTER = listOf(
         "LayarKaca21:::div.movie-info div.poster img[itemprop=image], div#movie-poster img, div.poster img", 
-        "IndoDrama21:::meta[property=\"og:image\"], div.gmr-movie-data figure img, figure.pull-left img", 
+        "Dutamovie21,IndoDrama21:::meta[property=\"og:image\"], div.gmr-movie-data figure img, figure.pull-left img", 
         "Pencurimovie:::div.mvic-thumb img", 
         "Donghuastream:::div.thumb > img, img.ts-post-image", 
         "Anichin:::div.thumb img, .ts-post-image, .wp-post-image", 
@@ -263,20 +268,20 @@ object ProviderHTMLConstants {
         "Samehadaku:::div.entry-content p, .description p, div.description", 
         "Anichin:::div.description, .entry-content, .desc", 
         "Animasu:::div.sinopsis, .desc", 
-        "LayarKaca21,IndoDrama21:::div.meta-info, div.description, div.entry-content", 
+        "LayarKaca21,Dutamovie21,IndoDrama21:::div.meta-info, div.description, div.entry-content", 
         "GLOBAL:::.description, .plot, .entry-content"
     )
     
-    val LOAD_INFO_BOX = listOf("Animasu:::div.infox div.spe", "Pencurimovie:::div.mvic-info", "Samehadaku:::div.spe, .info, .entry-content", "Anichin,Donghuastream:::.spe", "LayarKaca21:::div.gmr-moviedata", "IndoDrama21:::div.content-moviedata", "GLOBAL:::.info")
-    val LOAD_TAGS = listOf("Pencurimovie:::div.mvic-info p:contains(Genre) a", "Animasu:::span:contains(Genre:) a", "LayarKaca21:::div.tag-list span, .gmr-movie-on a", "IndoDrama21:::div.gmr-moviedata a[rel=\"category tag\"], .gmr-movie-on a", "Samehadaku:::div.genre-info a, .genres a", "GLOBAL:::.genre a")
-    val LOAD_RATING = listOf("LayarKaca21,IndoDrama21:::div.info-tag strong, .gmr-rating-item", "GLOBAL:::.rating, .score")
+    val LOAD_INFO_BOX = listOf("Animasu:::div.infox div.spe", "Pencurimovie:::div.mvic-info", "Samehadaku:::div.spe, .info, .entry-content", "Anichin,Donghuastream:::.spe", "LayarKaca21:::div.gmr-moviedata", "Dutamovie21,IndoDrama21:::div.content-moviedata", "GLOBAL:::.info")
+    val LOAD_TAGS = listOf("Pencurimovie:::div.mvic-info p:contains(Genre) a", "Animasu:::span:contains(Genre:) a", "LayarKaca21:::div.tag-list span, .gmr-movie-on a", "Dutamovie21,IndoDrama21:::div.gmr-moviedata a[rel=\"category tag\"], .gmr-movie-on a", "Samehadaku:::div.genre-info a, .genres a", "GLOBAL:::.genre a")
+    val LOAD_RATING = listOf("LayarKaca21,Dutamovie21,IndoDrama21:::div.info-tag strong, .gmr-rating-item", "GLOBAL:::.rating, .score")
     val LOAD_STATUS = listOf("Samehadaku:::div.spe span:contains(Status), .spe", "Animasu:::span:contains(Status:) font", "GLOBAL:::.status")
     val LOAD_QUALITY = listOf("GLOBAL:::.quality")
-    val LOAD_TRAILER = listOf("LayarKaca21,IndoDrama21:::ul.action-left > li:nth-child(3) > a, .gmr-trailer-popup", "Samehadaku:::iframe[src*=\"youtube\"], .trailer a", "GLOBAL:::div.trailer iframe")
-    val LOAD_RECOMMEND = listOf("LayarKaca21:::div#gmr-related-load article, div.related-post article", "IndoDrama21:::div.gmr-grid article, .gmr-related-title + .row article", "Samehadaku:::div.relat ul li, .relat article, .related-post article", "Anichin,Donghuastream,Animasu:::.listupd article, .listupd .bsx, .related-post article, .relat article", "Pencurimovie:::.mlw-related .ml-item, #related-items .ml-item", "GLOBAL:::div.related article, .recommendations article")
+    val LOAD_TRAILER = listOf("LayarKaca21,Dutamovie21,IndoDrama21:::ul.action-left > li:nth-child(3) > a, .gmr-trailer-popup", "Samehadaku:::iframe[src*=\"youtube\"], .trailer a", "GLOBAL:::div.trailer iframe")
+    val LOAD_RECOMMEND = listOf("LayarKaca21:::div#gmr-related-load article, div.related-post article", "Dutamovie21,IndoDrama21:::div.gmr-grid article, .gmr-related-title + .row article", "Samehadaku:::div.relat ul li, .relat article, .related-post article", "Anichin,Donghuastream,Animasu:::.listupd article, .listupd .bsx, .related-post article, .relat article", "Pencurimovie:::.mlw-related .ml-item, #related-items .ml-item", "GLOBAL:::div.related article, .recommendations article")
 
     val EPISODE_ITEMS = listOf("Animasu:::ul#daftarepisode > li", "Samehadaku:::div.lstepsiode ul li, .eplister li", "Pencurimovie:::div.tvseason div.les-content a", "Anichin:::.eplister li", "Donghuastream:::.eplister li", "GLOBAL:::.ep-list li")
-    val EPISODE_HREF = listOf("Samehadaku:::a", "LayarKaca21,IndoDrama21:::a", "Pencurimovie:::a", "Anichin:::.eplister li > a", "Donghuastream:::.eplister li > a", "GLOBAL:::a")
+    val EPISODE_HREF = listOf("Samehadaku:::a", "LayarKaca21,Dutamovie21,IndoDrama21:::a", "Pencurimovie:::a", "Anichin:::.eplister li > a", "Donghuastream:::.eplister li > a", "GLOBAL:::a")
     val EPISODE_TITLE = listOf("Samehadaku:::a, .epl-title", "Anichin,Donghuastream:::.epl-title", "Animasu:::a", "GLOBAL:::.title")
     val EPISODE_NUM = listOf("Anichin,Donghuastream,Samehadaku:::.epl-num", "GLOBAL:::.ep-num")
     val EPISODE_DESC = listOf("GLOBAL:::.ep-desc")
@@ -286,12 +291,12 @@ object ProviderHTMLConstants {
         "Animasu:::.mobius > .mirror > option", 
         "Anichin,Donghuastream:::option[data-index], option[value]", 
         "LayarKaca21:::ul#player-list > li",
-        "IndoDrama21:::ul.muvipro-player-tabs li a",
+        "Dutamovie21,IndoDrama21:::ul.muvipro-player-tabs li a",
         "Pencurimovie:::div.player_nav a, div.player_nav strong, div.player_nav span, ul.list-server li",
     )
     val DOWNLOAD_ITEMS = listOf("Samehadaku:::div#downloadb li", "GLOBAL:::.dl-list a")
-    val ACTOR_ITEMS = listOf("LayarKaca21,IndoDrama21:::div.movie-cast div.cast-item, .movie-info .cast-item, .gmr-moviedata span[itemprop=actors]", "GLOBAL:::.cast-item")
-    val ACTOR_NAME = listOf("LayarKaca21,IndoDrama21:::span[itemprop=name], .cast-name, h3", "GLOBAL:::.name")
+    val ACTOR_ITEMS = listOf("LayarKaca21,Dutamovie21,IndoDrama21:::div.movie-cast div.cast-item, .movie-info .cast-item, .gmr-moviedata span[itemprop=actors]", "GLOBAL:::.cast-item")
+    val ACTOR_NAME = listOf("LayarKaca21,Dutamovie21,IndoDrama21:::span[itemprop=name], .cast-name, h3", "GLOBAL:::.name")
 
     // ========================================================================
     // --- [5] STRUCTURAL SELECTORS (HARDCODE CLEANUP) ---
@@ -313,7 +318,7 @@ object ProviderHTMLConstants {
     // --- [6] SPECIAL CONSTANTS & STRINGS (UI & LOGIC) ---
     // ========================================================================
 
-    val FOLLOW_LINK_SELECTOR = listOf("LayarKaca21,IndoDrama21:::a#openNow, div.links a", "GLOBAL:::")
+    val FOLLOW_LINK_SELECTOR = listOf("LayarKaca21,Dutamovie21,IndoDrama21:::a#openNow, div.links a", "GLOBAL:::")
     val CONFIG_HREF_CLEAN_REGEXPS = listOf("Animasu:::^https?://[^/]+/(?:nonton-anime-|anime-|)([a-zA-Z0-9-]+)(?:-episode-.*|-movie.*|)/?$", "GLOBAL:::")
     val CONFIG_HREF_CLEAN_REPLACES = listOf("Animasu:::https://v1.animasu.top/anime/$1", "GLOBAL:::")
     
@@ -321,10 +326,10 @@ object ProviderHTMLConstants {
     
     // --- [HOOKS FOR HARDCODED LOGIC] ---
     val CONFIG_HOOK_IS_HORIZONTAL = listOf("Samehadaku:::true", "GLOBAL:::false")
-    val CONFIG_HOOK_YEAR_EXTRACTOR = listOf("LayarKaca21,IndoDrama21:::\\\\d, (\\\\d+)", "GLOBAL:::")
-    val CONFIG_HOOK_YEAR_SELECTOR = listOf("LayarKaca21,IndoDrama21:::div.movie-info h1", "GLOBAL:::")
-    val CONFIG_HOOK_REFERER_PLAYER = listOf("LayarKaca21,IndoDrama21:::series_url", "GLOBAL:::current_url")
-    val CONFIG_HOOK_IFRAME_SELECTORS = listOf("LayarKaca21,IndoDrama21:::div.embed-container iframe, .gmr-embed-responsive iframe, iframe", "GLOBAL:::iframe")
+    val CONFIG_HOOK_YEAR_EXTRACTOR = listOf("LayarKaca21,Dutamovie21,IndoDrama21:::\\\\d, (\\\\d+)", "GLOBAL:::")
+    val CONFIG_HOOK_YEAR_SELECTOR = listOf("LayarKaca21,Dutamovie21,IndoDrama21:::div.movie-info h1", "GLOBAL:::")
+    val CONFIG_HOOK_REFERER_PLAYER = listOf("LayarKaca21,Dutamovie21,IndoDrama21:::series_url", "GLOBAL:::current_url")
+    val CONFIG_HOOK_IFRAME_SELECTORS = listOf("LayarKaca21,Dutamovie21,IndoDrama21:::div.embed-container iframe, .gmr-embed-responsive iframe, iframe", "GLOBAL:::iframe")
     
     const val VAL_REFERER = "Referer"
     const val VAL_USER_AGENT = "User-Agent"
