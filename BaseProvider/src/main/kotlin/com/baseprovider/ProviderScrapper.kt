@@ -81,7 +81,7 @@ class ProviderScrapper(
             val home = document.selectSafe(providerId, SEARCH_ITEMS, "SEARCH_ITEMS").mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() }
             newHomePageResponse(list = HomePageList(name = request.name, list = home, isHorizontalImages = isHorizontal), hasNext = home.isNotEmpty())
         }.getOrElse { e -> 
-            logFail(providerId, "MainPage Fetch Failure on ${request.name}: ${e.message}", url = url, method = "getMainPage", type = FailureType.NETWORK_FAILURE)
+            logFail(providerId, "MainPage Fetch Failure on ${request.name}: ${e.message}", url = url, method = "getMainPage", type = FailureType.NETWORK_FAILURE, selectors = "SEARCH_ITEMS")
             newHomePageResponse(request.name, emptyList(), false) 
         }
     }
@@ -105,7 +105,7 @@ class ProviderScrapper(
                 }
                 results
             }.getOrElse { e -> 
-                logFail(providerId, "JSON Search Execution Failed for '$query': ${e.message}", url = url, method = "search", type = FailureType.NETWORK_FAILURE)
+                logFail(providerId, "JSON Search Execution Failed for '$query': ${e.message}", url = url, method = "search", type = FailureType.NETWORK_FAILURE, selectors = "SEARCH_ITEMS")
                 emptyList() 
             }
         }
@@ -143,7 +143,7 @@ class ProviderScrapper(
         val type = if (isMovie) TvType.Movie else if (supportedTypes.contains(TvType.Anime)) TvType.Anime else TvType.TvSeries
         val tracker = runCatching { APIHolder.getTracker(listOf(metadata.title), TrackerType.getTypes(type), metadata.year, true) }.getOrElse { e -> logDebug(providerId, "Tracker Fetch Warning: ${e.message}"); null }
 
-        logSuccess(providerId, "Loaded page: ${metadata.title} (${if (isMovie) "Movie" else "Series"}, tags=${metadata.tags?.size ?: 0})", url = currentUrl, method = "load", selectors = "h1.entry-title, div.thumb img, .spe, .entry-content, .genre-info a")
+        logSuccess(providerId, "Loaded page: ${metadata.title} (${if (isMovie) "Movie" else "Series"}, tags=${metadata.tags?.size ?: 0})", url = currentUrl, method = "load", selectors = "LOAD_TITLE, LOAD_POSTER, LOAD_DESC, LOAD_INFO_BOX")
 
         if (isMovie) {
             val watchUrl = fixUrlSmart(document.selectFirstSafe(providerId, ProviderHTMLConstants.SELECTOR_WATCH_BUTTONS, "SELECTOR_WATCH_BUTTONS")?.attr("href"), currentUrl).ifBlank { currentUrl }
@@ -220,8 +220,8 @@ class ProviderScrapper(
                 resolveConfigList(providerId, ProviderHTMLConstants.ATTR_IFRAME_SOURCES).forEach { attr -> val s = el.attr(attr); if (s.isNotBlank()) allPossibleLinks.add(s to null) }
             }
 
-            if (allPossibleLinks.isEmpty()) {
-                logFail(providerId, "No media links or iframes found for: $data", url = data, method = "loadLinks", type = FailureType.SELECTOR_FAILURE, selectors = linkSelectors.joinToString(", "))
+        if (allPossibleLinks.isEmpty()) {
+                logFail(providerId, "No media links or iframes found", url = data, method = "loadLinks", type = FailureType.SELECTOR_FAILURE, selectors = linkSelectors.joinToString(", "))
             } else {
                 logSuccess(providerId, "${allPossibleLinks.size} links", url = data, method = "loadLinks", selectors = linkSelectors.joinToString(", "))
             }
@@ -258,13 +258,13 @@ class ProviderScrapper(
                         
                         val iframeEl = iframeSelectors.asSequence().mapNotNull { playerDoc.selectFirst(it) }.firstOrNull()
                         if (iframeEl == null) {
-                            logFail(providerId, "Manual iframe fetch failed: no iframe found on: $fixedUrl (selectors: ${iframeSelectors.joinToString(", ")})", url = data, method = "loadLinks", type = FailureType.INVALID_IFRAME)
+                            logFail(providerId, "No iframe found", url = data, method = "loadLinks", type = FailureType.INVALID_IFRAME, selectors = iframeSelectors.joinToString(", "))
                             return@runCatching
                         }
                         
                         val iframeSrc = iframeAttributes.asSequence().mapNotNull { iframeEl.attr(it).ifBlank { null } }.firstOrNull() 
                         if (iframeSrc == null) {
-                            logFail(providerId, "Manual iframe fetch failed: iframe has no src on: $fixedUrl", url = data, method = "loadLinks", type = FailureType.INVALID_IFRAME)
+                            logFail(providerId, "Iframe has no src", url = data, method = "loadLinks", type = FailureType.INVALID_IFRAME, selectors = iframeAttributes.joinToString(", "))
                             return@runCatching
                         }
                         

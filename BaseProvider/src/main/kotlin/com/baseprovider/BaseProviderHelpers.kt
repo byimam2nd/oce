@@ -147,10 +147,11 @@ object ProviderLog {
         val methodInfo = method ?: ""
         val selInfo = selectors.ifBlank { "-" }
 
-        val body = if (level == "SUCCESS") {
-            "$emoji[Sukses]$tag/$methodInfo/$selInfo/$urlInfo/$message"
-        } else {
-            "$emoji[$level]$tag/$methodInfo/$selInfo/$urlInfo/$message"
+        val isLinkMethod = method == "loadLinks" || method == "extractLinks"
+        val body = when {
+            level == "SUCCESS" -> "$emoji[Sukses]$tag/$methodInfo/$selInfo/$urlInfo/$message"
+            isLinkMethod && level == "FAIL" -> "$emoji[$level]$tag/$methodInfo/$urlInfo/$selInfo/$message\nMassagge: $message"
+            else -> "$emoji[$level]$tag/$methodInfo/$selInfo/$urlInfo/$message\nMassagge: $message"
         }
 
         val key = "$level|$tag|$host"

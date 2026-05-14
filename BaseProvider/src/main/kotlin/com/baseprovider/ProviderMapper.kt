@@ -86,7 +86,7 @@ class ProviderMapper(
             val missing = mutableListOf<String>()
             if (title == "Unknown Title") missing.add("Title")
             if (poster.isBlank()) missing.add("Poster")
-            logFail(providerId, "Metadata Integrity Failure: Missing ${missing.joinToString(" & ")}", url = currentUrl, method = "extractMetadata", type = FailureType.METADATA_FAILURE)
+            logFail(providerId, "Metadata Integrity Failure: Missing ${missing.joinToString(" & ")}", url = currentUrl, method = "extractMetadata", type = FailureType.METADATA_FAILURE, selectors = "LOAD_TITLE, LOAD_POSTER, LOAD_DESC, LOAD_INFO_BOX, LOAD_TAGS, LOAD_RATING, LOAD_STATUS")
         }
 
         val banner = document.selectFirstSafe(providerId, LOAD_BANNER, "LOAD_BANNER")?.safeExtractImage(ATTR_IMAGE)
