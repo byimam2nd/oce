@@ -176,8 +176,6 @@ object ProviderLog {
                 sentMessages[key] = msgId
             }
         }
-            }
-        }
     }
 }
 
