@@ -343,5 +343,5 @@ object ProviderHTMLConstants {
     val ATTR_VALUE = listOf("GLOBAL:::value", "GLOBAL:::data-index", "GLOBAL:::data-id", "GLOBAL:::data-url", "GLOBAL:::data-link")
     val ATTR_CONTENT = listOf("GLOBAL:::content")
 
-    val BLOAT_REGEX = Regex("(?i)(\\bONA\\b|\\bOngoing\\b|\\bCompleted\\b|\\bSpecial\\b|\\bTAMAT\\b|\\bIndo\\b|\\bFull\\b|\\bSeason\\b|Subtitle\\s*Indonesia|Nonton|Anime|Movie|TV|Series|Lengkap|HD|Free|\\d{3,4}p|Dual\\s*Audio|\\s*–\\s*|\\s*\\|\\s*)", RegexOption.IGNORE_CASE)
+    val BLOAT_REGEX = Regex("(?i)(\\bONA\\b|\\bOngoing\\b|\\bCompleted\\b|\\bSpecial\\b|\\bTAMAT\\b|\\bIndo\\b|\\bFull\\b|\\bSeason\\b|\\bEpisode\\s*\\d*|Subtitle\\s*Indonesia|Nonton|Anime|Movie|TV|Series|Lengkap|HD|Free|\\d{3,4}p|Dual\\s*Audio|\\s*–\\s*|\\s*\\|\\s*)", RegexOption.IGNORE_CASE)
 }
