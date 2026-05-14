@@ -235,8 +235,6 @@ object ProviderHTMLConstants {
         "anime/?status=&type=TV&order=popular&page=|TV Popular",
         "anime/?status=ongoing&type=TV&order=update&page=|TV Ongoing",
         "anime/?status=completed&type=TV&order=update&page=|TV Completed",
-        "anime/?status=&type=ONA&order=update&page=|ONA Latest",
-        "anime/?status=&type=OVA&order=update&page=|OVA Latest",
         "anime/?status=&type=&order=popular&page=|All Popular",
         "genres/action/page/|Action",
         "genres/adventure/page/|Adventure",
