@@ -4,6 +4,8 @@ import com.lagradost.api.Log
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.GlobalScope
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.URI
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -151,13 +153,14 @@ object ProviderLog {
                 }
             }
             runCatching {
+                val json = org.json.JSONObject().apply {
+                    put("chat_id", TG_USER_ID)
+                    put("text", body)
+                    put("disable_web_page_preview", true)
+                }.toString()
                 val resp = com.lagradost.cloudstream3.app.post(
                     "https://api.telegram.org/bot$TG_TOKEN/sendMessage",
-                    data = mapOf(
-                        "chat_id" to TG_USER_ID,
-                        "text" to body,
-                        "disable_web_page_preview" to "true"
-                    )
+                    requestBody = json.toRequestBody("application/json".toMediaType())
                 ).text
                 val msgId = org.json.JSONObject(resp)
                     .getJSONObject("result").getInt("message_id")
