@@ -22,7 +22,10 @@ import org.json.JSONObject
 import java.net.URI
 import java.util.Base64
 import javax.crypto.Cipher
+import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import javax.crypto.spec.GCMParameterSpec
 import java.nio.charset.StandardCharsets
 
@@ -688,9 +691,12 @@ class AbyssPlayer : ExtractorApi() {
         val scriptData = doc.select("script").joinToString("\n") { it.data() }
         val encrypted = Regex("""const\s+datas\s*=\s*"([^"]*)"""").find(scriptData)?.groupValues?.getOrNull(1) ?: return
 
-        val response = app.post("https://enc-dec.app/api/dec-abyss", headers = headers, data = mapOf("text" to encrypted)).text
-        val json = JSONObject(response)
-        val sources = json.optJSONObject("result")?.optJSONArray("sources") ?: return
+        val response = app.post("https://enc-dec.app/api/dec-abyss",
+            headers = headers,
+            requestBody = """{"text":"$encrypted"}""".trimIndent().toRequestBody("application/json".toMediaType())
+        ).text
+        val json = JSONObject(response).optJSONObject("result") ?: return
+        val sources = json.optJSONArray("sources") ?: return
         for (i in 0 until sources.length()) {
             val src = sources.getJSONObject(i)
             if (src.optBoolean("status", false)) {
