@@ -156,7 +156,7 @@ object ProviderLog {
                         "https://api.telegram.org/bot$TG_TOKEN/editMessageText",
                         data = mapOf(
                             "chat_id" to TG_USER_ID,
-                            "message_id" to existingId,
+                            "message_id" to existingId.toString(),
                             "text" to text,
                             "parse_mode" to "Markdown",
                             "disable_web_page_preview" to "true"
