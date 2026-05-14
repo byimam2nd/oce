@@ -138,7 +138,7 @@ object ProviderLog {
         val escapedMsg = message.escapeMarkdownV2()
 
         val sb = StringBuilder()
-        sb.appendLine("\uD83D\uDD25 *[$level]* $escapedTag${if (escapedMethod != null) " / $escapedMethod" else ""}")
+        sb.appendLine("\uD83D\uDD25 *\\[$level\\]* $escapedTag${if (escapedMethod != null) " / $escapedMethod" else ""}")
 
         val lines = mutableListOf<String>()
         lines += "Provider: $escapedTag"
@@ -146,7 +146,7 @@ object ProviderLog {
         if (escapedHost.isNotBlank()) lines += "Host: $escapedHost"
         if (!escapedUrl.isNullOrBlank()) lines += "Page: $escapedUrl"
         lines += "Error: $escapedMsg"
-        lines += "Time: $now"
+        lines += "Time: ${now.escapeMarkdownV2()}"
 
         for (i in 0 until lines.size - 1) {
             sb.appendLine("\u251C ${lines[i]}")
@@ -160,7 +160,7 @@ object ProviderLog {
                     data = mapOf(
                         "chat_id" to TG_USER_ID,
                         "text" to sb.toString(),
-                        "parse_mode" to "MarkdownV2",
+                        "parse_mode" to "Markdown",
                         "disable_web_page_preview" to "true"
                     )
                 )
