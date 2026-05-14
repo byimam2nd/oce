@@ -95,6 +95,15 @@ jobs:
         run: |
           echo "✅ Secrets loaded"
 
+      - name: Inject Build Timestamp
+        run: |
+          TS=$(date +'%Y-%m-%d %H:%M')
+          echo "Injecting timestamp: $TS UTC"
+          for f in "$GITHUB_WORKSPACE/src/Provider"*/build.gradle.kts; do
+            sed -i "s|description = \"|description = \"[Build $TS UTC] |" "$f"
+          done
+          echo "✅ Timestamp injected into all providers"
+
       - name: Build Plugins
         run: |
           cd $GITHUB_WORKSPACE/src
