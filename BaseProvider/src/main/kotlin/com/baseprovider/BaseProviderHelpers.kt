@@ -112,25 +112,28 @@ object ProviderLog {
 
     private fun sendToTelegram(level: String, tag: String, message: String, url: String?, host: String, method: String?) {
         val now = dateFormat.format(Date())
-
-        val sb = StringBuilder()
-        sb.append("\uD83D\uDD25 *[$level]* $tag")
-        if (method != null) sb.append(" / $method")
-        sb.append("\n")
-        val lines = mutableListOf<String>()
-        lines += "Provider: $tag"
-        if (method != null) lines += "Method: $method"
-        if (host.isNotBlank()) lines += "Host: $host"
-        if (!url.isNullOrBlank()) lines += "Page: $url"
-        lines += "Error: $message"
-        lines += "Time: $now"
-        for (i in 0 until lines.size - 1) {
-            sb.append("\u251C ${lines[i]}\n")
+        val emoji = when (level) {
+            "FAIL" -> "\u26A0\uFE0F"
+            "ERROR" -> "\u274C"
+            "CRITICAL" -> "\uD83D\uDD25"
+            else -> "\u2139\uFE0F"
         }
-        if (lines.isNotEmpty()) sb.append("\u2514 ${lines.last()}")
+
+        val body = buildString {
+            append("$emoji <b>[$level]</b> $tag")
+            if (method != null) append(" / $method")
+            append("\n\n")
+            append("<pre>")
+            append("\u251C Provider: $tag\n")
+            if (method != null) append("\u251C Method: $method\n")
+            if (host.isNotBlank()) append("\u251C Host: $host\n")
+            if (!url.isNullOrBlank()) append("\u251C Page: $url\n")
+            append("\u251C Error: $message\n")
+            append("\u2514 Time: $now")
+            append("</pre>")
+        }
 
         val key = "$level|$tag|$host"
-        val text = sb.toString()
 
         kotlinx.coroutines.GlobalScope.launch {
             val existingId = sentMessages[key]
@@ -150,8 +153,8 @@ object ProviderLog {
                     "https://api.telegram.org/bot$TG_TOKEN/sendMessage",
                     data = mapOf(
                         "chat_id" to TG_USER_ID,
-                        "text" to text,
-                        "parse_mode" to "Markdown",
+                        "text" to body,
+                        "parse_mode" to "HTML",
                         "disable_web_page_preview" to "true"
                     )
                 ).text
