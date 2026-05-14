@@ -172,11 +172,32 @@ object ProviderHTMLConstants {
     ).joinToString(";")
 
     private val INDODRAMA21_MAIN = listOf(
-        "rating|Terpopuler",
         "box-office|Box Office",
-        "country/indonesia|Film Indonesia Terupdate",
-        "country/thailand|Film Thailand Terupdate",
-        "country/china|Film China Terupdate"
+        "category/action|Action",
+        "category/adventure|Adventure",
+        "category/comedy|Comedy",
+        "category/crime|Crime",
+        "category/documentary|Documentary",
+        "category/drama|Drama",
+        "category/family|Family",
+        "category/fantasy|Fantasy",
+        "category/horror|Horror",
+        "category/mystery|Mystery",
+        "category/romance|Romance",
+        "category/science-fiction|Sci-Fi",
+        "category/thriller|Thriller",
+        "country/australia|Australia",
+        "country/canada|Canada",
+        "country/china|China",
+        "country/france|France",
+        "country/germany|Germany",
+        "country/india|India",
+        "country/indonesia|Indonesia",
+        "country/japan|Japan",
+        "country/korea|Korea",
+        "country/thailand|Thailand",
+        "country/usa|USA",
+        "country/united-kingdom|United Kingdom"
     ).joinToString(";")
 
     private val DUTAMOVIE21_MAIN = listOf(
