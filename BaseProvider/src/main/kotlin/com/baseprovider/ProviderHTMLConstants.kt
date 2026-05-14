@@ -285,9 +285,9 @@ object ProviderHTMLConstants {
     val LINK_OPTIONS = listOf(
         "Animasu:::.mobius > .mirror > option", 
         "Anichin,Donghuastream:::option[data-index], option[value]", 
-        "LayarKaca21,IndoDrama21:::ul#player-list > li, select#player-select option, div.player-nav select option, ul.muvipro-player-tabs li a", 
+        "LayarKaca21:::ul#player-list > li",
+        "IndoDrama21:::ul.muvipro-player-tabs li a",
         "Pencurimovie:::div.player_nav a, div.player_nav strong, div.player_nav span, ul.list-server li",
-        "GLOBAL:::select.mirror option"
     )
     val DOWNLOAD_ITEMS = listOf("Samehadaku:::div#downloadb li", "GLOBAL:::.dl-list a")
     val ACTOR_ITEMS = listOf("LayarKaca21,IndoDrama21:::div.movie-cast div.cast-item, .movie-info .cast-item, .gmr-moviedata span[itemprop=actors]", "GLOBAL:::.cast-item")
