@@ -239,12 +239,13 @@ suspend fun loadExtractorWithFallbackCustom(
     }
 
     // 5. Final Report
+        val extractorNames = matchingExtractors.joinToString(", ") { it.name }.ifBlank { "none" }
         if (collectedLinks.isEmpty() && urlDomain.isNotBlank() && url.startsWith("http")) {
             val ft = if (urlDomain.contains("short.") || urlDomain.contains("shorte")) FailureType.SHORTLINK_FAILURE
                 else FailureType.EXTRACTOR_FAILURE
-            logFail(providerId, "All extraction methods failed to find playable links for host: $urlDomain", url = url, method = "extractLinks", type = ft)
+            logFail(providerId, "All extraction methods failed to find playable links for host: $urlDomain", url = url, method = "extractLinks", type = ft, selectors = extractorNames)
         } else if (collectedLinks.isNotEmpty()) {
-            logSuccess(providerId, "Successfully extracted ${collectedLinks.size} link(s) from host: $urlDomain", url = url, method = "extractLinks")
+            logSuccess(providerId, "${collectedLinks.size} links", url = url, method = "extractLinks", selectors = extractorNames)
         }
 
     MasterLinkGenerator.refineAndDeliver(collectedLinks, callback)

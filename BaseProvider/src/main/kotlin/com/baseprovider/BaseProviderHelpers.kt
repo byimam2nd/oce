@@ -102,7 +102,7 @@ object ProviderLog {
 
     private val sentMessages = java.util.concurrent.ConcurrentHashMap<String, Int>()
 
-    fun log(level: LogLevel, tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null, type: FailureType? = null) {
+    fun log(level: LogLevel, tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null, type: FailureType? = null, selectors: String = "") {
         val errTrace = error?.let {
             buildString {
                 val cause = it.message ?: it.javaClass.simpleName
@@ -118,7 +118,8 @@ object ProviderLog {
         val hostInfo = if (host.isNotBlank()) " | host=$host" else ""
         val methodInfo = if (method != null) " | method=$method" else ""
         val typeInfo = " | type=${ft.label}"
-        val logcatMsg = "[$tag]${methodInfo}$typeInfo$hostInfo | $message"
+        val selInfo = if (selectors.isNotBlank()) " | selectors=$selectors" else ""
+        val logcatMsg = "[$tag]${methodInfo}$typeInfo${selInfo}$hostInfo | $message"
         val fullMsg = message + errTrace
 
         when (level) {
@@ -130,11 +131,11 @@ object ProviderLog {
         }
 
         if (level != LogLevel.DEBUG) {
-            sendToTelegram(level.name, tag, fullMsg, url, host, method, ft)
+            sendToTelegram(level.name, tag, fullMsg, url, host, method, ft, selectors)
         }
     }
 
-    private fun sendToTelegram(level: String, tag: String, message: String, url: String?, host: String, method: String?, type: FailureType) {
+    private fun sendToTelegram(level: String, tag: String, message: String, url: String?, host: String, method: String?, type: FailureType, selectors: String = "") {
         val emoji = when (level) {
             "SUCCESS" -> "\u2705"
             "FAIL" -> "\u274C"
@@ -144,11 +145,12 @@ object ProviderLog {
         }
         val urlInfo = url?.let { if (it.length > 80) it.take(77) + "..." else it } ?: ""
         val methodInfo = method ?: ""
+        val selInfo = selectors.ifBlank { "-" }
 
         val body = if (level == "SUCCESS") {
-            "$emoji[Sukses]$tag/$methodInfo/$message/$urlInfo"
+            "$emoji[Sukses]$tag/$methodInfo/$selInfo/$urlInfo/$message"
         } else {
-            "$emoji[$level]$tag/$methodInfo/$message/$urlInfo\nMessage: $message"
+            "$emoji[$level]$tag/$methodInfo/$selInfo/$urlInfo/$message"
         }
 
         val key = "$level|$tag|$host"
@@ -186,10 +188,10 @@ object ProviderLog {
 
 fun log(level: LogLevel, tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null, type: FailureType? = null) = ProviderLog.log(level, tag, message, error, url, method, type)
 fun logDebug(tag: String, message: String) = log(LogLevel.DEBUG, tag, message)
-fun logFail(tag: String, message: String, url: String? = null, method: String? = null, type: FailureType? = null) = log(LogLevel.FAIL, tag, message, url = url, method = method, type = type)
+fun logFail(tag: String, message: String, url: String? = null, method: String? = null, type: FailureType? = null, selectors: String = "") = log(LogLevel.FAIL, tag, message, url = url, method = method, type = type, selectors = selectors)
 fun logError(tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null, type: FailureType? = null) = log(LogLevel.ERROR, tag, message, error, url, method, type)
-fun logCritical(tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null, type: FailureType? = null) = log(LogLevel.CRITICAL, tag, message, error, url, method, type)
-fun logSuccess(tag: String, message: String, url: String? = null, method: String? = null) = log(LogLevel.SUCCESS, tag, message, url = url, method = method, type = FailureType.SUCCESS)
+fun logCritical(tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null, type: FailureType? = null, selectors: String = "") = log(LogLevel.CRITICAL, tag, message, error, url, method, type, selectors)
+fun logSuccess(tag: String, message: String, url: String? = null, method: String? = null, selectors: String = "") = log(LogLevel.SUCCESS, tag, message, url = url, method = method, type = FailureType.SUCCESS, selectors = selectors)
 
 // --- HIGH-STABILITY CONFIG ENGINE ---
 
