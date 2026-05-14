@@ -283,16 +283,6 @@ open class Odnoklassniki : ExtractorApi() {
     data class OkRuVideo(@JsonProperty("name") val name: String, @JsonProperty("url") val url: String)
 }
 
-open class StreamRuby : ExtractorApi() {
-    override var name = "StreamRuby"; override var mainUrl = "https://rubyvidhub.com"; override val requiresReferer = true
-    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
-        val id = "embed-([a-zA-Z0-9]+)\\.html".toRegex().find(url)?.groupValues?.get(1) ?: return
-        val response = app.post("$mainUrl/dl", data = mapOf("op" to "embed", "file_code" to id, "auto" to "1"), referer = referer)
-        val urls = CompiledRegexPatterns.extractAllVideoUrls(response.text)
-        CompiledRegexPatterns.filterMasterM3u8(urls).forEach { MasterLinkGenerator.createSmartLink(this.name, it, mainUrl, callback = callback) }
-    }
-}
-
 open class ByseSX : ExtractorApi() {
     override var name = "Byse"; override var mainUrl = "https://byse.sx"; override val requiresReferer = true
     private fun b64UrlDecode(s: String): ByteArray { val fixed = s.replace('-', '+').replace('_', '/'); return Base64.getDecoder().decode(fixed + "=".repeat((4 - fixed.length % 4) % 4)) }
@@ -320,7 +310,6 @@ open class Hownetwork : ExtractorApi() {
 class Svanila : StreamRuby() { override var name = "svanila"; override var mainUrl = "https://streamruby.net" }
 class Svilla : StreamRuby() { override var name = "svilla"; override var mainUrl = "https://streamruby.com" }
 class Cloudhownetwork : Hownetwork() { override var mainUrl = "https://cloud.hownetwork.xyz" }
-class PlayStreamplay : ExtractorApi() { override var name = "PlayStreamplay"; override var mainUrl = "https://playstreamplay.com"; override val requiresReferer = true }
 class Ultrahd : ExtractorApi() { override var name = "Ultrahd"; override var mainUrl = "https://ultrahd.to"; override val requiresReferer = true }
 class Vtbe : ExtractorApi() { override var name = "Vtbe"; override var mainUrl = "https://vtbe.com"; override val requiresReferer = true }
 class wishfast : ExtractorApi() { override var name = "wishfast"; override var mainUrl = "https://wishfast.to"; override val requiresReferer = true }
@@ -356,14 +345,164 @@ object ProviderExtractors {
     val list = listOf(
         Dailymotion(), Odnoklassniki(), Rumble(), StreamRuby(), Svanila(), Svilla(), 
         ByseSX(), Hownetwork(), Cloudhownetwork(),
-        PlayStreamplay(), Ultrahd(), Vtbe(), wishfast(),
+        PlayStreamplay(), AnichinStream(), AbyssPlayer(), Filedon(), BloggerVideo(),
+        Ultrahd(), Vtbe(), wishfast(),
         Minochinos(), Vidhide(), ShortIcu(),
         Lk21PlayerPage()
     )
 }
 
 // ============================================
-// REGION 6: LK21 PLAYER.JS DECRYPTION
+// REGION 6: JS PACKER DECODER
+// ============================================
+
+private val BASE36_CHARS = "0123456789abcdefghijklmnopqrstuvwxyz"
+private val BASE62_CHARS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+private fun toBase(n: Int, base: Int): String {
+    if (n == 0) return if (base == 36) "0" else "0"
+    val chars = if (base == 36) BASE36_CHARS else BASE62_CHARS
+    val sb = StringBuilder()
+    var num = n
+    while (num > 0) {
+        sb.append(chars[num % base])
+        num /= base
+    }
+    return sb.reverse().toString()
+}
+
+private fun decodePackedJs(payload: String, keywords: List<String>, base: Int): String {
+    var result = payload
+    for (i in keywords.size - 1 downTo 0) {
+        val kw = keywords.getOrNull(i) ?: continue
+        if (kw.isNotBlank()) {
+            val encoded = Regex.escape(toBase(i, base))
+            result = result.replace(Regex("\\b$encoded\\b"), kw)
+        }
+    }
+    return result
+}
+
+private fun findPackedJsInPage(html: String): Triple<String, List<String>, Int>? {
+    val scriptRegex = Regex("<script[^>]*>.*?</script>", setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE))
+    for (match in scriptRegex.findAll(html)) {
+        val script = match.value
+        if (!script.contains("function(p,a,c,k,e,d)") || !script.contains(".split")) continue
+        val packedRegex = Regex("""}\('((?:[^'\\]|\\.)*)',\s*(\d+),\s*(\d+),\s*'((?:[^'\\]|\\.)*)'\.split\('\|\'""", setOf(RegexOption.DOT_MATCHES_ALL))
+        val m = packedRegex.find(script) ?: continue
+        val payloadRaw = m.groupValues[1].replace("\\'", "'").replace("\\\"", "\"").replace("\\n", "\n").replace("\\/", "/")
+        val base = m.groupValues[2].toIntOrNull() ?: 36
+        val kwStr = m.groupValues[4]
+        val keywords = kwStr.split("|")
+        return Triple(payloadRaw, keywords, base)
+    }
+    return null
+}
+
+// ============================================
+// REGION 7: EXTRACTORS (ADDITIONAL)
+// ============================================
+
+open class StreamRuby : ExtractorApi() {
+    override var name = "StreamRuby"; override var mainUrl = "https://rubyvidhub.com"; override val requiresReferer = true
+    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
+        val id = "embed-([a-zA-Z0-9]+)\\.html".toRegex().find(url)?.groupValues?.get(1) ?: return
+        val response = app.post("$mainUrl/dl", data = mapOf("op" to "embed", "file_code" to id, "auto" to "1"), referer = referer)
+        var urls = CompiledRegexPatterns.extractAllVideoUrls(response.text)
+        if (urls.isEmpty()) {
+            val decoded = findPackedJsInPage(response.text)?.let { (p, k, b) -> decodePackedJs(p, k, b) } ?: response.text
+            urls = CompiledRegexPatterns.extractAllVideoUrls(decoded)
+            if (urls.isEmpty()) {
+                val fileMatch = Regex("""file\s*:\s*"([^"]+)""").find(decoded)
+                if (fileMatch != null) {
+                    val fileUrl = fileMatch.groupValues[1]
+                    if (fileUrl.startsWith("http")) urls = setOf(fileUrl)
+                }
+            }
+        }
+        CompiledRegexPatterns.filterMasterM3u8(urls).forEach { MasterLinkGenerator.createSmartLink(this.name, it, mainUrl, callback = callback) }
+    }
+}
+
+class AnichinStream : ExtractorApi() {
+    override var name = "AnichinStream"
+    override var mainUrl = "https://anichin.stream"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
+        val response = app.get(url, referer = referer)
+        val decoded = findPackedJsInPage(response.text)?.let { (p, k, b) -> decodePackedJs(p, k, b) } ?: return
+        val fileMatch = Regex("""file\s*:\s*"([^"]+)""").find(decoded)
+        if (fileMatch != null) {
+            val fileUrl = fileMatch.groupValues[1]
+            val finalUrl = if (fileUrl.startsWith("http")) fileUrl else fixUrlSmart(fileUrl, mainUrl)
+            MasterLinkGenerator.createSmartLink(this.name, finalUrl, referer ?: mainUrl, callback = callback)
+        }
+    }
+}
+
+class PlayStreamplay : ExtractorApi() {
+    override var name = "PlayStreamplay"
+    override var mainUrl = "https://play.streamplay.co.in"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
+        val doc = app.get(url, referer = referer).document
+        doc.select("iframe[src]").forEach { iframe ->
+            val src = iframe.attr("src")
+            if (src.isNotBlank() && !src.contains("ads") && !src.contains("ads?")) {
+                loadExtractorWithFallbackCustom(fixUrlSmart(src, url), url, subtitleCallback, callback = callback, providerTag = name)
+            }
+        }
+    }
+}
+
+class AbyssPlayer : ExtractorApi() {
+    override var name = "AbyssPlayer"
+    override var mainUrl = "https://abyssplayer.com"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
+        val response = app.get(url, referer = referer)
+        val urls = CompiledRegexPatterns.extractAllVideoUrls(response.text)
+        if (urls.isNotEmpty()) {
+            CompiledRegexPatterns.filterMasterM3u8(urls).forEach { MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback) }
+        }
+    }
+}
+
+class Filedon : ExtractorApi() {
+    override var name = "Filedon"
+    override var mainUrl = "https://filedon.co"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
+        val response = app.get(url, referer = referer)
+        val urls = CompiledRegexPatterns.extractAllVideoUrls(response.text)
+        if (urls.isNotEmpty()) {
+            CompiledRegexPatterns.filterMasterM3u8(urls).forEach { MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback) }
+        }
+    }
+}
+
+class BloggerVideo : ExtractorApi() {
+    override var name = "BloggerVideo"
+    override var mainUrl = "https://www.blogger.com"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
+        val doc = app.get(url, referer = referer).document
+        doc.select("video source[src], video[src], iframe[src]").forEach { el ->
+            val src = el.attr("src")
+            if (src.isNotBlank() && (src.contains(".mp4") || src.contains(".m3u8") || src.contains("youtube"))) {
+                loadExtractorWithFallbackCustom(src, url, subtitleCallback, callback = callback, providerTag = name)
+            }
+        }
+    }
+}
+
+// ============================================
+// REGION 8: LK21 PLAYER.JS DECRYPTION
 // ============================================
 
 private var cachedLk21Scope: Scriptable? = null
