@@ -76,19 +76,6 @@ suspend fun <T> executeWithRetry(
 
 // --- CENTRALIZED LOGGING SYSTEM ---
 
-private val markdownV2Escape = mapOf(
-    '\\' to "\\\\", '_' to "\\_", '*' to "\\*", '[' to "\\[", ']' to "\\]",
-    '(' to "\\(", ')' to "\\)", '~' to "\\~", '`' to "\\`", '>' to "\\>",
-    '#' to "\\#", '+' to "\\+", '-' to "\\-", '=' to "\\=", '|' to "\\|",
-    '{' to "\\{", '}' to "\\}", '.' to "\\.", '!' to "\\!"
-)
-
-fun String.escapeMarkdownV2(): String = buildString {
-    for (c in this@escapeMarkdownV2) {
-        append(markdownV2Escape[c] ?: c.toString())
-    }
-}
-
 enum class LogLevel { DEBUG, FAIL, ERROR, CRITICAL }
 
 object ProviderLog {
@@ -124,21 +111,17 @@ object ProviderLog {
     }
 
     private fun sendToTelegram(level: String, tag: String, message: String, url: String?, host: String, method: String?) {
-        val now = dateFormat.format(Date()).escapeMarkdownV2()
-        val escapedTag = tag.escapeMarkdownV2()
-        val escapedMethod = method?.escapeMarkdownV2()
-        val escapedHost = host.escapeMarkdownV2()
-        val escapedUrl = url?.escapeMarkdownV2()
-        val escapedMsg = message.escapeMarkdownV2()
+        val now = dateFormat.format(Date())
 
         val sb = StringBuilder()
-        sb.appendLine("\uD83D\uDD25 *\\[$level\\]* $escapedTag${if (escapedMethod != null) " / $escapedMethod" else ""}")
+        // *bold* untuk level, [ dan ] tidak perlu escape di Markdown biasa
+        sb.appendLine("\uD83D\uDD25 *[$level]* $tag${if (method != null) " / $method" else ""}")
         val lines = mutableListOf<String>()
-        lines += "Provider: $escapedTag"
-        if (escapedMethod != null) lines += "Method: $escapedMethod"
-        if (escapedHost.isNotBlank()) lines += "Host: $escapedHost"
-        if (!escapedUrl.isNullOrBlank()) lines += "Page: $escapedUrl"
-        lines += "Error: $escapedMsg"
+        lines += "Provider: $tag"
+        if (method != null) lines += "Method: $method"
+        if (host.isNotBlank()) lines += "Host: $host"
+        if (!url.isNullOrBlank()) lines += "Page: $url"
+        lines += "Error: $message"
         lines += "Time: $now"
         for (i in 0 until lines.size - 1) {
             sb.appendLine("\u251C ${lines[i]}")
