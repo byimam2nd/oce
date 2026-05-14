@@ -278,7 +278,7 @@ object ProviderHTMLConstants {
     val EPISODE_ITEMS = listOf("Animasu:::ul#daftarepisode > li", "Samehadaku:::div.lstepsiode ul li, .eplister li", "Pencurimovie:::div.tvseason div.les-content a", "Anichin:::.eplister li", "Donghuastream:::.eplister li", "GLOBAL:::.ep-list li")
     val EPISODE_HREF = listOf("Samehadaku:::a", "LayarKaca21,IndoDrama21:::a", "Pencurimovie:::a", "Anichin:::.eplister li > a", "Donghuastream:::.eplister li > a", "GLOBAL:::a")
     val EPISODE_TITLE = listOf("Samehadaku:::a, .epl-title", "Anichin,Donghuastream:::.epl-title", "Animasu:::a", "GLOBAL:::.title")
-    val EPISODE_NUM = listOf("Anichin,Donghuastream:::.epl-num", "GLOBAL:::.ep-num")
+    val EPISODE_NUM = listOf("Anichin,Donghuastream,Samehadaku:::.epl-num", "GLOBAL:::.ep-num")
     val EPISODE_DESC = listOf("GLOBAL:::.ep-desc")
     val EPISODE_TIME = listOf("GLOBAL:::.ep-duration")
 
