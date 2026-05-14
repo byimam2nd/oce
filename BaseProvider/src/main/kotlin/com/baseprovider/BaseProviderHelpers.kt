@@ -123,6 +123,7 @@ object ProviderLog {
 
         when (level) {
             LogLevel.DEBUG -> Log.d(GLOBAL_PREFIX, logcatMsg)
+            LogLevel.SUCCESS -> Log.i(GLOBAL_PREFIX, logcatMsg)
             LogLevel.FAIL -> Log.w(GLOBAL_PREFIX, logcatMsg)
             LogLevel.ERROR -> Log.e(GLOBAL_PREFIX, logcatMsg)
             LogLevel.CRITICAL -> Log.e(GLOBAL_PREFIX, logcatMsg)
