@@ -154,8 +154,7 @@ object ProviderLog {
             else -> "$emoji[$level]$tag/$methodInfo/$selInfo/$urlInfo/$message\nMassagge: $message"
         }
 
-        val msgKey = message.take(40).hashCode()
-        val key = "$level|$tag|${method ?: ""}|$host|$msgKey"
+        val key = "$level|$tag|${method ?: ""}|$host"
 
         kotlinx.coroutines.GlobalScope.launch {
             val existing = sentMessages[key]
