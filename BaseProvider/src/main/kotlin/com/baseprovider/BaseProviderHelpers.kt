@@ -100,7 +100,7 @@ object ProviderLog {
     private const val TG_USER_ID = "832658254"
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
 
-    private val sentMessages = java.util.concurrent.ConcurrentHashMap<String, Int>()
+    private val sentMessages = java.util.concurrent.ConcurrentHashMap<String, Pair<Int, Int>>()
 
     fun log(level: LogLevel, tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null, type: FailureType? = null, selectors: String = "") {
         val errTrace = error?.let {
@@ -148,7 +148,7 @@ object ProviderLog {
         val selInfo = selectors.ifBlank { "-" }
 
         val isLinkMethod = method == "loadLinks" || method == "extractLinks"
-        val body = when {
+        val rawBody = when {
             level == "SUCCESS" -> "$emoji[Sukses]$tag/$methodInfo/$selInfo/$urlInfo/$message"
             isLinkMethod && level == "FAIL" -> "$emoji[$level]$tag/$methodInfo/$urlInfo/$selInfo/$message\nMassagge: $message"
             else -> "$emoji[$level]$tag/$methodInfo/$selInfo/$urlInfo/$message\nMassagge: $message"
@@ -157,31 +157,37 @@ object ProviderLog {
         val key = "$level|$tag|$host"
 
         kotlinx.coroutines.GlobalScope.launch {
-            val existingId = sentMessages[key]
-            if (existingId != null) {
+            val existing = sentMessages[key]
+            if (existing != null) {
+                val (msgId, count) = existing
+                val newCount = count + 1
+                val body = "[$newCount]$rawBody"
                 runCatching {
                     com.lagradost.cloudstream3.app.post(
-                        "https://api.telegram.org/bot$TG_TOKEN/deleteMessage",
-                        data = mapOf(
-                            "chat_id" to TG_USER_ID,
-                            "message_id" to existingId.toString()
-                        )
-                    )
+                        "https://api.telegram.org/bot$TG_TOKEN/editMessageText",
+                        requestBody = org.json.JSONObject().apply {
+                            put("chat_id", TG_USER_ID)
+                            put("message_id", msgId)
+                            put("text", body)
+                        }.toString().toRequestBody("application/json".toMediaType())
+                    ).text
+                }.onSuccess {
+                    sentMessages[key] = msgId to newCount
                 }
-            }
-            runCatching {
-                val json = org.json.JSONObject().apply {
-                    put("chat_id", TG_USER_ID)
-                    put("text", body)
-                    put("disable_web_page_preview", true)
-                }.toString()
-                val resp = com.lagradost.cloudstream3.app.post(
-                    "https://api.telegram.org/bot$TG_TOKEN/sendMessage",
-                    requestBody = json.toRequestBody("application/json".toMediaType())
-                ).text
-                val msgId = org.json.JSONObject(resp)
-                    .getJSONObject("result").getInt("message_id")
-                sentMessages[key] = msgId
+            } else {
+                runCatching {
+                    val resp = com.lagradost.cloudstream3.app.post(
+                        "https://api.telegram.org/bot$TG_TOKEN/sendMessage",
+                        requestBody = org.json.JSONObject().apply {
+                            put("chat_id", TG_USER_ID)
+                            put("text", rawBody)
+                            put("disable_web_page_preview", true)
+                        }.toString().toRequestBody("application/json".toMediaType())
+                    ).text
+                    val msgId = org.json.JSONObject(resp)
+                        .getJSONObject("result").getInt("message_id")
+                    sentMessages[key] = msgId to 1
+                }
             }
         }
     }
