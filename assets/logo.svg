@@ -1,23 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
-  <!-- Background rounded square -->
-  <rect x="20" y="20" width="360" height="360" rx="36" ry="36"
-        fill="#1a1a2e" stroke="#2a2a3e" stroke-width="1"/>
+  <!-- Background -->
+  <rect x="20" y="20" width="360" height="360" rx="40" ry="40" fill="#f8f9fa"/>
 
-  <!-- Play circle -->
-  <circle cx="200" cy="165" r="75" fill="none" stroke="#e94560" stroke-width="3"/>
-  <polygon points="178,125 178,205 238,165" fill="#e94560"/>
+  <!-- Play icon -->
+  <circle cx="200" cy="165" r="70" fill="#e8ecf1"/>
+  <polygon points="180,130 180,200 230,165" fill="#4a5568"/>
 
   <!-- O C E -->
   <text x="200" y="310" text-anchor="middle"
         font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-        font-size="48" font-weight="700" fill="#ffffff" letter-spacing="14">
+        font-size="46" font-weight="300" fill="#2d3748" letter-spacing="16">
     OCE
   </text>
 
   <!-- Subtitle -->
   <text x="200" y="340" text-anchor="middle"
         font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
-        font-size="10" fill="#555577" letter-spacing="3.5">
+        font-size="9" fill="#a0aec0" letter-spacing="4" text-transform="uppercase">
     OPEN CLOUDSTREAM EXTENSION
   </text>
 </svg>
