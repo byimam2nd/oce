@@ -661,15 +661,34 @@ private fun findPackedJsInPage(html: String): Triple<String, List<String>, Int>?
     for (match in scriptRegex.findAll(html)) {
         val script = match.value
         if (!script.contains("function(p,a,c,k,e,d)") || !script.contains(".split")) continue
-        val packedRegex = Regex("""}\('((?:[^'\\]|\\.)*)',\s*(\d+),\s*(\d+),\s*'((?:[^'\\]|\\.)*)'\.split\('\|\'""", setOf(RegexOption.DOT_MATCHES_ALL))
-        val m = packedRegex.find(script) ?: continue
-        val payloadRaw = m.groupValues[1].replace("\\'", "'").replace("\\\"", "\"").replace("\\n", "\n").replace("\\/", "/")
-        val base = m.groupValues[2].toIntOrNull() ?: 36
-        val kwStr = m.groupValues[4]
-        val keywords = kwStr.split("|")
+        val start = script.indexOf("}(")
+        if (start < 0) continue
+        val snippet = script.substring(start)
+        val endIdx = snippet.indexOf("'.split('|')")
+        if (endIdx < 0) continue
+        val raw = snippet.substring(2, endIdx)
+        val parts = splitPackedJsArgs(raw) ?: continue
+        val payloadRaw = parts[0].replace("\\'", "'").replace("\\\"", "\"").replace("\\n", "\n").replace("\\/", "/")
+        val base = parts.getOrNull(1)?.toIntOrNull() ?: 36
+        val keywords = parts.getOrNull(3)?.split("|") ?: continue
         return Triple(payloadRaw, keywords, base)
     }
     return null
+}
+
+private fun splitPackedJsArgs(s: String): List<String>? {
+    val args = mutableListOf<String>()
+    var depth = 0
+    var current = StringBuilder()
+    for (ch in s) {
+        when {
+            ch == '\'' && depth == 0 && current.isEmpty() -> depth = 1
+            ch == '\'' && depth == 1 -> { depth = 0; args.add(current.toString()); current = StringBuilder() }
+            ch == ',' && depth == 0 -> { /* skip */ }
+            depth == 1 -> current.append(ch)
+        }
+    }
+    return if (args.size >= 4) args else null
 }
 
 // ============================================
