@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#16213e"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f3460"/>
+      <stop offset="100%" style="stop-color:#533483"/>
+    </linearGradient>
+    <linearGradient id="play" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#e94560"/>
+      <stop offset="100%" style="stop-color:#ff6b6b"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="200" cy="200" r="190" fill="url(#bg)" stroke="url(#accent)" stroke-width="4"/>
+
+  <!-- Outer ring -->
+  <circle cx="200" cy="200" r="175" fill="none" stroke="#0f3460" stroke-width="1" opacity="0.3"/>
+  <circle cx="200" cy="200" r="165" fill="none" stroke="#0f3460" stroke-width="0.5" opacity="0.15"/>
+
+  <!-- Central hexagon shape -->
+  <polygon points="200,85 285,132 285,268 200,315 115,268 115,132"
+           fill="url(#accent)" opacity="0.8" stroke="#533483" stroke-width="2"/>
+
+  <!-- Play button triangle inside hexagon -->
+  <polygon points="175,155 175,245 245,200"
+           fill="url(#play)"/>
+
+  <!-- O C E letters -->
+  <text x="200" y="370" text-anchor="middle"
+        font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+        font-size="38" font-weight="700" fill="#e94560" letter-spacing="10">
+    OCE
+  </text>
+
+  <!-- Small subtitle -->
+  <text x="200" y="388" text-anchor="middle"
+        font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+        font-size="10" fill="#aaa" letter-spacing="4" opacity="0.6">
+    ONE CLICK EXTRACTOR
+  </text>
+</svg>
