@@ -247,6 +247,10 @@ class ProviderScrapper(
 
                     val okDirect = runCatching { loadExtractorWithFallbackCustom(fixedUrl, currentUrl, subtitleCallback, headers = globalHeaders, callback = wrappedCallback, providerTag = providerId) }.getOrDefault(false)
                     if (!okDirect) {
+                        if (ProviderExtractors.hasMatchingExtractor(fixedUrl)) {
+                            logDebug(providerId, "Skipping manual iframe fetch: extractor already tried for $fixedUrl")
+                            return@runCatching
+                        }
                         val refererMode = resolveConfig(providerId, CONFIG_HOOK_REFERER_PLAYER, ProviderHTMLConstants.STR_REFERER_MODE_CURRENT)
                         val refererForPlayer = if (refererMode == ProviderHTMLConstants.STR_REFERER_MODE_SERIES) "$seriesUrl/" else currentUrl
                         
@@ -264,7 +268,7 @@ class ProviderScrapper(
                             return@runCatching
                         }
                         
-                        val iframeSrc = iframeAttributes.asSequence().mapNotNull { iframeEl.attr(it).ifBlank { null } }.firstOrNull() 
+                        val iframeSrc = iframeAttributes.asSequence().mapNotNull { iframeEl.attr(it).takeIf { v -> v.isNotBlank() && v != "about:blank" } }.firstOrNull() 
                         if (iframeSrc == null) {
                             logFail(providerId, "Iframe has no src", url = data, method = "loadLinks", type = FailureType.INVALID_IFRAME, selectors = iframeAttributes.joinToString(", "))
                             return@runCatching

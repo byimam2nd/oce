@@ -651,6 +651,14 @@ object ProviderExtractors {
         MegaPlay(), AWSStream(), LuluStream(), Dhcplay(), Voe(), Xtwap(), Gdplayer(), Vidguardto2(), Movearnpre(),
         Lk21PlayerPage()
     )
+
+    fun hasMatchingExtractor(url: String): Boolean {
+        val urlDomain = url.removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
+        return list.any { extractor ->
+            val extractorDomain = extractor.mainUrl.removePrefix("http://").removePrefix("https://").replace("www.", "").lowercase()
+            urlDomain.contains(extractorDomain)
+        }
+    }
 }
 
 // ============================================
@@ -709,10 +717,23 @@ private fun splitPackedJsArgs(s: String): List<String>? {
     var i = 0
     while (i < s.length && args.size < 4) {
         if (s[i] == '\'') {
-            val end = s.indexOf('\'', i + 1)
-            if (end < 0) return null
-            args.add(s.substring(i + 1, end))
-            i = end + 1
+            var end = i + 1
+            while (end < s.length) {
+                end = s.indexOf('\'', end)
+                if (end < 0) return null
+                var slashCount = 0
+                var ci = end - 1
+                while (ci >= 0 && s[ci] == '\\') {
+                    slashCount++
+                    ci--
+                }
+                if (slashCount % 2 == 0) {
+                    args.add(s.substring(i + 1, end))
+                    i = end + 1
+                    break
+                }
+                end++
+            }
         } else if (s[i] == ',' || s[i] == ' ') {
             i++
         } else {
@@ -769,12 +790,22 @@ class PlayStreamplay : ExtractorApi() {
     override val requiresReferer = true
 
     override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
-        val doc = app.get(url, referer = referer).document
+        val response = app.get(url, referer = referer)
+        val doc = response.document
+        val html = response.text
         doc.select("iframe[src]").forEach { iframe ->
             val src = iframe.attr("src")
             if (src.isNotBlank() && !src.contains("ads") && !src.contains("ads?")) {
                 loadExtractorWithFallbackCustom(fixUrlSmart(src, url), url, subtitleCallback, callback = callback, providerTag = name, callChain = "PlayStreamplay")
             }
+        }
+        var urls = CompiledRegexPatterns.extractAllVideoUrls(html)
+        if (urls.isEmpty()) {
+            val decoded = findPackedJsInPage(html)?.let { (p, k, b) -> decodePackedJs(p, k, b) } ?: html
+            urls = CompiledRegexPatterns.extractAllVideoUrls(decoded)
+        }
+        if (urls.isNotEmpty()) {
+            CompiledRegexPatterns.filterMasterM3u8(urls).forEach { MasterLinkGenerator.createSmartLink(this.name, it, mainUrl, callback = callback) }
         }
     }
 }
