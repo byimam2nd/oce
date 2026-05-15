@@ -1,129 +1,120 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/byimam2nd/oce/refs/heads/master/assets/logo.svg" width="160" height="160" alt="OCE Logo" style="border-radius: 50%; box-shadow: 0 8px 24px rgba(0,0,0,0.15);">
+<img src="https://raw.githubusercontent.com/byimam2nd/oce/refs/heads/master/assets/logo.svg" width="140" height="140" alt="OCE Logo">
 
-# 🌊 Open Cloudstream Extensions (OCE)
-### *Redefining Resilience. Empowering Discovery. Bridging Content.*
+# 🌊 OCE — Open Cloudstream Extension
+
+### Modular, Stable, Multi-Provider Extension for CloudStream 3
 
 [![Build Status](https://github.com/byimam2nd/oce/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/byimam2nd/oce/actions)
-
-[![Platform: CloudStream](https://img.shields.io/badge/Platform-CloudStream-6200EE?style=for-the-badge&logo=android)](https://cloudstream.cf)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-0052cc.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0)
-[![Community](https://img.shields.io/badge/Community-Indonesia-ff4b2b?style=for-the-badge)](https://github.com/byimam2nd/oce)
-[![Maintained](https://img.shields.io/badge/Status-Active-00b894?style=for-the-badge)](https://github.com/byimam2nd/oce/graphs/commit-activity)
-
-<p align="center">
-  <b>OCE adalah jembatan digital yang menghubungkan Anda dengan hiburan tanpa batas melalui ekosistem yang stabil, modular, dan transparan.</b>
-  <br><br>
-  <a href="#-filosofi-kami">Filosofi</a> •
-  <a href="#-fitur-utama">Fitur Utama</a> •
-  <a href="#-instruksi-instalasi">Instalasi</a> •
-  <a href="#-ekosistem-teknis">Teknologi</a> •
-  <a href="#-kontribusi">Kontribusi</a>
-</p>
-
----
+[![Platform: CloudStream](https://img.shields.io/badge/Platform-CloudStream-6200EE?style=flat-square&logo=android)](https://cloudstream.cf)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square)](https://www.gnu.org/licenses/gpl-3.0)
+[![Version](https://img.shields.io/github/v/release/byimam2nd/oce?style=flat-square&color=brightgreen)](https://github.com/byimam2nd/oce/releases)
+[![Release](https://img.shields.io/github/v/release/byimam2nd/oce?display_name=release&style=flat-square&color=ff4b2b)](https://github.com/byimam2nd/oce/releases/latest)
 
 </div>
 
-## 📖 Filosofi Kami
+---
 
-Dunia hiburan digital berkembang begitu cepat, namun stabilitas seringkali terabaikan. **OCE** (Open Cloudstream Extensions) lahir dari visi untuk menciptakan standar baru dalam penyediaan konten pihak ketiga. Kami tidak hanya membuat kode; kami membangun **ketahanan**.
+## 📦 Providers
 
-Kami percaya bahwa akses terhadap informasi dan hiburan haruslah:
-1.  **Resilien:** Tetap teguh meskipun struktur sumber berubah.
-2.  **Modular:** Logika yang terisolasi untuk skalabilitas tanpa batas.
-3.  **Humanis:** Dirancang untuk kemudahan manusia, bukan sekadar mesin.
+| Provider | Domain | Type | Status |
+|---|---|---|---|
+| **Anichin** | anichin.cafe | Donghua Anime | ✅ Stable |
+| **Animasu** | v1.animasu.app | Anime | ✅ Stable |
+| **Donghuastream** | donghuastream.org | Donghua Streaming | ✅ Stable |
+| **Dutamovie21** | simplycufflinks.com | Movie, Series, Anime | ✅ Stable |
+| **IndoDrama21** | 89.124.116.48 | Movie, Asian Drama | ✅ Stable |
+| **LayarKaca21** | tv10.lk21official.cc | Movie, Series | ✅ Stable |
+| **Pencurimovie** | ww73.pencurimovie.bond | Movie, Series | ✅ Stable |
+| **Samehadaku** | samehadaku.biz | Anime Sub Indo | ✅ Stable |
 
 ---
 
-## ✨ Fitur & Keunggulan Utama
+## 🔧 Extractor Support
 
-Mengapa OCE menjadi pilihan utama bagi ribuan pengguna CloudStream?
-
-### **🚀 Performa Tanpa Kompromi**
-Setiap baris kode dioptimalkan untuk mengurangi latensi. Kami meminimalkan request yang tidak perlu untuk memastikan pemuatan data secepat kilat.
-
-### **🧩 Arsitektur Modular (Clean Code)**
-Logika scraping, transformasi data, dan adapter Cloudstream dipisahkan secara ketat. Ini memudahkan pengembangan fitur baru tanpa risiko regresi pada modul lain.
-
-### **🛡️ Sistem Audit "Nuclear"**
-Sistem kami melakukan audit otomatis harian untuk mendeteksi perubahan sekecil apa pun pada website sumber. Kami memperbaiki masalah bahkan sebelum Anda menyadarinya.
-
-### **🇮🇩 Fokus pada Kedekatan**
-Kami memahami komunitas Indonesia. Itulah mengapa kami mengkurasi sumber-sumber terbaik dengan dukungan bahasa lokal yang kaya dan akurat.
-
----
-
-## 📥 Instruksi Instalasi
-
-Hanya perlu tiga langkah sederhana untuk membuka pintu menuju dunia hiburan baru.
-
-### **Pemasangan Repository (Otomatis)**
-Sangat disarankan untuk mendapatkan rilis stabil terbaru secara otomatis.
-
-1.  **Salin Tautan Resmi (Stable):**
-    ```text
-    https://github.com/byimam2nd/oce/raw/master/repo.json
-    ```
-
-2.  **Salin Tautan Pengujian (Beta/Testing):**
-    ```text
-    https://github.com/byimam2nd/oce/raw/master/repo-beta.json
-    ```
-
-3.  Buka **CloudStream** ➡️ **Settings** ➡️ **Extensions**.
-4.  Pilih **Add Repository**, beri nama `OCE`, dan tempelkan salah satu tautan di atas.
+| Extractor | Host | Method |
+|---|---|---|
+| **AbyssPlayer** | abyssplayer.com | Decrypt API (hydrax) |
+| **AWSStream** | awstream.net | POST hash → videoSource |
+| **BloggerVideo** | blogger.com | Video element extraction |
+| **Dailymotion** | dailymotion.com | Regex extraction |
+| **Dhcplay** | dhcplay.com | WebViewResolver + packed JS |
+| **Filedon** | filedon.co | Direct extraction |
+| **Gdplayer** | gdplayer.to | API kaken token |
+| **Lk21Player** | playeriframe.sbs | AJAX + iframe fallback |
+| **LuluStream** | luluvdo.com | POST form → vplayer |
+| **MegaPlay** | megaplay.buzz | API data-id → getSources |
+| **Minochinos** | minochinos.com | Packed JS + JW Player |
+| **Movearnpre** | movearnpre.com | Packed JS + JW Player |
+| **PlayPutarIn** | play.putar.in | URL parameter forward |
+| **PlayStreamplay** | play.streamplay.co.in | Iframe extraction |
+| **Rumble** | rumble.com | Regex extraction |
+| **ShortIcu** | short.icu | Redirect follow |
+| **StreamHG** | hgcloud.to | WebViewResolver + packed JS |
+| **StreamRuby** | rubyvidhub.com | Direct pattern |
+| **Vidguardto** | listeamed.net | Rhino JS + sigDecode |
+| **VidHide** | vidhide.com | JW Player extraction |
+| **Voe** | voe.sx | Regex m3u8 extraction |
+| **Wishfast** | wishfast.to | Packed JS + file: pattern |
+| **Xtwap** | xtwap.top | JW Player → play.php → m3u8 |
+| **Odnoklassniki** | ok.ru | API extraction |
+| **YouTube** | youtube.com | Trailer extraction |
 
 ---
 
-## ⚙️ Ekosistem Teknis & Otomatisasi
+## 🏗️ Architecture
 
-Dibalik tampilan yang sederhana, OCE ditenagai oleh mesin yang sangat terorganisir dengan **Arsitektur Modular V2.2.0**.
-
-### **1. Modular Component Map**
-- **Scrapper:** Mengelola alur koneksi dan orkestrasi scraping.
-- **Mapper:** Mengubah elemen HTML mentah menjadi data terstruktur.
-- **Cloudstream Adapter:** Jembatan murni antara mesin internal dan aplikasi.
-- **HTML Constants:** Pusat kontrol selector berbasis *Owner Tagging*.
-
-### **2. Dual-Workflow Distribution**
-```mermaid
-graph TD
-    A[Master Code] --> B{GitHub Actions}
-    B -->|Automatic| C[Branch Builds - BETA]
-    B -->|Manual Tag / Release| D[GitHub Releases - STABLE]
-    D --> E[End Users]
+```
+ProviderHTMLConstants.kt   ← Selector & config (Owner Tagging)
+ProviderScrapper.kt        ← HTTP, search, load, loadLinks
+ProviderMapper.kt          ← HTML → CloudStream objects
+ProviderExtractors.kt      ← Video host extractors
+ProviderCloudstream.kt     ← MainAPI adapter (thin)
+ProviderParser.kt          ← Utility functions
+BaseProviderHelpers.kt     ← Logging, config resolution
 ```
 
----
-
-## 🎖️ Credits & Penghargaan Spesial
-
-Hormat kami kepada:
-- **[CloudStream Team & Community](https://github.com/recloudstream)**
-- **[Phisher](https://github.com/Phisher98)**
-- **[ExtCloud](https://github.com/recloudstream/cloudstream-extensions)**
+Each provider module (e.g. `ProviderAnichin/`) is a **thin wrapper** — only 2 files:
+- `ProviderName.kt` — extends `ProviderCloudstream()`
+- `ProviderNamePlugin.kt` — registers main API + extractors
 
 ---
 
-## 🤝 Bergabung & Berkontribusi
+## 🧪 Build & CI
 
-Kami selalu terbuka untuk pikiran-pikiran cerdas. Anda dapat berkontribusi melalui [Issues](https://github.com/byimam2nd/oce/issues) atau memberikan **Star ⭐** jika OCE membantu hari-hari Anda.
+```bash
+./gradlew make                    # Build all .cs3 plugins
+./gradlew makePluginsJson         # Generate plugins.json
+```
 
-**Ingin mendukung operasional kami?**
-- ☕ [Buy Me A Coffee](https://buymeacoffee.com/imam2nd)
-- 💖 [SociaBuzz (Dukungan Lokal)](https://sociabuzz.com/imam2nd/tribe)
+**Two distribution channels:**
+- **Stable** — GitHub Releases (manually tagged)
+- **Beta** — Builds branch (auto-built on every push)
+
+---
+
+## 📋 Requirements
+
+- Android 5.0+ (API 21)
+- CloudStream 3 (latest)
 
 ---
 
-## ⚖️ Lisensi & Tanggung Jawab
+## 🤝 Contributing
 
-Proyek ini dilindungi oleh lisensi **GNU GPLv3**. Penggunaan alat ini sepenuhnya merupakan tanggung jawab pengguna. Harap gunakan dengan bijak dan hargai karya para kreator asli.
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
+
+## ⚖️ License
+
+GNU General Public License v3.0 — see [LICENSE](LICENSE).
+
+---
+
 <div align="center">
-  <b>Managed with passion and precision by <a href="https://github.com/byimam2nd">imam2nd</a></b>
+  <b>Managed by <a href="https://github.com/byimam2nd">imam2nd</a></b>
   <br>
-  <i>"For the community, by the community."</i>
+  <i>For the community, by the community.</i>
 </div>

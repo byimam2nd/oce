@@ -1,68 +1,58 @@
-# 🤝 Panduan Kontribusi: Membangun Masa Depan OCE
+# Contributing to OCE
 
-Terima kasih telah meluangkan waktu untuk berkontribusi! Di **Open Cloudstream Extensions (OCE)**, kami tidak hanya mengumpulkan kode; kami membangun ekosistem yang resilien, modular, dan berkualitas tinggi.
+Terima kasih tertarik berkontribusi ke OCE! Berikut panduan singkatnya.
 
----
+## Struktur Proyek
 
-## 🌟 Visi Kontribusi Kami
+```
+BaseProvider/src/main/kotlin/com/baseprovider/
+├── BaseProviderHelpers.kt     ← Logging, config resolution
+├── ProviderCloudstream.kt      ← MainAPI adapter
+├── ProviderHTMLConstants.kt    ← Selector & config (Owner Tagging)
+├── ProviderScrapper.kt         ← HTTP + search + load + loadLinks
+├── ProviderMapper.kt           ← HTML → CloudStream objects
+├── ProviderExtractors.kt       ← Video host extractors
+├── ProviderParser.kt           ← Utility functions
+│
+ProviderNama/                   ← Thin provider module (extends ProviderCloudstream)
+├── build.gradle.kts
+├── src/main/kotlin/com/Nama/
+│   ├── Nama.kt                 ← class Nama : ProviderCloudstream()
+│   └── NamaPlugin.kt           ← registerMainAPI + registerExtractorAPI
+```
 
-Kami mengutamakan **kualitas di atas kuantitas**. Setiap kontribusi yang masuk harus selaras dengan prinsip utama kami:
-1.  **Stabilitas:** Kode harus tahan terhadap perubahan dinamis website sumber.
-2.  **Modularitas:** Perubahan logika tidak boleh merusak fungsionalitas lain (Single Responsibility).
-3.  **Kebersihan:** Kode yang bersih adalah kode yang mudah dipelihara oleh siapa pun.
+## Cara Kerja
 
----
+Semua logika scraping ada di `BaseProvider/`. Provider module hanya **thin wrapper** — 2 file, ~5 baris kode. Selector dikonfigurasi via **Owner Tagging** di `ProviderHTMLConstants.kt`.
 
-## 🏛️ Hukum Sentralisasi (Modular Blueprint)
+Format Owner Tagging: `"ProviderID:::css-selector"`
+Contoh: `"Anichin:::div.bsx h2, .tt, a[title]"`
 
-Proyek OCE menggunakan arsitektur **Modular Blueprint** di mana logika inti dipisahkan secara ketat dari data spesifik situs.
+Selector di-resolve oleh `selectFirstSafe()` — ambil match pertama dari provider-specific → multi-provider → GLOBAL.
 
-### 1. Pengembangan Berbasis Blueprint
-Seluruh logika inti berada di dalam direktori `BaseHtmlProvider/`. 
-- **Aturan:** Anda **DILARANG** memodifikasi logika langsung pada folder modul provider (misal: `ProviderAnichin/`). Perubahan tersebut akan terhapus otomatis oleh sistem sinkronisasi.
-- **Tindakan:** Lakukan pengembangan pada file template master:
-    - `ProviderScrapper.kt`: Untuk alur scraping dan koneksi.
-    - `ProviderMapper.kt`: Untuk transformasi elemen HTML ke data.
-    - `ProviderCloudstream.kt`: Untuk konfigurasi adapter Cloudstream.
-    - `ProviderUtils.kt`: Untuk fungsi utilitas global.
+## Aturan
 
-### 2. Abstraksi Data (HTML Constants)
-Logika mesin dirancang untuk menjadi *Site-Agnostic*.
-- **Aturan:** Semua selektor CSS, pola Regex, dan ID eksternal harus didefinisikan di dalam `ProviderHTMLConstants.kt` menggunakan sistem **Owner Tagging**.
-- **Tindakan:** Gunakan format `ProviderID:::Selector` untuk isolasi konfigurasi per provider.
+1. **Jangan edit file di `ProviderNama/`** secara langsung — cukup edit `ProviderHTMLConstants.kt` + `ProviderExtractors.kt` di `BaseProvider/`
+2. **Patch minimal** — jangan refactor kode yang tidak terkait
+3. **Test selector** — jalankan `curl` + Python script untuk verifikasi selector match
+4. **Jangan update versi** — versi di-set otomatis saat release
 
-### 3. Skalabilitas Global
-Setiap baris kode di blueprint harus mampu menangani puluhan situs secara bersamaan. Hindari solusi "Quick Fix" yang hanya bekerja untuk satu situs namun merusak stabilitas global.
+## Pull Request
 
----
+1. Fork repo
+2. Buat branch: `fix/xxx` atau `feat/xxx`
+3. Commit dengan pesan deskriptif
+4. Push → buat PR
 
-## 🚀 Alur Kontribusi (Workflow)
+## Menambah Provider Baru
 
-1.  **Issue:** Diskusikan fitur atau bug di kolom Issue sebelum memulai.
-2.  **Environment:** Gunakan JDK 17+ dan Android SDK API 35.
-3.  **Development:** Lakukan perubahan di `BaseHtmlProvider/`.
-4.  **Sync:** Jalankan `python3 scripts/sync_providers.py` untuk menyebarkan perubahan ke seluruh modul.
-5.  **Build:** Pastikan `./gradlew make` berhasil tanpa error kompilasi.
+1. Tambah selector di `ProviderHTMLConstants.kt` (Owner Tagging)
+2. Buat folder `ProviderNama/` dengan `build.gradle.kts`, `Nama.kt`, `NamaPlugin.kt`, `AndroidManifest.xml`
+3. Jika butuh extractor baru, tambah di `ProviderExtractors.kt`
+4. Build: `./gradlew make`
 
----
+## Menambah Extractor Baru
 
-## 📝 Standar Komunikasi (Commits)
-
-| Tipe | Deskripsi |
-| :--- | :--- |
-| `feat` | Penambahan fitur atau provider baru. |
-| `fix` | Perbaikan bug atau penyesuaian selektor. |
-| `refactor` | Perubahan kode tanpa mengubah fungsi utama (modularisasi). |
-| `chore` | Sinkronisasi, pembaruan dokumentasi, atau CI/CD. |
-
----
-
-## 📜 Kode Etik & Lisensi
-
-- **Profesionalisme:** Berkomunikasilah dengan profesional di kolom Issue dan PR.
-- **Lisensi:** Seluruh kontribusi dilisensikan di bawah **GNU GPLv3**.
-
----
-<div align="center">
-  <b>Terima kasih telah membantu membangun hiburan yang lebih baik.</b>
-</div>
+1. Buat class di `ProviderExtractors.kt` yang extends `ExtractorApi()`
+2. Override: `name`, `mainUrl`, `requiresReferer`, `getUrl()`
+3. Daftarkan di `ProviderExtractors.list`
