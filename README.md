@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://avatars.githubusercontent.com/u/52017796?v=4&size=160" width="160" height="160" alt="OCE Logo" style="border-radius: 50%; box-shadow: 0 8px 24px rgba(0,0,0,0.15);">
+<img src="https://raw.githubusercontent.com/byimam2nd/oce/refs/heads/master/assets/logo.svg" width="160" height="160" alt="OCE Logo" style="border-radius: 50%; box-shadow: 0 8px 24px rgba(0,0,0,0.15);">
 
 # 🌊 Open Cloudstream Extensions (OCE)
 ### *Redefining Resilience. Empowering Discovery. Bridging Content.*
