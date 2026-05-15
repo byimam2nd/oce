@@ -240,7 +240,7 @@ class ProviderScrapper(
                         }
                     } else raw
 
-                    val fixedUrl = fixUrlSmart(decodedRaw, currentUrl).safeHttpsify().unpackPacked()
+                    val fixedUrl = fixUrlSmart(decodedRaw, currentUrl).safeHttpsify().unpackPacked().substringBefore("#")
                     if (fixedUrl.isBlank()) return@runCatching
 
                     logDebug(providerId, "Processing link: $fixedUrl (label: $label)")

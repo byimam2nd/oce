@@ -416,7 +416,42 @@ open class LuluStream : ExtractorApi() {
     }
 }
 
-class Dhcplay : VidHidePro() { override var mainUrl = "https://dhcplay.com" }
+class Dhcplay : ExtractorApi() {
+    override var name = "Dhcplay"
+    override var mainUrl = "https://dhcplay.com"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
+        val text = app.get(url, referer = referer).text
+        val packed = findPackedJsInPage(text)
+        if (packed != null) {
+            val unpacked = decodePackedJs(packed.first, packed.second, packed.third)
+            CompiledRegexPatterns.extractAllVideoUrls(unpacked).let { urls ->
+                CompiledRegexPatterns.filterMasterM3u8(urls).forEach { MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback) }
+            }
+        } else {
+            val urls = CompiledRegexPatterns.extractAllVideoUrls(text)
+            CompiledRegexPatterns.filterMasterM3u8(urls).forEach { MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback) }
+        }
+    }
+}
+
+class Movearnpre : ExtractorApi() {
+    override var name = "Movearnpre"
+    override var mainUrl = "https://movearnpre.com"
+    override val requiresReferer = true
+
+    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
+        val text = app.get(url, referer = referer).text
+        val packed = findPackedJsInPage(text)
+        if (packed != null) {
+            val unpacked = decodePackedJs(packed.first, packed.second, packed.third)
+            CompiledRegexPatterns.extractAllVideoUrls(unpacked).let { urls ->
+                CompiledRegexPatterns.filterMasterM3u8(urls).forEach { MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback) }
+            }
+        }
+    }
+}
 class Voe : ExtractorApi() {
     override var name = "Voe"
     override var mainUrl = "https://voe.sx"
@@ -570,7 +605,7 @@ object ProviderExtractors {
         PlayStreamplay(), AnichinStream(), AbyssPlayer(), Filedon(), BloggerVideo(),
         Ultrahd(), Vtbe(), wishfast(),
         Minochinos(), Vidhide(), ShortIcu(), PlayPutarIn(), StreamHG(),
-        MegaPlay(), AWSStream(), LuluStream(), Dhcplay(), Voe(), Xtwap(), Gdplayer(), Vidguardto2(),
+        MegaPlay(), AWSStream(), LuluStream(), Dhcplay(), Voe(), Xtwap(), Gdplayer(), Vidguardto2(), Movearnpre(),
         Lk21PlayerPage()
     )
 }
