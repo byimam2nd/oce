@@ -664,9 +664,9 @@ private fun findPackedJsInPage(html: String): Triple<String, List<String>, Int>?
         val start = script.indexOf("}(")
         if (start < 0) continue
         val snippet = script.substring(start)
-        val endIdx = snippet.indexOf("'.split('|')")
+        val endIdx = snippet.indexOf("'.split")
         if (endIdx < 0) continue
-        val raw = snippet.substring(2, endIdx)
+        val raw = snippet.substring(2, endIdx + 1)
         val parts = splitPackedJsArgs(raw) ?: continue
         val payloadRaw = parts[0].replace("\\'", "'").replace("\\\"", "\"").replace("\\n", "\n").replace("\\/", "/")
         val base = parts.getOrNull(1)?.toIntOrNull() ?: 36
@@ -678,14 +678,19 @@ private fun findPackedJsInPage(html: String): Triple<String, List<String>, Int>?
 
 private fun splitPackedJsArgs(s: String): List<String>? {
     val args = mutableListOf<String>()
-    var depth = 0
-    var current = StringBuilder()
-    for (ch in s) {
-        when {
-            ch == '\'' && depth == 0 && current.isEmpty() -> depth = 1
-            ch == '\'' && depth == 1 -> { depth = 0; args.add(current.toString()); current = StringBuilder() }
-            ch == ',' && depth == 0 -> { /* skip */ }
-            depth == 1 -> current.append(ch)
+    var i = 0
+    while (i < s.length && args.size < 4) {
+        if (s[i] == '\'') {
+            val end = s.indexOf('\'', i + 1)
+            if (end < 0) return null
+            args.add(s.substring(i + 1, end))
+            i = end + 1
+        } else if (s[i] == ',' || s[i] == ' ') {
+            i++
+        } else {
+            val end = s.indexOfAny(charArrayOf(',', ')', ' '), i).let { if (it < 0) s.length else it }
+            args.add(s.substring(i, end))
+            i = end
         }
     }
     return if (args.size >= 4) args else null
