@@ -1,5 +1,5 @@
 // use an integer for version numbers
-version = 1
+version = 3
 
 cloudstream {
     description = "👌 DramaBox - Platform streaming Drama Asia (Short-form) dengan subtitle Indonesia!"

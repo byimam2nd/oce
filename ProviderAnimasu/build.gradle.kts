@@ -1,5 +1,5 @@
 // use an integer for version numbers
-version = 1
+version = 3
 
 cloudstream {
     description = "🐰 Animasu - Streaming Anime Subtitle Indonesia dengan kualitas tinggi dan update tercepat!"

@@ -1,5 +1,5 @@
 // use an integer for version numbers
-version = 1
+version = 3
 
 cloudstream {
     description = "Dutamovie21 - Nonton film box office, series, dan serial TV subtitle Indonesia"

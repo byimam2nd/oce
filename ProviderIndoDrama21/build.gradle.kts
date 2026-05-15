@@ -1,5 +1,5 @@
 // use an integer for version numbers
-version = 1
+version = 3
 
 cloudstream {
     description = "🎬 IndoDrama21 - Nonton film box office, series, dan Asian drama dengan subtitle Indonesia gratis!"
