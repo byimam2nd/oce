@@ -166,8 +166,8 @@ object ProviderHTMLConstants {
         "https://tv10.lk21official.cc/populer/page/|Film Terpopuler",
         "https://tv10.lk21official.cc/rating/page/|Film Berdasarkan IMDb Rating",
         "https://tv10.lk21official.cc/most-commented/page/|Film Dengan Komentar Terbanyak",
-        "https://tv10.lk21official.cc/nontondrama?page=latest-series|Series Terbaru",
-        "https://tv10.lk21official.cc/nontondrama?page=series/asian|Film Asian Terbaru",
+        "https://series.lk21.de/latest-series|Series Terbaru",
+        "https://series.lk21.de/series/asian|Film Asian Terbaru",
         "https://tv10.lk21official.cc/latest/page/|Film Upload Terbaru"
     ).joinToString(";")
 
@@ -270,7 +270,7 @@ object ProviderHTMLConstants {
     // ========================================================================
 
     val SEARCH_ITEMS = listOf(
-        "LayarKaca21:::div.content-main article, div#gmr-main-load article",
+        "LayarKaca21:::div.content-main article, div#gmr-main-load article, div.gallery-grid article",
         "Dutamovie21,IndoDrama21:::article.item, article.item-infinite, div#gmr-main-load article",
         "Anichin,Donghuastream:::div.listupd > article",
         "Samehadaku:::div.bsx, .listupd .bsx, div.animposx",
