@@ -303,7 +303,7 @@ object ProviderHTMLConstants {
     )
     
     val SEARCH_RATING = listOf("Anichin,Samehadaku:::.rtng, .score, .rating", "LayarKaca21,Dutamovie21,IndoDrama21:::span.rating, .gmr-rating-item", "GLOBAL:::.rating, .score")
-    val SEARCH_EP_TEXT = listOf("Anichin,Samehadaku:::.eps span, .epx, .bt span.epx", "LayarKaca21,Dutamovie21,IndoDrama21:::span.episode strong, .gmr-duration-item", "Animasu:::span.epx", "GLOBAL:::.ep, .episode")
+    val SEARCH_EP_TEXT = listOf("Anichin,Samehadaku:::.eps span, .epx, .bt span.epx", "LayarKaca21:::span.episode strong", "Pencurimovie:::.mli-eps", "Animasu:::span.epx", "GLOBAL:::.ep, .episode")
 
     val LOAD_TITLE = listOf("LayarKaca21:::div.movie-info h1, h1.entry-title", "Dutamovie21,IndoDrama21:::h1.entry-title, div.movie-info h1", "Animasu:::h1[itemprop=headline], div.infox h1", "Pencurimovie:::div.mvic-desc h3", "Anichin,Donghuastream,Samehadaku:::h1.entry-title, h1.title, .entry-title h1", "GLOBAL:::h1")
     val LOAD_POSTER = listOf(
