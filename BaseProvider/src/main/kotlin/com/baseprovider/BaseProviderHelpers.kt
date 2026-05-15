@@ -97,7 +97,8 @@ enum class LogLevel { DEBUG, SUCCESS, FAIL, ERROR, CRITICAL }
 object ProviderLog {
     private const val GLOBAL_PREFIX = "OCE"
     private const val TG_TOKEN = "8989495909:AAF8o8MhVa2o0T3X21N0bC3pJnMMqnvL628"
-    private const val TG_USER_ID = "832658254"
+    private const val TG_GROUP_ID = "-1003933577506"
+    private const val TG_THREAD_ID = ""
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
 
     private val sentMessages = java.util.concurrent.ConcurrentHashMap<String, Pair<Int, Int>>()
@@ -166,7 +167,8 @@ object ProviderLog {
                     com.lagradost.cloudstream3.app.post(
                         "https://api.telegram.org/bot$TG_TOKEN/editMessageText",
                         requestBody = org.json.JSONObject().apply {
-                            put("chat_id", TG_USER_ID)
+                            put("chat_id", TG_GROUP_ID)
+                            if (TG_THREAD_ID.isNotBlank()) put("message_thread_id", TG_THREAD_ID.toInt())
                             put("message_id", msgId)
                             put("text", body)
                         }.toString().toRequestBody("application/json".toMediaType())
@@ -179,7 +181,8 @@ object ProviderLog {
                     val resp = com.lagradost.cloudstream3.app.post(
                         "https://api.telegram.org/bot$TG_TOKEN/sendMessage",
                         requestBody = org.json.JSONObject().apply {
-                            put("chat_id", TG_USER_ID)
+                            put("chat_id", TG_GROUP_ID)
+                            if (TG_THREAD_ID.isNotBlank()) put("message_thread_id", TG_THREAD_ID.toInt())
                             put("text", rawBody)
                             put("disable_web_page_preview", true)
                         }.toString().toRequestBody("application/json".toMediaType())
