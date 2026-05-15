@@ -6,6 +6,8 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
+import com.lagradost.cloudstream3.network.WebViewResolver
+import com.lagradost.cloudstream3.utils.M3u8Helper
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -368,6 +370,19 @@ class StreamHG : ExtractorApi() {
             CompiledRegexPatterns.extractAllVideoUrls(unpacked).let { urls ->
                 CompiledRegexPatterns.filterMasterM3u8(urls).forEach { MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback) }
             }
+        } else {
+            try {
+                val resolver = WebViewResolver(
+                    interceptUrl = Regex("(m3u8|master\\.txt)"),
+                    additionalUrls = listOf(Regex("(m3u8|master\\.txt)")),
+                    useOkhttp = false,
+                    timeout = 15_000L
+                )
+                val interceptedUrl = app.get(url, referer = referer, interceptor = resolver).url
+                if (interceptedUrl.isNotBlank()) {
+                    MasterLinkGenerator.createSmartLink(this.name, interceptedUrl, url, callback = callback)
+                }
+            } catch (_: Exception) {}
         }
     }
 }
@@ -426,13 +441,26 @@ class Dhcplay : ExtractorApi() {
         val packed = findPackedJsInPage(text)
         if (packed != null) {
             val unpacked = decodePackedJs(packed.first, packed.second, packed.third)
+            var found = false
             CompiledRegexPatterns.extractAllVideoUrls(unpacked).let { urls ->
-                CompiledRegexPatterns.filterMasterM3u8(urls).forEach { MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback) }
+                CompiledRegexPatterns.filterMasterM3u8(urls).forEach { found = true; MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback) }
             }
-        } else {
-            val urls = CompiledRegexPatterns.extractAllVideoUrls(text)
-            CompiledRegexPatterns.filterMasterM3u8(urls).forEach { MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback) }
+            if (found) return
         }
+        val urls = CompiledRegexPatterns.extractAllVideoUrls(text)
+        CompiledRegexPatterns.filterMasterM3u8(urls).forEach { MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback) }
+        try {
+            val resolver = WebViewResolver(
+                interceptUrl = Regex("(m3u8|master\\.txt)"),
+                additionalUrls = listOf(Regex("(m3u8|master\\.txt)")),
+                useOkhttp = false,
+                timeout = 15_000L
+            )
+            val interceptedUrl = app.get(url, referer = referer, interceptor = resolver).url
+            if (interceptedUrl.isNotBlank()) {
+                MasterLinkGenerator.createSmartLink(this.name, interceptedUrl, url, callback = callback)
+            }
+        } catch (_: Exception) {}
     }
 }
 
