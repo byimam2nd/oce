@@ -98,7 +98,7 @@ object ProviderLog {
     private const val GLOBAL_PREFIX = "OCE"
     private const val TG_TOKEN = "8989495909:AAF8o8MhVa2o0T3X21N0bC3pJnMMqnvL628"
     private const val TG_GROUP_ID = "-1003933577506"
-    private const val TG_THREAD_ID = ""
+    private const val TG_THREAD_ID = "2"
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
 
     private val sentMessages = java.util.concurrent.ConcurrentHashMap<String, Pair<Int, Int>>()
