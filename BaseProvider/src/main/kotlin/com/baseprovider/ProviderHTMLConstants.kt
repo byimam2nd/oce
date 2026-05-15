@@ -87,7 +87,7 @@ object ProviderHTMLConstants {
         "Donghuastream:::{baseUrl}/{data}{page}",
         "LayarKaca21:::{data}{page}",
         "Dutamovie21,IndoDrama21:::{baseUrl}/{data}/page/{page}",
-        "Dutamovie21:::{baseUrl}/{data}page/{page}",
+        "Dutamovie21:::{baseUrl}/{data}/page/{page}",
         "Pencurimovie:::{baseUrl}/{data}/page/{page}",
         "Samehadaku:::{baseUrl}/{data}{page}",
         "GLOBAL:::{baseUrl}/{data}{page}"
@@ -201,25 +201,25 @@ object ProviderHTMLConstants {
     ).joinToString(";")
 
     private val DUTAMOVIE21_MAIN = listOf(
-        "category/box-office/|Box Office",
-        "category/serial-tv/|TV Series",
-        "action/|Action",
-        "adventure/|Adventure",
-        "animation/|Animation",
-        "comedy/|Comedy",
-        "crime/|Crime",
-        "drama/|Drama",
-        "fantasy/|Fantasy",
-        "horror/|Horror",
-        "mystery/|Mystery",
-        "romance/|Romance",
-        "science-fiction/|Sci-Fi",
-        "thriller/|Thriller",
-        "country/china/|China",
-        "country/indonesia/|Indonesia",
-        "country/korea/|Korea",
-        "country/philippines/|Philippines",
-        "country/thailand/|Thailand"
+        "category/box-office|Box Office",
+        "category/serial-tv|TV Series",
+        "action|Action",
+        "adventure|Adventure",
+        "animation|Animation",
+        "comedy|Comedy",
+        "crime|Crime",
+        "drama|Drama",
+        "fantasy|Fantasy",
+        "horror|Horror",
+        "mystery|Mystery",
+        "romance|Romance",
+        "science-fiction|Sci-Fi",
+        "thriller|Thriller",
+        "country/china|China",
+        "country/indonesia|Indonesia",
+        "country/korea|Korea",
+        "country/philippines|Philippines",
+        "country/thailand|Thailand"
     ).joinToString(";")
 
     private val PENCURIMOVIE_MAIN = listOf(
