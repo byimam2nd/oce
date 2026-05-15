@@ -282,7 +282,7 @@ object ProviderHTMLConstants {
     val SEARCH_TITLE = listOf(
         "LayarKaca21:::h3, h2, a[title]", 
         "Dutamovie21,IndoDrama21:::h2.entry-title a, .entry-title a",
-        "Samehadaku:::.entry-title a, .title", 
+        "Samehadaku:::h2, .entry-title a, .title", 
         "Anichin,Donghuastream:::div.bsx h2, .tt, a[title]", 
         "Animasu:::div.tt", 
         "Pencurimovie:::a[oldtitle], a[title]", 
