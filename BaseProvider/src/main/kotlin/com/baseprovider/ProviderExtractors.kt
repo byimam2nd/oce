@@ -446,9 +446,14 @@ class Movearnpre : ExtractorApi() {
         val packed = findPackedJsInPage(text)
         if (packed != null) {
             val unpacked = decodePackedJs(packed.first, packed.second, packed.third)
+            var found = false
             CompiledRegexPatterns.extractAllVideoUrls(unpacked).let { urls ->
-                CompiledRegexPatterns.filterMasterM3u8(urls).forEach { MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback) }
+                CompiledRegexPatterns.filterMasterM3u8(urls).forEach { found = true; MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback) }
             }
+            if (found) return
+        }
+        CompiledRegexPatterns.extractAllVideoUrls(text).let { urls ->
+            CompiledRegexPatterns.filterMasterM3u8(urls).forEach { MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback) }
         }
     }
 }
@@ -457,10 +462,15 @@ class Voe : ExtractorApi() {
     override var mainUrl = "https://voe.sx"
     override val requiresReferer = true
     override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
-        val doc = app.get(url, referer = referer).document
-        val script = doc.select("script").joinToString("\n") { it.data() }
-        val m3u8 = Regex("""https?://[^"\' ]+\.m3u8[^"\' ]*""").find(script)?.value ?: return
-        MasterLinkGenerator.createSmartLink(this.name, m3u8, url, callback = callback)
+        val resp = app.get(url, referer = referer)
+        val text = resp.text
+        val doc = resp.document
+        for (src in listOf(
+            Regex("""https?://[^"\' ]+\.m3u8[^"\' ]*""").find(text)?.value,
+            Regex("""file:\s*"([^"]+)"""").find(text)?.groupValues?.getOrNull(1),
+        )) {
+            if (src != null) { MasterLinkGenerator.createSmartLink(this.name, src, url, callback = callback); return }
+        }
     }
 }
 class Xtwap : ExtractorApi() {
@@ -548,16 +558,21 @@ class Minochinos : ExtractorApi() {
     override val requiresReferer = true
 
     override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
-        val response = app.get(url, referer = referer)
-        val text = response.text
+        val text = app.get(url, referer = referer).text
         val packed = findPackedJsInPage(text)
-        val unpacked = if (packed != null) {
-            decodePackedJs(packed.first, packed.second, packed.third)
-        } else {
-            response.document.selectFirst("script:containsData(sources:)")?.data() ?: return
+        val script = if (packed != null) decodePackedJs(packed.first, packed.second, packed.third) else text
+        var found = false
+        CompiledRegexPatterns.extractAllVideoUrls(script).let { urls ->
+            CompiledRegexPatterns.filterMasterM3u8(urls).forEach { found = true; MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback) }
         }
-        val urls = CompiledRegexPatterns.extractAllVideoUrls(unpacked)
-        CompiledRegexPatterns.filterMasterM3u8(urls).forEach { MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback) }
+        if (!found) {
+            val docScripts = try { app.get(url, referer = referer).document.selectFirst("script:containsData(sources:)")?.data() } catch (_: Exception) { null }
+            if (docScripts != null) {
+                CompiledRegexPatterns.extractAllVideoUrls(docScripts).let { urls ->
+                    CompiledRegexPatterns.filterMasterM3u8(urls).forEach { MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback) }
+                }
+            }
+        }
     }
 }
 class Vidhide : ExtractorApi() { override var name = "Vidhide"; override var mainUrl = "https://vidhide.com"; override val requiresReferer = true }
