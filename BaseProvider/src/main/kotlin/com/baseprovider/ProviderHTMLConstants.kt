@@ -73,7 +73,7 @@ object ProviderHTMLConstants {
         "Anichin:::{baseUrl}/page/{page}/?s={query}",
         "Animasu:::{baseUrl}/?s={query}",
         "Donghuastream:::{baseUrl}/pagg/{page}/?s={query}",
-        "LayarKaca21:::https://gudangvape.com/search.php?s={query}",
+        "LayarKaca21:::{baseUrl}/?s={query}",
         "Dutamovie21,IndoDrama21:::{baseUrl}/page/{page}/?s={query}",
         "Dutamovie21:::{baseUrl}/page/{page}/?s={query}",
         "Pencurimovie:::{baseUrl}/?s={query}",
@@ -116,7 +116,7 @@ object ProviderHTMLConstants {
     val CONFIG_REVERSE_EPISODES = listOf("LayarKaca21:::false", "Dutamovie21,IndoDrama21:::false", "Pencurimovie:::false", "GLOBAL:::true")
 
     // --- JSON Search Properties ---
-    val CONFIG_SEARCH_IS_JSON = listOf("LayarKaca21:::true", "GLOBAL:::false")
+    val CONFIG_SEARCH_IS_JSON = listOf("LayarKaca21:::false", "GLOBAL:::false")
     val CONFIG_SEARCH_JSON_ROOTS = listOf("LayarKaca21:::data", "GLOBAL:::data")
     val CONFIG_SEARCH_JSON_TITLES = listOf("LayarKaca21:::title", "GLOBAL:::title")
     val CONFIG_SEARCH_JSON_HREFS = listOf("LayarKaca21:::slug", "GLOBAL:::slug")
@@ -304,7 +304,7 @@ object ProviderHTMLConstants {
 
     val LOAD_TITLE = listOf("LayarKaca21:::div.movie-info h1, h1.entry-title", "Dutamovie21,IndoDrama21:::h1.entry-title, div.movie-info h1", "Animasu:::h1[itemprop=headline], div.infox h1", "Pencurimovie:::div.mvic-desc h3", "Anichin,Donghuastream,Samehadaku:::h1.entry-title, h1.title, .entry-title h1")
     val LOAD_POSTER = listOf(
-        "LayarKaca21:::div.movie-info > img, div#movie-poster img, div.movie-info div.poster img", 
+        "LayarKaca21:::div.movie-info > img, div#movie-poster img, div.movie-info div.poster img, div.poster img", 
         "Dutamovie21,IndoDrama21:::meta[property=\"og:image\"], div.gmr-movie-data figure img, figure.pull-left img", 
         "Pencurimovie:::div.mvic-thumb img", 
         "Donghuastream:::div.thumb > img, img.ts-post-image", 
