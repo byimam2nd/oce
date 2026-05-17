@@ -305,7 +305,7 @@ object ProviderHTMLConstants {
 
     val LOAD_TITLE = listOf("LayarKaca21:::div.movie-info h1, h1.entry-title", "Dutamovie21,IndoDrama21:::h1.entry-title, div.movie-info h1", "Animasu:::h1[itemprop=headline], div.infox h1", "Pencurimovie:::div.mvic-desc h3", "Anichin,Donghuastream,Samehadaku:::h1.entry-title, h1.title, .entry-title h1")
     val LOAD_POSTER = listOf(
-        "LayarKaca21:::div.movie-info > img, div#movie-poster img, div.movie-info div.poster img, div.poster img", 
+        "LayarKaca21:::div.movie-info .detail img, div.movie-info > img, div#movie-poster img, div.movie-info div.poster img, div.poster img", 
         "Dutamovie21,IndoDrama21:::meta[property=\"og:image\"], div.gmr-movie-data figure img, figure.pull-left img", 
         "Pencurimovie:::div.mvic-thumb img", 
         "Donghuastream:::div.thumb > img, img.ts-post-image", 
