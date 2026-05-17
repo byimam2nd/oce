@@ -57,6 +57,7 @@ class ProviderScrapper(
     private val searchPageLimit: Int,
     private val seriesKeyword: String,
     private val moviePathSegment: String,
+    private val tvPathSegment: String,
     private val supportedTypes: Set<TvType>,
     private val episodeDataUrlPattern: String,
     private val mapper: ProviderMapper,
@@ -140,7 +141,8 @@ class ProviderScrapper(
         
         val epItems = document.selectSafe(providerId, EPISODE_ITEMS, "EPISODE_ITEMS")
         val seasonDataScript = document.selectFirstSafe(providerId, ProviderHTMLConstants.SELECTOR_SEASON_CONTAINER, "SELECTOR_SEASON_CONTAINER")
-        val isMovie = (seasonDataScript == null) && ((moviePathSegment.isNotBlank() && currentUrl.contains(moviePathSegment)) || epItems.isEmpty())
+        val hasTvPath = tvPathSegment.isNotBlank() && currentUrl.contains(tvPathSegment)
+        val isMovie = (seasonDataScript == null) && !hasTvPath && ((moviePathSegment.isNotBlank() && currentUrl.contains(moviePathSegment)) || epItems.isEmpty())
         val type = if (isMovie) TvType.Movie else if (supportedTypes.contains(TvType.Anime)) TvType.Anime else TvType.TvSeries
         val tracker = runCatching { APIHolder.getTracker(listOf(metadata.title), TrackerType.getTypes(type), metadata.year, true) }.getOrElse { e -> logDebug(providerId, "Tracker Fetch Warning: ${e.message}"); null }
 

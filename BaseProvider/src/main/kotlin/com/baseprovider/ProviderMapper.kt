@@ -41,6 +41,7 @@ class ProviderMapper(
     private val providerId: String,
     private val mainUrl: String,
     private val moviePathSegment: String,
+    private val tvPathSegment: String,
     private val supportedTypes: Set<TvType>,
     private val dubKeyword: String,
     private val globalHeaders: Map<String, String>,
@@ -62,7 +63,8 @@ class ProviderMapper(
             val cleanReplace = resolveConfig(providerId, ProviderHTMLConstants.CONFIG_HREF_CLEAN_REPLACES, "")
             if (cleanRegex.isNotBlank() && cleanReplace.isNotBlank()) { href = href.replace(Regex(cleanRegex), cleanReplace) }
             val poster = element.selectFirstSafe(providerId, SEARCH_POSTER, "SEARCH_POSTER")?.safeExtractImage(ATTR_IMAGE); val rating = element.selectFirstSafe(providerId, SEARCH_RATING, "SEARCH_RATING")?.text(); val eps = element.selectFirstSafe(providerId, SEARCH_EP_TEXT, "SEARCH_EP_TEXT")?.text()?.safeExtractEpNum()
-            val isMovie = (moviePathSegment.isNotBlank() && href.contains(moviePathSegment)) || href.contains("movie", true)
+            val hasTvPath = tvPathSegment.isNotBlank() && href.contains(tvPathSegment)
+            val isMovie = !hasTvPath && ((moviePathSegment.isNotBlank() && href.contains(moviePathSegment)) || href.contains("movie", true))
             val type = if (isMovie) TvType.Movie else if (supportedTypes.contains(TvType.Anime)) TvType.Anime else TvType.TvSeries
             api.newAnimeSearchResponse(title, href, type) { 
                 this.posterUrl = poster
@@ -114,8 +116,8 @@ class ProviderMapper(
         var episodes = mutableListOf<Episode>()
         if (seasonDataScript != null) { runCatching { val root = JSONObject(seasonDataScript.data()); root.keys().forEach { k -> val arr = root.getJSONArray(k)
                     for (i in 0 until arr.length()) { val ep = arr.getJSONObject(i); episodes.add(api.newEpisode(fixUrlSmart(ep.getString("slug"), currentUrl)) { this.season = ep.optInt("s"); this.episode = ep.optInt("episode_no"); this.name = "${episodeKeyword} ${ep.optInt("episode_no")}" }) } } } }
-        if (episodes.isEmpty()) { episodes.addAll(epItems.mapNotNull { ep -> runCatching { val anchor = ep.selectFirstSafe(providerId, EPISODE_HREF, "EPISODE_HREF") ?: ep.selectFirst("a") ?: return@runCatching null
-                val href = episodeDataUrlPattern.replace("{url}", fixUrlSmart(anchor.attr("href"), currentUrl)); val titleEl = ep.selectFirstSafe(providerId, EPISODE_TITLE, "EPISODE_TITLE") ?: ep.selectFirst("a")
+        if (episodes.isEmpty()) { episodes.addAll(epItems.mapNotNull { ep -> runCatching { val anchor = ep.selectFirstSafe(providerId, EPISODE_HREF, "EPISODE_HREF") ?: ep.selectFirst("a") ?: if (ep.tagName() == "a") ep else null ?: return@runCatching null
+                val href = episodeDataUrlPattern.replace("{url}", fixUrlSmart(anchor.attr("href"), currentUrl)); val titleEl = ep.selectFirstSafe(providerId, EPISODE_TITLE, "EPISODE_TITLE") ?: ep.selectFirst("a") ?: if (ep.tagName() == "a") ep else null
                 val epNum = titleEl?.text()?.safeExtractEpNum() ?: ep.selectFirstSafe(providerId, EPISODE_NUM, "EPISODE_NUM")?.text()?.safeExtractEpNum() ?: ep.text().safeExtractEpNum(); val rawName = titleEl?.text()?.trim() ?: ""
                 val isJustNumber = rawName.matches(Regex("""^\d+(\.\d+)?$""")); api.newEpisode(href) { if (!isJustNumber && rawName.isNotBlank()) this.name = rawName; this.episode = epNum; this.description = ep.selectFirstSafe(providerId, EPISODE_DESC, "EPISODE_DESC")?.text()?.trim()
                     this.runTime = ep.selectFirstSafe(providerId, EPISODE_TIME, "EPISODE_TIME")?.text()?.filter { it.isDigit() }?.toIntOrNull(); this.posterUrl = ep.selectFirst("img")?.safeExtractImage(ATTR_IMAGE) ?: poster } }.getOrNull() }) }

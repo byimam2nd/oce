@@ -105,7 +105,8 @@ object ProviderHTMLConstants {
 
     val CONFIG_TV_PATH_SEGMENTS = listOf(
         "LayarKaca21:::/nontondrama/",
-        "Dutamovie21,IndoDrama21:::/series/",
+        "Dutamovie21:::/series/",
+        "IndoDrama21:::/tv/",
         "Pencurimovie:::/series/",
         "Samehadaku:::/anime/",
         "GLOBAL:::/anime/"
@@ -330,7 +331,7 @@ object ProviderHTMLConstants {
     val LOAD_TRAILER = listOf("LayarKaca21,Dutamovie21,IndoDrama21:::.gmr-trailer-popup", "Samehadaku:::iframe[src*=\"youtube\"], .trailer a")
     val LOAD_RECOMMEND = listOf("LayarKaca21:::div#gmr-related-load article, div.related-post article", "Dutamovie21,IndoDrama21:::div.gmr-grid article, .gmr-related-title + .row article", "Samehadaku:::div.relat ul li, .relat article, .related-post article", "Anichin,Donghuastream,Animasu:::.listupd article, .listupd .bsx, .related-post article, .relat article", "Pencurimovie:::.mlw-related .ml-item, #related-items .ml-item")
 
-    val EPISODE_ITEMS = listOf("Animasu:::ul#daftarepisode > li", "Samehadaku:::div.lstepsiode ul li, .eplister li", "Pencurimovie:::div.tvseason div.les-content a", "Anichin:::.eplister li", "Donghuastream:::.eplister li", "LayarKaca21,Dutamovie21,IndoDrama21:::.eplister li")
+    val EPISODE_ITEMS = listOf("Animasu:::ul#daftarepisode > li", "Samehadaku:::div.lstepsiode ul li, .eplister li", "Pencurimovie:::div.tvseason div.les-content a", "Anichin:::.eplister li", "Donghuastream:::.eplister li", "LayarKaca21,Dutamovie21:::.eplister li", "IndoDrama21:::div.gmr-listseries a[href*='/eps/']")
     val EPISODE_HREF = listOf("Samehadaku:::a", "LayarKaca21,Dutamovie21,IndoDrama21:::a", "Pencurimovie:::a", "Anichin:::.eplister li > a", "Donghuastream:::.eplister li > a", "Animasu:::a")
     val EPISODE_TITLE = listOf("Samehadaku:::a, .epl-title", "Anichin,Donghuastream:::.epl-title", "Animasu:::a", "LayarKaca21,Dutamovie21,IndoDrama21:::a, .ep-name, .epl-title", "Pencurimovie:::a")
     val EPISODE_NUM = listOf("Anichin,Donghuastream,Samehadaku:::.epl-num", "Animasu:::.ep-num, .epl-num", "LayarKaca21,Dutamovie21,IndoDrama21:::.ep-num, .epl-num", "Pencurimovie:::.ep-num, .epl-num")
