@@ -5,76 +5,10 @@ import java.net.URI
 import java.util.Base64
 import com.lagradost.cloudstream3.utils.Qualities
 
-/**
- * PARSER UTILS - V2.2.0
- * 
- * Berisi seluruh logika pembedahan HTML (Jsoup) dan pembersihan data.
- * Memisahkan tanggung jawab parsing dari utilitas engine umum.
- */
-
-// --- JSOUP SAFE SELECTORS ---
-
-fun Element.selectFirstSafe(providerId: String, selectors: List<String>, constantName: String? = null): Element? {
-    if (selectors.isEmpty()) return null
-    for (s in selectors) { if (!s.contains(":::")) continue
-        val owners = s.substringBefore(":::"); if (owners.split(",").contains(providerId)) {
-            val sel = s.substringAfter(":::"); if (sel.isNotBlank()) { val el = this.selectFirst(sel); if (el != null) return el }
-        }
-    }
-    for (s in selectors) {
-        val sel = if (s.startsWith("GLOBAL:::")) s.substringAfter(":::") else if (!s.contains(":::")) s else continue
-        if (sel.isNotBlank()) { val el = this.selectFirst(sel); if (el != null) return el }
-    }
-    // Jika gagal, catat ke log untuk maintenance
-    if (constantName != null) {
-        logDebug(providerId, "Selector Constant '$constantName' failed to find elements in ${this.tagName()}")
-    }
-    return null
-}
-
-fun Element.selectSafe(providerId: String, selectors: List<String>, constantName: String? = null): org.jsoup.select.Elements {
-    if (selectors.isEmpty()) return org.jsoup.select.Elements()
-    for (s in selectors) { if (!s.contains(":::")) continue
-        val owners = s.substringBefore(":::"); if (owners.split(",").contains(providerId)) {
-            val sel = s.substringAfter(":::"); if (sel.isNotBlank()) { val els = this.select(sel); if (els.isNotEmpty()) return els }
-        }
-    }
-    for (s in selectors) {
-        val sel = if (s.startsWith("GLOBAL:::")) s.substringAfter(":::") else if (!s.contains(":::")) s else continue
-        if (sel.isNotBlank()) { val els = this.select(sel); if (els.isNotEmpty()) return els }
-    }
-    // Jika gagal, catat ke log untuk maintenance
-    if (constantName != null) {
-        logDebug(providerId, "Selector Constant '$constantName' returned empty list in ${this.tagName()}")
-    }
-    return org.jsoup.select.Elements()
-}
-
-fun Element.attrSafe(providerId: String, attributes: List<String>, constantName: String? = null): String? {
-    for (a in attributes) { if (!a.contains(":::")) continue
-        val owners = a.substringBefore(":::"); if (owners.split(",").contains(providerId)) {
-            val attrN = a.substringAfter(":::"); val v = this.attr(attrN); if (v.isNotBlank() && v != "about:blank") return v
-        }
-    }
-    for (a in attributes) {
-        val attrN = if (a.startsWith("GLOBAL:::")) a.substringAfter(":::") else if (!a.contains(":::")) a else continue
-        attrN.split(",").map { it.trim() }.forEach { singleAttr ->
-            val v = this.attr(singleAttr); if (v.isNotBlank() && v != "about:blank") return v
-        }
-    }
-    if (constantName != null) {
-        logDebug(providerId, "Attribute Constant '$constantName' failed to extract value from ${this.tagName()}")
-    }
-    return null
-}
-
-// --- DATA EXTRACTION & CLEANING ---
-
 fun Element.safeExtractImage(attributes: List<String>): String {
     return try {
         attributes.asSequence()
             .flatMap { it.split(",").map { a -> a.trim() } }
-            .map { if (it.contains(":::")) it.substringAfter(":::") else it }
             .map { attr(it) }.filter { it.isNotBlank() && it != "about:blank" }.firstOrNull()?.split(" ")?.firstOrNull() ?: ""
     } catch (_: Exception) { "" }
 }
@@ -186,17 +120,4 @@ fun String?.safeGetQuality(): Int {
             else -> Qualities.Unknown.value
         }
     } catch (_: Exception) { Qualities.Unknown.value }
-}
-
-/**
- * Mendeteksi dan membongkar JavaScript yang di-pack (P.A.C.K.E.R).
- */
-fun String.unpackPacked(): String {
-    return try {
-        if (!this.contains("p,a,c,k,e,d")) return this
-        val payload = this.substringAfter("}(").substringBefore("))")
-        val parts = payload.split(",")
-        if (parts.size < 4) return this
-        this
-    } catch (_: Exception) { this }
 }

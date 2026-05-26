@@ -1,0 +1,121 @@
+package com.baseprovider.config
+
+import com.lagradost.cloudstream3.TvType
+
+data class ProviderConfig(
+    val id: String,
+
+    // ── Identity ──
+    val name: String = id,
+    val mainUrl: String = "https://example.com",
+    val seriesUrl: String? = null,
+    val searchUrl: String? = null,
+    val lang: String = "id",
+    val supportedTypes: Set<TvType> = emptySet(),
+
+    // ── URL Patterns ──
+    val searchPathPattern: String = "{baseUrl}/page/{page}/?s={query}",
+    val mainPagePathPattern: String = "{baseUrl}/{data}{page}",
+    val moviePathSegment: String = "/movie/",
+    val tvPathSegment: String = "/anime/",
+    val episodeDataUrlPattern: String = "{url}",
+
+    // ── Features ──
+    val searchPageLimit: Int = 2,
+    val reverseEpisodes: Boolean = true,
+    val isJsonSearch: Boolean = false,
+    val searchJsonRoot: String = "data",
+    val searchJsonTitle: String = "title",
+    val searchJsonHref: String = "slug",
+    val searchJsonPoster: String = "poster",
+    val searchJsonPosterPrefix: String = "",
+    val searchJsonType: String = "type",
+    val useDocumentLarge: Boolean = false,
+    val cacheTtlMinutes: Long = 5L,
+    val isHorizontal: Boolean = false,
+    val refererPlayerMode: String = "current_url",
+    val iframeSelectors: String = "iframe",
+
+    // ── Headers ──
+    val globalHeaders: Map<String, String> = emptyMap(),
+
+    // ── Navigation ──
+    val mainPageLists: List<Pair<String, String>> = emptyList(),
+
+    // ── UI Keywords ──
+    val dubKeyword: String = "dub",
+    val ongoingKeyword: String = "Ongoing",
+    val episodeKeyword: String = "Episode",
+    val seriesKeyword: String = "Series",
+    val comingSoonKeywords: String = "Coming Soon",
+
+    // ── Selectors: Search ──
+    val searchItems: String = "",
+    val searchTitle: String = "",
+    val searchHref: String = "",
+    val searchPoster: String = "",
+    val searchRating: String = "",
+    val searchEpText: String = "",
+
+    // ── Selectors: Load ──
+    val loadTitle: String = "",
+    val loadPoster: String = "",
+    val loadBanner: String = "",
+    val loadDesc: String = "",
+    val loadInfoBox: String = "",
+    val loadTags: String = "",
+    val loadRating: String = "",
+    val loadStatus: String = "",
+    val loadQuality: String = "",
+    val loadTrailer: String = "",
+    val loadRecommend: String = "",
+
+    // ── Selectors: Episode ──
+    val episodeItems: String = "",
+    val episodeHref: String = "",
+    val episodeTitle: String = "",
+    val episodeNum: String = "",
+    val episodeDesc: String = "",
+    val episodeTime: String = "",
+
+    // ── Selectors: Link & Misc ──
+    val linkOptions: String = "",
+    val downloadItems: String = "",
+    val actorItems: String = "",
+    val actorName: String = "",
+
+    // ── Selectors: Structural ──
+    val watchButtons: String = ".play-button, .watch-now, .btn-watch",
+    val seasonContainer: String = ".tvseason, #season-data",
+    val imdbExternal: String = "a[href*='imdb.com/title/']",
+    val tmdbExternal: String = "a[href*='themoviedb.org/']",
+    val iframeTag: String = "iframe",
+    val followLinkSelector: String = "",
+    val seasonDataSelector: String = "",
+
+    // ── Selectors: AJAX Player ──
+    val ajaxPlayerUrl: String = "",
+    val selectorJsonData: String = "",
+
+    // ── Attribute Names ──
+    val attrImage: List<String> = listOf("data-original", "data-src", "data-lazy-src", "data-litespeed-src", "src", "content"),
+    val attrHref: List<String> = listOf("href"),
+    val attrValue: List<String> = listOf("value", "data-index", "data-id", "data-url", "data-link", "data-litespeed-src"),
+    val iframeSources: List<String> = listOf("src", "data-src", "data-link", "data-litespeed-src"),
+
+    // ── URL Cleanup ──
+    val hrefCleanRegex: String = "",
+    val hrefCleanReplace: String = "",
+
+    // ── Hooks ──
+    val yearSelector: String = "",
+    val yearExtractorRegex: String = "",
+
+    // ── Bloat Regex ──
+    val bloatRegex: Regex = BLOAT_REGEX_DEFAULT,
+)
+
+private val BLOAT_REGEX_DEFAULT = Regex(
+    """(?i)(\bONA\b|\bOngoing\b|\bCompleted\b|\bSpecial\b|\bTAMAT\b|\bIndo\b|\bFull\b|\bSeason\b|\bEpisode\s*\d*|Subtitle\s*Indonesia|Nonton|Anime|Movie|TV|Series|Lengkap|HD|Free|\d{3,4}p|Dual\s*Audio|\s*–\s*|\s*\|\s*)""",
+    RegexOption.IGNORE_CASE
+)

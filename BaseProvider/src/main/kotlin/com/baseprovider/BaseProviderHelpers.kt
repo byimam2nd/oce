@@ -202,18 +202,3 @@ fun logFail(tag: String, message: String, url: String? = null, method: String? =
 fun logError(tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null, type: FailureType? = null) = log(LogLevel.ERROR, tag, message, error, url, method, type)
 fun logCritical(tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null, type: FailureType? = null, selectors: String = "") = log(LogLevel.CRITICAL, tag, message, error, url, method, type, selectors)
 fun logSuccess(tag: String, message: String, url: String? = null, method: String? = null, selectors: String = "") = log(LogLevel.SUCCESS, tag, message, url = url, method = method, type = FailureType.SUCCESS, selectors = selectors)
-
-// --- HIGH-STABILITY CONFIG ENGINE ---
-
-fun resolveConfig(providerId: String, list: List<String>, default: String): String {
-    for (item in list) { if (item.contains(":::")) { val owners = item.substringBefore(":::").split(","); if (owners.contains(providerId)) { val v = item.substringAfter(":::"); if (v.isBlank()) break; return v } } }
-    for (item in list) { if (item.startsWith("GLOBAL:::")) return item.substringAfter(":::"); if (!item.contains(":::")) return item }
-    return default
-}
-
-fun resolveConfigList(providerId: String, list: List<String>): List<String> {
-    val result = mutableListOf<String>(); for (item in list) { if (item.contains(":::")) { val owners = item.substringBefore(":::").split(","); if (owners.contains(providerId)) { val v = item.substringAfter(":::"); if (v.isNotBlank()) result.add(v) } } }
-    if (result.isNotEmpty()) return result
-    for (item in list) { val v = if (item.contains(":::")) { if (item.startsWith("GLOBAL:::")) item.substringAfter(":::") else continue } else item; if (v.isNotBlank()) result.add(v) }
-    return result
-}

@@ -2,46 +2,12 @@ package com.baseprovider
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import com.baseprovider.ProviderHTMLConstants.CONFIG_NAMES
-import com.baseprovider.ProviderHTMLConstants.CONFIG_MAIN_URLS
-import com.baseprovider.ProviderHTMLConstants.CONFIG_SERIES_URLS
-import com.baseprovider.ProviderHTMLConstants.CONFIG_SEARCH_URLS
-import com.baseprovider.ProviderHTMLConstants.CONFIG_LANGS
-import com.baseprovider.ProviderHTMLConstants.CONFIG_SUPPORTED_TYPES
-import com.baseprovider.ProviderHTMLConstants.CONFIG_SEARCH_PATH_PATTERNS
-import com.baseprovider.ProviderHTMLConstants.CONFIG_MAIN_PAGE_PATH_PATTERNS
-import com.baseprovider.ProviderHTMLConstants.CONFIG_MOVIE_PATH_SEGMENTS
-import com.baseprovider.ProviderHTMLConstants.CONFIG_TV_PATH_SEGMENTS
-import com.baseprovider.ProviderHTMLConstants.CONFIG_EPISODE_DATA_URL_PATTERNS
-import com.baseprovider.ProviderHTMLConstants.CONFIG_SEARCH_PAGE_LIMITS
-import com.baseprovider.ProviderHTMLConstants.CONFIG_REVERSE_EPISODES
-import com.baseprovider.ProviderHTMLConstants.CONFIG_SEARCH_IS_JSON
-import com.baseprovider.ProviderHTMLConstants.CONFIG_SEARCH_JSON_ROOTS
-import com.baseprovider.ProviderHTMLConstants.CONFIG_SEARCH_JSON_TITLES
-import com.baseprovider.ProviderHTMLConstants.CONFIG_SEARCH_JSON_HREFS
-import com.baseprovider.ProviderHTMLConstants.CONFIG_SEARCH_JSON_POSTERS
-import com.baseprovider.ProviderHTMLConstants.CONFIG_SEARCH_JSON_POSTER_PREFIXES
-import com.baseprovider.ProviderHTMLConstants.CONFIG_SEARCH_JSON_TYPES
-import com.baseprovider.ProviderHTMLConstants.CONFIG_GLOBAL_HEADERS
-import com.baseprovider.ProviderHTMLConstants.CONFIG_USE_DOCUMENT_LARGE
-import com.baseprovider.ProviderHTMLConstants.CONFIG_CACHE_TTL_MINUTES
-import com.baseprovider.ProviderHTMLConstants.CONFIG_MAIN_PAGE_LISTS
-import com.baseprovider.ProviderHTMLConstants.STR_DUB
-import com.baseprovider.ProviderHTMLConstants.STR_ONGOING
-import com.baseprovider.ProviderHTMLConstants.STR_EPISODE
-import com.baseprovider.ProviderHTMLConstants.STR_SERIES
-
-/**
- * 🚀 ULTIMATE HTML SCRAPING ENGINE - VERSION 2.2.0 (MODULAR EDITION)
- * 
- * Provider.kt sekarang bertindak sebagai adapter murni.
- * Seluruh logika scraping berada di ProviderScrapper.
- * Seluruh logika pemetaan berada di ProviderMapper.
- */
+import com.baseprovider.config.providerConfig
+import com.baseprovider.config.ProviderConfig
 
 open class ProviderCloudstream : MainAPI() {
 
-    protected val providerId: String by lazy { 
+    protected val providerId: String by lazy {
         this::class.java.simpleName.replace("Provider", "").replace(Regex("[^a-zA-Z0-9]"), "")
     }
 
@@ -49,98 +15,59 @@ open class ProviderCloudstream : MainAPI() {
         logDebug(providerId, "Initializing BaseProvider Engine V2.2.0")
     }
 
-    // Cache untuk mempercepat akses konfigurasi (O(1))
-    private val configCache = mutableMapOf<Int, String>()
-    private val configListCache = mutableMapOf<Int, List<String>>()
+    val config: ProviderConfig by lazy { providerConfig(providerId) }
 
-    override var name = getCached(CONFIG_NAMES, "Base HTML Provider")
-    override var mainUrl = getCached(CONFIG_MAIN_URLS, "https://example.com")
-    open var seriesUrl = getCached(CONFIG_SERIES_URLS, mainUrl).let { if (it.isBlank()) mainUrl else it }
-    open var searchUrl = getCached(CONFIG_SEARCH_URLS, mainUrl).let { if (it.isBlank()) mainUrl else it }
+    override var name = config.name
+    override var mainUrl = config.mainUrl
+    open var seriesUrl = config.seriesUrl ?: mainUrl
+    open var searchUrl = config.searchUrl ?: mainUrl
 
     override val hasMainPage = true
-    override var lang = getCached(CONFIG_LANGS, "id")
+    override var lang = config.lang
     override val hasDownloadSupport = true
     override val usesWebView = true
-    
-    override val supportedTypes = getCached(CONFIG_SUPPORTED_TYPES, "Anime,AnimeMovie,TvSeries,Movie,AsianDrama")
-        .split(",").mapNotNull { type -> 
-            runCatching { TvType.entries.find { it.name.equals(type.trim(), true) } }.getOrNull() 
-        }.toSet()
 
-    open var searchPathPattern = getCached(CONFIG_SEARCH_PATH_PATTERNS, "{baseUrl}/page/{page}/?s={query}")
-    open var mainPagePathPattern = getCached(CONFIG_MAIN_PAGE_PATH_PATTERNS, "{baseUrl}/{data}{page}")
-    open var moviePathSegment = getCached(CONFIG_MOVIE_PATH_SEGMENTS, "/movie/")
-    open var tvPathSegment = getCached(CONFIG_TV_PATH_SEGMENTS, "/anime/")
-    open var episodeDataUrlPattern = getCached(CONFIG_EPISODE_DATA_URL_PATTERNS, "{url}")
-    open var searchPageLimit = getCached(CONFIG_SEARCH_PAGE_LIMITS, "2").toIntOrNull() ?: 2
-    open var reverseEpisodes = getCached(CONFIG_REVERSE_EPISODES, "true").toBoolean()
-    open var isJsonSearch = getCached(CONFIG_SEARCH_IS_JSON, "false").toBoolean()
-    open var searchJsonRoot = getCached(CONFIG_SEARCH_JSON_ROOTS, "data")
-    open var searchJsonTitle = getCached(CONFIG_SEARCH_JSON_TITLES, "title")
-    open var searchJsonHref = getCached(CONFIG_SEARCH_JSON_HREFS, "slug")
-    open var searchJsonPoster = getCached(CONFIG_SEARCH_JSON_POSTERS, "poster")
-    open var searchJsonPosterPrefix = getCached(CONFIG_SEARCH_JSON_POSTER_PREFIXES, "")
-    open var searchJsonType = getCached(CONFIG_SEARCH_JSON_TYPES, "type")
-    
-    open var useDocumentLarge = getCached(CONFIG_USE_DOCUMENT_LARGE, "false").toBoolean()
-    open var cacheTtlMinutes = getCached(CONFIG_CACHE_TTL_MINUTES, "5").toLongOrNull() ?: 5L
+    override val supportedTypes = config.supportedTypes
 
-    open var globalHeaders: Map<String, String> = getCached(CONFIG_GLOBAL_HEADERS, "User-Agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-        .split("|").associate { val parts = it.split("="); if (parts.size == 2) parts[0] to parts[1] else "" to "" }.filter { it.key.isNotBlank() }
+    open var searchPathPattern = config.searchPathPattern
+    open var mainPagePathPattern = config.mainPagePathPattern
+    open var moviePathSegment = config.moviePathSegment
+    open var tvPathSegment = config.tvPathSegment
+    open var episodeDataUrlPattern = config.episodeDataUrlPattern
+    open var searchPageLimit = config.searchPageLimit
+    open var reverseEpisodes = config.reverseEpisodes
+    open var isJsonSearch = config.isJsonSearch
+    open var searchJsonRoot = config.searchJsonRoot
+    open var searchJsonTitle = config.searchJsonTitle
+    open var searchJsonHref = config.searchJsonHref
+    open var searchJsonPoster = config.searchJsonPoster
+    open var searchJsonPosterPrefix = config.searchJsonPosterPrefix
+    open var searchJsonType = config.searchJsonType
 
-    override val mainPage = mainPageOf(*resolveMainPageList().toTypedArray())
+    open var useDocumentLarge = config.useDocumentLarge
+    open var cacheTtlMinutes = config.cacheTtlMinutes
 
-    // UI Keywords Cached
-    private val ongoingKeyword by lazy { getCached(STR_ONGOING, "Ongoing") }
-    private val dubKeyword by lazy { getCached(STR_DUB, "dub") }
-    private val seriesKeyword by lazy { getCached(STR_SERIES, "Series") }
-    private val episodeKeyword by lazy { getCached(STR_EPISODE, "Episode") }
+    open var globalHeaders: Map<String, String> = config.globalHeaders.ifEmpty {
+        mapOf(
+            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept-Language" to "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"
+        )
+    }
 
-    // Modular Components
+    override val mainPage = mainPageOf(*config.mainPageLists.toTypedArray())
+
     private val mapper by lazy {
         ProviderMapper(
             api = this,
-            providerId = providerId,
-            mainUrl = mainUrl,
-            moviePathSegment = moviePathSegment,
-            tvPathSegment = tvPathSegment,
-            supportedTypes = supportedTypes,
-            dubKeyword = dubKeyword,
-            globalHeaders = globalHeaders,
-            ongoingKeyword = ongoingKeyword,
-            episodeKeyword = episodeKeyword,
-            reverseEpisodes = reverseEpisodes,
-            episodeDataUrlPattern = episodeDataUrlPattern
+            config = config,
         )
     }
 
     private val scrapper by lazy {
         ProviderScrapper(
             api = this,
-            providerId = providerId,
-            mainUrl = mainUrl,
-            seriesUrl = seriesUrl,
-            searchUrl = searchUrl,
-            searchPathPattern = searchPathPattern,
-            mainPagePathPattern = mainPagePathPattern,
-            useDocumentLarge = useDocumentLarge,
-            globalHeaders = globalHeaders,
-            isJsonSearch = isJsonSearch,
-            searchJsonRoot = searchJsonRoot,
-            searchJsonTitle = searchJsonTitle,
-            searchJsonHref = searchJsonHref,
-            searchJsonPoster = searchJsonPoster,
-            searchJsonPosterPrefix = searchJsonPosterPrefix,
-            searchJsonType = searchJsonType,
-            searchPageLimit = searchPageLimit,
-            seriesKeyword = seriesKeyword,
-            moviePathSegment = moviePathSegment,
-            tvPathSegment = tvPathSegment,
-            supportedTypes = supportedTypes,
-            episodeDataUrlPattern = episodeDataUrlPattern,
-            mapper = mapper,
-            name = name
+            config = config,
+            mapper = mapper
         )
     }
 
@@ -150,7 +77,7 @@ open class ProviderCloudstream : MainAPI() {
     override suspend fun search(query: String): List<SearchResponse> =
         scrapper.search(query)
 
-    override suspend fun quickSearch(query: String): List<SearchResponse>? = 
+    override suspend fun quickSearch(query: String): List<SearchResponse>? =
         scrapper.search(query)
 
     override suspend fun load(url: String): LoadResponse =
@@ -158,19 +85,4 @@ open class ProviderCloudstream : MainAPI() {
 
     override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean =
         scrapper.loadLinks(data, isCasting, subtitleCallback, callback)
-
-    // --- CONFIG BRIDGE ---
-
-    private fun getCached(list: List<String>, default: String): String {
-        return configCache.getOrPut(list.hashCode()) { resolveConfig(providerId, list, default) }
-    }
-
-    private fun getCachedList(list: List<String>): List<String> {
-        return configListCache.getOrPut(list.hashCode()) { resolveConfigList(providerId, list) }
-    }
-
-    private fun resolveMainPageList(): List<Pair<String, String>> {
-        val raw = getCached(CONFIG_MAIN_PAGE_LISTS, "trending/page/|Sedang Tren")
-        return raw.split(";").mapNotNull { val parts = it.split("|"); if (parts.size == 2) parts[0] to parts[1] else null }
-    }
 }
