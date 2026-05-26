@@ -1,10 +1,10 @@
 package com.baseprovider
+import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.extractors.*
+import com.lagradost.cloudstream3.utils.*
+import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.lagradost.cloudstream3.ExtractorApi
-import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.SubtitleFile
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.util.Base64

@@ -1,8 +1,8 @@
 package com.baseprovider
+import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.extractors.*
+import com.lagradost.cloudstream3.utils.*
 
-import com.lagradost.cloudstream3.ExtractorApi
-import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.SubtitleFile
 
 class Xtwap : ExtractorApi() {
     override var name = "Xtwap"

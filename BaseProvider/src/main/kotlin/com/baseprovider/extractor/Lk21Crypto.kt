@@ -1,4 +1,7 @@
 package com.baseprovider
+import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.extractors.*
+import com.lagradost.cloudstream3.utils.*
 
 import com.lagradost.api.Log
 import org.mozilla.javascript.Context

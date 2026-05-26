@@ -1,9 +1,8 @@
 package com.baseprovider
+import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.extractors.*
+import com.lagradost.cloudstream3.utils.*
 
-import com.lagradost.cloudstream3.ExtractorLink
-import com.lagradost.cloudstream3.ExtractorLinkType
-import com.lagradost.cloudstream3.Qualities
-import com.lagradost.cloudstream3.utils.newExtractorLink
 
 object MasterLinkGenerator {
 

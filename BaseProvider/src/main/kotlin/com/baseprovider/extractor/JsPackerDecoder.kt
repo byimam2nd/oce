@@ -1,4 +1,7 @@
 package com.baseprovider
+import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.extractors.*
+import com.lagradost.cloudstream3.utils.*
 
 private val BASE36_CHARS = "0123456789abcdefghijklmnopqrstuvwxyz"
 private val BASE62_CHARS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"

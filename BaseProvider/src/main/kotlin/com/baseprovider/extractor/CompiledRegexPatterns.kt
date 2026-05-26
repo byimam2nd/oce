@@ -1,4 +1,7 @@
 package com.baseprovider
+import com.lagradost.cloudstream3.*
+import com.lagradost.cloudstream3.extractors.*
+import com.lagradost.cloudstream3.utils.*
 
 object CompiledRegexPatterns {
     val M3U8_STREAM_INFO = Regex("#EXT-X-STREAM-INF")
