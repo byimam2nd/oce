@@ -42,12 +42,19 @@ async function getProviders() {
   }
 }
 
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', time: Date.now(), env: { owner: process.env.GITHUB_OWNER, repo: process.env.GITHUB_REPO, hasToken: !!process.env.GITHUB_TOKEN } });
+});
+
 app.get('/api/providers', async (req, res) => {
   try {
+    console.log('Loading providers...');
     const providers = await getProviders();
+    console.log(`Loaded ${providers.length} providers`);
     res.json(providers);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Providers error:', err.stack || err.message);
+    res.status(500).json({ error: err.message, stack: err.stack?.split('\n').slice(0, 5).join('\n') });
   }
 });
 
@@ -109,6 +116,11 @@ app.post('/api/commit', async (req, res) => {
 
 app.post('/api/push', async (req, res) => {
   res.json({ success: true, message: 'Push not needed — GitHub API commits directly' });
+});
+
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err?.stack || err?.message || err);
+  res.status(500).json({ error: err?.message || 'Internal server error', stack: err?.stack?.split('\n').slice(0, 3).join('\n') });
 });
 
 module.exports = app;
