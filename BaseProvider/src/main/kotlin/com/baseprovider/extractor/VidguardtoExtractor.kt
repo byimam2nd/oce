@@ -43,11 +43,11 @@ open class Vidguardto : ExtractorApi() {
     private fun runJS(js: String): String {
         var result = ""
         val r = Runnable {
-            val rhino = Context.enter()
-            rhino.optimizationLevel = -1
-            val scope: Scriptable = rhino.initSafeStandardObjects()
-            scope.put("window", scope, scope)
             try {
+                val rhino = Context.enter()
+                rhino.optimizationLevel = -1
+                val scope: Scriptable = rhino.initSafeStandardObjects()
+                scope.put("window", scope, scope)
                 rhino.evaluateString(scope, js, "JavaScript", 1, null)
                 val svg = scope.get("svg", scope)
                 result = if (svg is NativeObject) NativeJSON.stringify(Context.getCurrentContext(), scope, svg, null, null).toString()

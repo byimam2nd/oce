@@ -47,7 +47,7 @@ class ProviderScrapper(
         return runCatching {
             val document = getHtmlParsed(url)
             val isHorizontal = config.isHorizontal
-            val home = document.select(config.searchItems).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() }
+            val home = if (config.searchItems.isNotBlank()) document.select(config.searchItems).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() } else emptyList()
             newHomePageResponse(list = HomePageList(name = request.name, list = home, isHorizontalImages = isHorizontal), hasNext = home.isNotEmpty())
         }.getOrElse { e ->
             logFail(config.id, "MainPage Fetch Failure on ${request.name}: ${e.message}", url = url, method = "getMainPage", type = FailureType.NETWORK_FAILURE, selectors = "searchItems")
@@ -82,7 +82,7 @@ class ProviderScrapper(
         return coroutineScope { (1..config.searchPageLimit).map { page -> async { runCatching {
             val url = config.searchPathPattern.replace("{baseUrl}", baseUrl).replace("{page}", page.toString()).replace("{query}", encodedQuery)
             val document = getHtmlParsed(url, refer)
-            document.select(config.searchItems).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() } }.getOrElse { e -> logDebug(config.id, "Search Page $page Error: ${e.message}"); emptyList() } } }.awaitAll().flatten().distinctBy { it.url } }
+            if (config.searchItems.isNotBlank()) document.select(config.searchItems).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() } else emptyList() }.getOrElse { e -> logDebug(config.id, "Search Page $page Error: ${e.message}"); emptyList() } } }.awaitAll().flatten().distinctBy { it.url } }
     }
 
     suspend fun load(url: String): LoadResponse { return loadRecursive(url, 0) }
@@ -93,13 +93,13 @@ class ProviderScrapper(
         if (depth < 2 && config.followLinkSelector.isNotBlank()) {
             val nextAnchor = document.selectFirst(config.followLinkSelector)
             val nextHref = nextAnchor?.attr("href")
-            if (!nextHref.isNullOrBlank()) { val nextUrl = fixUrlSmart(nextHref, currentUrl); if (nextUrl != currentUrl && nextUrl != url) return loadRecursive(nextUrl, depth + 1) }
+            if (!nextHref.isNullOrBlank() && !nextHref.startsWith("javascript:", true)) { val nextUrl = fixUrlSmart(nextHref, currentUrl); if (nextUrl != currentUrl && nextUrl != url) return loadRecursive(nextUrl, depth + 1) }
         }
 
         val metadata = mapper.extractMetadata(document, currentUrl)
 
         val (recommendations, actors) = coroutineScope {
-            val recs = async { document.select(config.loadRecommend).mapNotNull { mapper.toSearchResult(it, currentUrl) } }
+            val recs = async { if (config.loadRecommend.isNotBlank()) document.select(config.loadRecommend).mapNotNull { mapper.toSearchResult(it, currentUrl) } else emptyList() }
             val acts = async {
                 if (config.actorItems.isBlank()) emptyList()
                 else document.select(config.actorItems).mapNotNull {
@@ -111,7 +111,7 @@ class ProviderScrapper(
             recs.await() to acts.await()
         }
 
-        val epItems = document.select(config.episodeItems)
+        val epItems = if (config.episodeItems.isNotBlank()) document.select(config.episodeItems) else org.jsoup.select.Elements()
         val seasonDataScript = if (config.seasonContainer.isNotBlank()) document.selectFirst(config.seasonContainer) else null
         val hasTvPath = config.tvPathSegment.isNotBlank() && currentUrl.contains(config.tvPathSegment)
         val isMovie = (seasonDataScript == null) && !hasTvPath && ((config.moviePathSegment.isNotBlank() && currentUrl.contains(config.moviePathSegment)) || epItems.isEmpty())
