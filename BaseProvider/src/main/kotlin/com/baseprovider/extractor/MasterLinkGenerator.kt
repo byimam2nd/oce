@@ -17,9 +17,10 @@ object MasterLinkGenerator {
         val isAdaptive = url.contains(".m3u8") || url.contains(".mpd")
         val safeHeaders = headers ?: emptyMap()
 
+        val cleanName = if (isAdaptive) source.replace(QUALITY_STRIP_REGEX, "").trim() else source
         callback(newExtractorLink(
             source = source,
-            name = source,
+            name = cleanName,
             url = url,
             type = if (url.contains(".mpd")) ExtractorLinkType.DASH else if (isAdaptive) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
         ) {
