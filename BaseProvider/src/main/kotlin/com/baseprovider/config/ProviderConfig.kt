@@ -1,6 +1,7 @@
 package com.baseprovider.config
 
 import com.lagradost.cloudstream3.TvType
+import com.lagradost.api.Log
 
 data class ProviderConfig(
     val id: String,
@@ -113,7 +114,36 @@ data class ProviderConfig(
 
     // ── Bloat Regex ──
     val bloatRegex: Regex = BLOAT_REGEX_DEFAULT,
-)
+) {
+    init { validate() }
+
+    private fun validate() {
+        val errors = mutableListOf<String>()
+
+        if (mainUrl.isBlank()) errors += "mainUrl must not be blank"
+        if (!mainUrl.startsWith("http")) errors += "mainUrl must start with http"
+        if (supportedTypes.isEmpty()) errors += "supportedTypes must not be empty"
+
+        if (refererPlayerMode !in listOf("series_url", "current_url", "main_url"))
+            errors += "invalid refererPlayerMode: $refererPlayerMode"
+
+        listOf(
+            "bloatRegex" to bloatRegex.pattern,
+            "yearExtractorRegex" to yearExtractorRegex,
+            "hrefCleanRegex" to hrefCleanRegex
+        ).forEach { (name, pattern) ->
+            if (pattern.isNotBlank()) {
+                try { Regex(pattern) } catch (e: Exception) {
+                    errors += "$name is not a valid regex: ${e.message}"
+                }
+            }
+        }
+
+        if (errors.isNotEmpty()) {
+            Log.w("ProviderConfig[$id]", "Validation:\n  ${errors.joinToString("\n  ")}")
+        }
+    }
+}
 
 private val BLOAT_REGEX_DEFAULT = Regex(
     """(?i)(\bONA\b|\bOngoing\b|\bCompleted\b|\bSpecial\b|\bTAMAT\b|\bIndo\b|\bFull\b|\bSeason\b|\bEpisode\s*\d*|Subtitle\s*Indonesia|Nonton|Anime|Movie|TV|Series|Lengkap|HD|Free|\d{3,4}p|Dual\s*Audio|\s*–\s*|\s*\|\s*)""",

@@ -247,7 +247,7 @@ class ProviderScrapper(
                         logDebug(config.id, "Found iframe: $finalIframe, extracting...")
 
                         val okRecursive = runCatching { loadExtractorWithFallbackCustom(finalIframe, refererForExtractor, subtitleCallback, headers = config.globalHeaders, callback = wrappedCallback, providerTag = config.id) }.getOrDefault(false)
-                        if (!okRecursive && (finalIframe.contains(".mp4") || finalIframe.contains(".m3u8") || finalIframe.contains(".mkv") || finalIframe.contains(".mpd"))) {
+                        if (!okRecursive && finalIframe.isDirectMediaUrl()) {
                             MasterLinkGenerator.createSmartLink(label ?: config.name, finalIframe, refererForExtractor, headers = config.globalHeaders, callback = wrappedCallback)
                         }
                     }

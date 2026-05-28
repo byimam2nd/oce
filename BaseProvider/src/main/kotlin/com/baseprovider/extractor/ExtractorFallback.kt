@@ -27,10 +27,9 @@ suspend fun loadExtractorWithFallbackCustom(
         if (seenUrls.add(link.url)) { collectedLinks.add(link) }
     }
 
-    val urlDomain = url.removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
+    val urlDomain = url.normalizeDomain()
     val matchingExtractors = ProviderExtractors.list.filter { extractor ->
-        val extractorDomain = extractor.mainUrl.removePrefix("http://").removePrefix("https://").replace("www.", "").lowercase()
-        urlDomain.contains(extractorDomain)
+        urlDomain.contains(extractor.mainUrl.normalizeExtractorDomain())
     }
 
     if (matchingExtractors.isEmpty()) {
@@ -62,7 +61,7 @@ suspend fun loadExtractorWithFallbackCustom(
         }
     }
 
-    if (collectedLinks.isEmpty() && (url.contains(".mp4") || url.contains(".m3u8") || url.contains(".mkv") || url.contains(".mpd"))) {
+    if (collectedLinks.isEmpty() && url.isDirectMediaUrl()) {
         MasterLinkGenerator.createSmartLink("Direct", url, referer, headers = headers, callback = internalCallback)
     }
 

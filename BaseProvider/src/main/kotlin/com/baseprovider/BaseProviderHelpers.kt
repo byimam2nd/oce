@@ -202,3 +202,22 @@ fun logFail(tag: String, message: String, url: String? = null, method: String? =
 fun logError(tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null, type: FailureType? = null) = log(LogLevel.ERROR, tag, message, error, url, method, type)
 fun logCritical(tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null, type: FailureType? = null, selectors: String = "") = log(LogLevel.CRITICAL, tag, message, error, url, method, type, selectors)
 fun logSuccess(tag: String, message: String, url: String? = null, method: String? = null, selectors: String = "") = log(LogLevel.SUCCESS, tag, message, url = url, method = method, type = FailureType.SUCCESS, selectors = selectors)
+
+// ── Domain Helpers ──
+
+fun String.normalizeDomain(): String =
+    removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
+
+fun String.normalizeExtractorDomain(): String =
+    removePrefix("http://").removePrefix("https://").replace("www.", "").lowercase()
+
+// ── Media URL Helpers ──
+
+private val DIRECT_MEDIA_EXTENSIONS = listOf(".mp4", ".m3u8", ".mkv", ".mpd")
+
+fun String.isDirectMediaUrl(): Boolean =
+    DIRECT_MEDIA_EXTENSIONS.any { contains(it, ignoreCase = true) }
+
+// ── Quality Regex ──
+
+val QUALITY_STRIP_REGEX = Regex("""\d{3,4}p|HD|SD|FHD""", RegexOption.IGNORE_CASE)

@@ -15,10 +15,7 @@ object ProviderExtractors {
     )
 
     fun hasMatchingExtractor(url: String): Boolean {
-        val urlDomain = url.removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
-        return list.any { extractor ->
-            val extractorDomain = extractor.mainUrl.removePrefix("http://").removePrefix("https://").replace("www.", "").lowercase()
-            urlDomain.contains(extractorDomain)
-        }
+        val urlDomain = url.normalizeDomain()
+        return list.any { extractor -> urlDomain.contains(extractor.mainUrl.normalizeExtractorDomain()) }
     }
 }
