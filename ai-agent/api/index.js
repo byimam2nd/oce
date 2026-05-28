@@ -2,7 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const axios = require('axios');
-const { SocksProxyAgent } = require('socks-proxy-agent');
+let SocksProxyAgent;
+try { SocksProxyAgent = require('socks-proxy-agent').SocksProxyAgent; } catch(e) { SocksProxyAgent = null; }
 const { loadAllProviderConfigs, commitProviderConfig } = require('../lib/github');
 
 const app = express();
@@ -23,7 +24,7 @@ const DEFAULT_HEADERS = {
 };
 
 function makeProxyAgent(proxyUrl) {
-  if (!proxyUrl || !proxyUrl.startsWith('socks')) return null;
+  if (!SocksProxyAgent || !proxyUrl || !proxyUrl.startsWith('socks')) return null;
   try { return new SocksProxyAgent(proxyUrl); } catch(e) { return null; }
 }
 
