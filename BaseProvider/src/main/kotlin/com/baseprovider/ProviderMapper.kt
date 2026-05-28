@@ -57,7 +57,8 @@ class ProviderMapper(
         val infoText = if (config.loadInfoBox.isNotBlank()) document.selectFirst(config.loadInfoBox)?.text() ?: "" else ""
         val year = infoText.safeExtractYear() ?: run {
             if (config.yearSelector.isNotBlank() && config.yearExtractorRegex.isNotBlank()) {
-                Regex(config.yearExtractorRegex).find(document.select(config.yearSelector).text())?.groupValues?.get(1)?.toIntOrNull()
+                val yearEl = document.selectFirst(config.yearSelector)
+                Regex(config.yearExtractorRegex).find(yearEl?.text() ?: "")?.groupValues?.get(1)?.toIntOrNull()
             } else null
         }
         val statusText = if (config.loadStatus.isNotBlank()) document.selectFirst(config.loadStatus)?.text() else null

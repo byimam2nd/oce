@@ -67,10 +67,10 @@ fun String?.safeExtractEpNum(): Int? {
     return try {
         val keywordMatch = Regex("""(?i)(?:episode|ep|eps)\s*(\d+(?:\.\d+)?)""").find(this)
         if (keywordMatch != null) return keywordMatch.groupValues[1].toDoubleOrNull()?.toInt()
-        val numbers = Regex("""(\d+(?:\.\d+)?)""").findAll(this)
-        for (match in numbers) {
+        val numbers = Regex("""(\d+(?:\.\d+)?)""").findAll(this).toList()
+        for ((i, match) in numbers.withIndex()) {
             val numStr = match.groupValues[1]; val num = numStr.toDoubleOrNull()?.toInt() ?: continue
-            if (num in 1900..2099 && numStr.length == 4) continue
+            if (num in 1900..2099 && numStr.length == 4 && numbers.size > 1) continue
             return num
         }
         Regex("""(\d+(?:\.\d+)?)""").find(this)?.groupValues?.get(1)?.toDoubleOrNull()?.toInt()
