@@ -17,7 +17,7 @@ open class Gdplayer : ExtractorApi() {
         val json = JSONObject(app.get("$mainUrl/api/?${kaken}=&_=${System.currentTimeMillis()}", headers = mapOf("X-Requested-With" to "XMLHttpRequest")).text)
         val sources = json.optJSONArray("sources") ?: return
         for (i in 0 until sources.length()) {
-            val file = sources.getJSONObject(i).optString("file")
+            val file = sources.optJSONObject(i)?.optString("file") ?: ""
             if (file.isNotBlank()) MasterLinkGenerator.createSmartLink(this.name, file, mainUrl, callback = callback)
         }
     }
