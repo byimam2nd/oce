@@ -79,10 +79,17 @@ class ProviderScrapper(
                 emptyList()
             }
         }
-        return coroutineScope { (1..config.searchPageLimit).map { page -> async { runCatching {
-            val url = config.searchPathPattern.replace("{baseUrl}", baseUrl).replace("{page}", page.toString()).replace("{query}", encodedQuery)
-            val document = getHtmlParsed(url, refer)
-            if (config.searchItems.isNotBlank()) document.select(config.searchItems).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() } else emptyList() }.getOrElse { e -> logDebug(config.id, "Search Page $page Error: ${e.message}"); emptyList() } } }.awaitAll().flatten().distinctBy { it.url } }
+        val enoughResults = AtomicBoolean(false)
+        return coroutineScope { (1..config.searchPageLimit).map { page -> async {
+            if (enoughResults.get()) return@async emptyList<SearchResponse>()
+            runCatching {
+                val url = config.searchPathPattern.replace("{baseUrl}", baseUrl).replace("{page}", page.toString()).replace("{query}", encodedQuery)
+                val document = getHtmlParsed(url, refer)
+                val pageResults = if (config.searchItems.isNotBlank()) document.select(config.searchItems).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() } else emptyList()
+                if (pageResults.size >= MIN_SEARCH_RESULTS) enoughResults.set(true)
+                pageResults
+            }.getOrElse { e -> logDebug(config.id, "Search Page $page Error: ${e.message}"); emptyList() }
+        } }.awaitAll().flatten().distinctBy { it.url } }
     }
 
     suspend fun load(url: String): LoadResponse { return loadRecursive(url, 0) }
@@ -156,7 +163,7 @@ class ProviderScrapper(
 
             coroutineScope {
                 allPossibleLinks.filter { it.first.isNotBlank() && !it.first.startsWith("#") }.map { (raw, label) -> async {
-                    processLink(raw, label, currentUrl, subtitleCallback, wrappedCallback)
+                    linkSemaphore.withPermit { processLink(raw, label, currentUrl, subtitleCallback, wrappedCallback) }
                 } }.awaitAll()
             }
 

@@ -24,7 +24,7 @@ object MasterLinkGenerator {
             url = url,
             type = if (url.contains(".mpd")) ExtractorLinkType.DASH else if (isAdaptive) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
         ) {
-            this.quality = quality ?: detectQualityFromUrl(url)
+            this.quality = if (isAdaptive) -1 else (quality ?: detectQualityFromUrl(url))
             this.referer = referer ?: ""
             this.headers = safeHeaders
         })
@@ -37,7 +37,7 @@ object MasterLinkGenerator {
             if (isM3u8) {
                 if (seenM3u8Sources.add(link.source)) {
                     val refinedName = link.source.replace(QUALITY_STRIP_REGEX, "").trim()
-                    finalCallback(ExtractorLink(source = link.source, name = refinedName, url = link.url, referer = link.referer, quality = link.quality, type = link.type, headers = link.headers, extractorData = null))
+                    finalCallback(ExtractorLink(source = link.source, name = refinedName, url = link.url, referer = link.referer, quality = -1, type = link.type, headers = link.headers, extractorData = null))
                 }
             } else {
                 val qualityLabel = if (link.quality > 0) "${link.quality}p" else ""

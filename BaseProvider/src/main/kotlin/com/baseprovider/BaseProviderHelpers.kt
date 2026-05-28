@@ -4,12 +4,15 @@ import com.lagradost.api.Log
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.URI
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.random.Random
 
 /**
@@ -21,36 +24,47 @@ import kotlin.random.Random
 
 object SmartThrottle {
     private val lastRequestMap = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private val failureCount = java.util.concurrent.ConcurrentHashMap<String, Int>()
     private const val MIN_DELAY = 500L
+    private const val MAX_DELAY = 5000L
+    private const val BACKOFF_PER_FAILURE = 500L
 
     suspend fun wait(domain: String) {
         val now = System.currentTimeMillis()
         val lastRequest = lastRequestMap[domain] ?: 0L
         val diff = now - lastRequest
-        if (diff < MIN_DELAY) {
-            delay(MIN_DELAY - diff + Random.nextLong(100L))
+        val failBoost = minOf((failureCount[domain] ?: 0) * BACKOFF_PER_FAILURE, MAX_DELAY - MIN_DELAY)
+        val effectiveDelay = MIN_DELAY + failBoost
+        if (diff < effectiveDelay) {
+            delay(effectiveDelay - diff + Random.nextLong(100L))
         }
         lastRequestMap[domain] = System.currentTimeMillis()
     }
+
+    fun reportFailure(domain: String) { failureCount.merge(domain, 1, Int::plus) }
+    fun reportSuccess(domain: String) { failureCount[domain] = (failureCount[domain] ?: 1) / 2 }
 }
 
-class ExpiringCache<T>(private val durationMs: Long) {
-    private val cache = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, T>>()
-
-    fun get(key: String): T? {
-        val entry = cache[key] ?: return null
-        if (System.currentTimeMillis() - entry.first > durationMs) {
-            cache.remove(key)
-            return null
-        }
-        return entry.second
+class ExpiringCache<T>(private val durationMs: Long, private val maxSize: Int = 100) {
+    private val cache = object : LinkedHashMap<String, Pair<Long, T>>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Pair<Long, T>>?): Boolean = size > maxSize
     }
 
-    fun put(key: String, value: T) {
+    fun get(key: String): T? = synchronized(this) {
+        val entry = cache[key] ?: return@synchronized null
+        if (System.currentTimeMillis() - entry.first > durationMs) {
+            cache.remove(key)
+            return@synchronized null
+        }
+        entry.second
+    }
+
+    fun put(key: String, value: T) = synchronized(this) {
         cache[key] = System.currentTimeMillis() to value
     }
 }
 
+val linkSemaphore = Semaphore(5)
 val globalHtmlCache = ExpiringCache<org.jsoup.nodes.Document>(5 * 60 * 1000L)
 
 suspend fun rateLimitDelay(url: String = "") {
@@ -66,6 +80,7 @@ private val NON_RETRYABLE_HTTP = Regex("""\b(403|404|410|451)\b""")
 suspend fun <T> executeWithRetry(
     maxRetries: Int = 3,
     initialDelay: Long = 1000L,
+    maxDelay: Long = 10_000L,
     block: suspend () -> T
 ): T {
     var lastException: Exception? = null
@@ -74,7 +89,11 @@ suspend fun <T> executeWithRetry(
             val msg = e.message ?: ""
             if (NON_RETRYABLE_HTTP.containsMatchIn(msg)) throw e
             lastException = e
-            if (attempt < maxRetries - 1) { Log.d("OCE", "executeWithRetry attempt ${attempt + 1}/$maxRetries failed: ${e.message}"); delay(initialDelay * (attempt + 1)) }
+            if (attempt < maxRetries - 1) {
+                val delayMs = minOf(initialDelay * (1L shl attempt) + Random.nextLong(500L), maxDelay)
+                Log.d("OCE", "executeWithRetry attempt ${attempt + 1}/$maxRetries failed: ${e.message}, retry in ${delayMs}ms")
+                delay(delayMs)
+            }
         }
     }
     throw lastException ?: Exception("Max retries reached")
