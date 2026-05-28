@@ -57,7 +57,7 @@ suspend fun rateLimitDelay(url: String = "") {
     if (url.isBlank()) {
         try { delay(100L + Random.nextLong(200L)) } catch (_: Exception) {}
     } else {
-        runCatching { SmartThrottle.wait(URI(url).host ?: "default") }
+        runCatching { SmartThrottle.wait(URI(url).host ?: "default") }.onFailure { Log.d("OCE", "rateLimitDelay SmartThrottle error for $url: ${it.message}") }
     }
 }
 
@@ -74,7 +74,7 @@ suspend fun <T> executeWithRetry(
             val msg = e.message ?: ""
             if (NON_RETRYABLE_HTTP.containsMatchIn(msg)) throw e
             lastException = e
-            if (attempt < maxRetries - 1) delay(initialDelay * (attempt + 1))
+            if (attempt < maxRetries - 1) { Log.d("OCE", "executeWithRetry attempt ${attempt + 1}/$maxRetries failed: ${e.message}"); delay(initialDelay * (attempt + 1)) }
         }
     }
     throw lastException ?: Exception("Max retries reached")
@@ -100,9 +100,9 @@ enum class LogLevel { DEBUG, SUCCESS, FAIL, ERROR, CRITICAL }
 
 object ProviderLog {
     private const val GLOBAL_PREFIX = "OCE"
-    private const val TG_TOKEN = "8989495909:AAF8o8MhVa2o0T3X21N0bC3pJnMMqnvL628"
-    private const val TG_GROUP_ID = "-1003933577506"
-    private const val TG_THREAD_ID = "2"
+    private val TG_TOKEN: String get() = System.getenv("OCE_TG_TOKEN") ?: ""
+    private val TG_GROUP_ID: String get() = System.getenv("OCE_TG_GROUP_ID") ?: ""
+    private val TG_THREAD_ID: String get() = System.getenv("OCE_TG_THREAD_ID") ?: "2"
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
 
     private val sentMessages = java.util.concurrent.ConcurrentHashMap<String, Pair<Int, Int>>()
@@ -118,7 +118,7 @@ object ProviderLog {
                 }
             }
         } ?: ""
-        val host = url?.let { runCatching { URI(it).host }.getOrNull() } ?: ""
+        val host = url?.let { runCatching { URI(it).host }.getOrElse { e -> Log.d("OCE", "URI parsing failed for $url: ${e.message}"); null } } ?: ""
         val ft = type ?: if (host.contains("short.")) FailureType.SHORTLINK_FAILURE else FailureType.UNKNOWN
         val hostInfo = if (host.isNotBlank()) " | host=$host" else ""
         val methodInfo = if (method != null) " | method=$method" else ""
@@ -141,6 +141,7 @@ object ProviderLog {
     }
 
     private fun sendToTelegram(level: String, tag: String, message: String, url: String?, host: String, method: String?, type: FailureType, selectors: String = "") {
+        if (TG_TOKEN.isBlank()) return
         val emoji = when (level) {
             "SUCCESS" -> "\u2705"
             "FAIL" -> "\u274C"
@@ -179,7 +180,7 @@ object ProviderLog {
                     ).text
                 }.onSuccess {
                     sentMessages[key] = msgId to newCount
-                }
+                }.onFailure { e -> Log.e("OCE", "Telegram editMessageText failed: ${e.message}") }
             } else {
                 runCatching {
                     val resp = com.lagradost.cloudstream3.app.post(
@@ -194,7 +195,7 @@ object ProviderLog {
                     val msgId = org.json.JSONObject(resp)
                         .getJSONObject("result").getInt("message_id")
                     sentMessages[key] = msgId to 1
-                }
+                }.onFailure { e -> Log.e("OCE", "Telegram sendMessage failed: ${e.message}") }
             }
         }
     }

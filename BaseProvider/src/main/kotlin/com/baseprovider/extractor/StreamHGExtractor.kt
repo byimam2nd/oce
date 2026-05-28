@@ -3,6 +3,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.network.WebViewResolver
+import com.lagradost.api.Log
 
 
 class StreamHG : ExtractorApi() {
@@ -31,7 +32,7 @@ class StreamHG : ExtractorApi() {
                 if (interceptedUrl.isNotBlank()) {
                     MasterLinkGenerator.createSmartLink(this.name, interceptedUrl, url, callback = callback)
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.d("StreamHG", "WebViewResolver failed: ${e.message}") }
         }
     }
 }

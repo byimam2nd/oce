@@ -68,5 +68,5 @@ suspend fun decryptLk21PlayerUrl(encrypted: String): String? {
             val result = fn.call(ctx, scope, scope, arrayOf(encrypted))
             Context.toString(result)
         } finally { Context.exit() }
-    }.getOrNull()
+    }.getOrElse { e -> Log.d("Lk21Crypto", "Decryption failed: ${e.message}"); null }
 }
