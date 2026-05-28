@@ -13,6 +13,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Semaphore
+import java.util.concurrent.atomic.AtomicBoolean
+
+private const val MIN_SEARCH_RESULTS = 20
 import kotlinx.coroutines.sync.withPermit
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
