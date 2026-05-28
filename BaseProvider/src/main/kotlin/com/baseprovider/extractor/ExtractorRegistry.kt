@@ -14,8 +14,17 @@ object ProviderExtractors {
         Lk21PlayerPage()
     )
 
+    private val normalizedList: List<Pair<String, ExtractorApi>> = list.map {
+        it.mainUrl.normalizeExtractorDomain() to it
+    }
+
+    fun getMatchingExtractors(url: String): List<ExtractorApi> {
+        val urlDomain = url.normalizeDomain()
+        return normalizedList.filter { (domain, _) -> urlDomain.contains(domain) }.map { it.second }
+    }
+
     fun hasMatchingExtractor(url: String): Boolean {
         val urlDomain = url.normalizeDomain()
-        return list.any { extractor -> urlDomain.contains(extractor.mainUrl.normalizeExtractorDomain()) }
+        return normalizedList.any { (domain, _) -> urlDomain.contains(domain) }
     }
 }

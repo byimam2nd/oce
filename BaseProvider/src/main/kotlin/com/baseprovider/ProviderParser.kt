@@ -5,6 +5,15 @@ import java.net.URI
 import java.util.Base64
 import com.lagradost.cloudstream3.utils.Qualities
 
+// ── Cached Regex Patterns ──
+
+private val WHITESPACE_REGEX = Regex("\\s+")
+private val DEDUPLICATE_REGEX = Regex("""^(.*?)\s+\1$""", RegexOption.IGNORE_CASE)
+private val YEAR_REGEX = Regex("\\d{4}")
+private val EPISODE_KEYWORD_REGEX = Regex("""(?i)(?:episode|ep|eps)\s*(\d+(?:\.\d+)?)""")
+private val EPISODE_NUMBER_REGEX = Regex("""(\d+(?:\.\d+)?)""")
+val JUST_NUMBER_REGEX = Regex("""^\d+(\.\d+)?$""")
+
 fun Element.safeExtractImage(attributes: List<String>): String {
     return try {
         attributes.asSequence()
@@ -23,7 +32,7 @@ fun String.safeCleanBloat(original: String, regex: Regex): String {
 
 fun String.safeDeduplicate(): String {
     if (this.isBlank()) return this
-    var s = this.replace(Regex("\\s+"), " ").trim()
+    var s = this.replace(WHITESPACE_REGEX, " ").trim()
     val separators = listOf(" - ", " | ", " : ", " – ", " — ")
     for (sep in separators) {
         if (s.contains(sep)) {
@@ -51,29 +60,28 @@ fun String.safeDeduplicate(): String {
         val secondHalf = words.subList(half, words.size).joinToString(" ")
         if (firstHalf.equals(secondHalf, ignoreCase = true)) return firstHalf
     }
-    val pattern = Regex("""^(.*?)\s+\1$""", RegexOption.IGNORE_CASE)
-    val match = pattern.find(s)
+    val match = DEDUPLICATE_REGEX.find(s)
     if (match != null) return match.groupValues[1].trim()
     return s
 }
 
 fun String?.safeExtractYear(): Int? {
     if (this == null) return null
-    return try { Regex("\\d{4}").find(this)?.value?.toIntOrNull() } catch (_: Exception) { null }
+    return try { YEAR_REGEX.find(this)?.value?.toIntOrNull() } catch (_: Exception) { null }
 }
 
 fun String?.safeExtractEpNum(): Int? {
     if (this == null || this.isBlank()) return null
     return try {
-        val keywordMatch = Regex("""(?i)(?:episode|ep|eps)\s*(\d+(?:\.\d+)?)""").find(this)
+        val keywordMatch = EPISODE_KEYWORD_REGEX.find(this)
         if (keywordMatch != null) return keywordMatch.groupValues[1].toDoubleOrNull()?.toInt()
-        val numbers = Regex("""(\d+(?:\.\d+)?)""").findAll(this).toList()
+        val numbers = EPISODE_NUMBER_REGEX.findAll(this).toList()
         for ((i, match) in numbers.withIndex()) {
             val numStr = match.groupValues[1]; val num = numStr.toDoubleOrNull()?.toInt() ?: continue
             if (num in 1900..2099 && numStr.length == 4 && numbers.size > 1) continue
             return num
         }
-        Regex("""(\d+(?:\.\d+)?)""").find(this)?.groupValues?.get(1)?.toDoubleOrNull()?.toInt()
+        EPISODE_NUMBER_REGEX.find(this)?.groupValues?.get(1)?.toDoubleOrNull()?.toInt()
     } catch (_: Exception) { null }
 }
 

@@ -4,6 +4,8 @@ import com.lagradost.cloudstream3.extractors.*
 import com.lagradost.cloudstream3.utils.*
 
 import com.lagradost.api.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import org.mozilla.javascript.Context
 import org.mozilla.javascript.NativeJSON
@@ -40,23 +42,18 @@ open class Vidguardto : ExtractorApi() {
         return url.replace(sig, t)
     }
 
-    private fun runJS(js: String): String {
-        var result = ""
-        val r = Runnable {
+    private suspend fun runJS(js: String): String = withContext(Dispatchers.IO) {
+        try {
+            val rhino = Context.enter()
             try {
-                val rhino = Context.enter()
                 rhino.optimizationLevel = -1
                 val scope: Scriptable = rhino.initSafeStandardObjects()
                 scope.put("window", scope, scope)
                 rhino.evaluateString(scope, js, "JavaScript", 1, null)
                 val svg = scope.get("svg", scope)
-                result = if (svg is NativeObject) NativeJSON.stringify(Context.getCurrentContext(), scope, svg, null, null).toString()
+                if (svg is NativeObject) NativeJSON.stringify(Context.getCurrentContext(), scope, svg, null, null).toString()
                 else Context.toString(svg)
-            } catch (e: Exception) { Log.e("Vidguard", "JS error: ${e.message}") }
-            finally { Context.exit() }
-        }
-        val t = Thread(ThreadGroup("A"), r, "rhino", 8 * 1024 * 1024)
-        t.start(); t.join(); t.interrupt()
-        return result
+            } finally { Context.exit() }
+        } catch (e: Exception) { Log.e("Vidguard", "JS error: ${e.message}"); "" }
     }
 }

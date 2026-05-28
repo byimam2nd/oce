@@ -61,6 +61,8 @@ suspend fun rateLimitDelay(url: String = "") {
     }
 }
 
+private val NON_RETRYABLE_HTTP = Regex("""\b(403|404|410|451)\b""")
+
 suspend fun <T> executeWithRetry(
     maxRetries: Int = 3,
     initialDelay: Long = 1000L,
@@ -69,6 +71,8 @@ suspend fun <T> executeWithRetry(
     var lastException: Exception? = null
     repeat(maxRetries) { attempt ->
         try { return block() } catch (e: Exception) {
+            val msg = e.message ?: ""
+            if (NON_RETRYABLE_HTTP.containsMatchIn(msg)) throw e
             lastException = e
             if (attempt < maxRetries - 1) delay(initialDelay * (attempt + 1))
         }

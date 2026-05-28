@@ -27,10 +27,8 @@ suspend fun loadExtractorWithFallbackCustom(
         if (seenUrls.add(link.url)) { collectedLinks.add(link) }
     }
 
+    val matchingExtractors = ProviderExtractors.getMatchingExtractors(url)
     val urlDomain = url.normalizeDomain()
-    val matchingExtractors = ProviderExtractors.list.filter { extractor ->
-        urlDomain.contains(extractor.mainUrl.normalizeExtractorDomain())
-    }
 
     if (matchingExtractors.isEmpty()) {
         logDebug(providerId, "No matching extractor for host: $urlDomain")
