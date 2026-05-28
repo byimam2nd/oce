@@ -80,8 +80,8 @@ class ProviderMapper(
         if (episodes.isEmpty()) { episodes.addAll(epItems.mapNotNull { ep -> runCatching { val anchor = ep.selectFirst(config.episodeHref) ?: ep.selectFirst("a") ?: if (ep.tagName() == "a") ep else null ?: return@runCatching null
             val href = config.episodeDataUrlPattern.replace("{url}", fixUrlSmart(anchor.attr("href"), currentUrl)); val titleEl = ep.selectFirst(config.episodeTitle) ?: ep.selectFirst("a") ?: if (ep.tagName() == "a") ep else null
             val epNum = titleEl?.text()?.safeExtractEpNum() ?: ep.selectFirst(config.episodeNum)?.text()?.safeExtractEpNum() ?: ep.text().safeExtractEpNum(); val rawName = titleEl?.text()?.trim() ?: ""
-            val isJustNumber = rawName.matches(Regex("""^\d+(\.\d+)?$""")); api.newEpisode(href) { if (!isJustNumber && rawName.isNotBlank()) this.name = rawName; this.episode = epNum; this.description = ep.selectFirst(config.episodeDesc)?.text()?.trim()
-                this.runTime = ep.selectFirst(config.episodeTime)?.text()?.filter { it.isDigit() }?.toIntOrNull(); this.posterUrl = ep.selectFirst("img")?.safeExtractImage(config.attrImage) ?: poster } }.getOrNull() }) }
+    val isJustNumber = rawName.matches(Regex("""^\d+(\.\d+)?$""")); api.newEpisode(href) { if (!isJustNumber && rawName.isNotBlank()) this.name = rawName; this.episode = epNum; this.description = if (config.episodeDesc.isNotBlank()) ep.selectFirst(config.episodeDesc)?.text()?.trim() else null
+        this.runTime = if (config.episodeTime.isNotBlank()) ep.selectFirst(config.episodeTime)?.text()?.filter { it.isDigit() }?.toIntOrNull() else null; this.posterUrl = ep.selectFirst("img")?.safeExtractImage(config.attrImage) ?: poster } }.getOrNull() }) }
         return if (config.reverseEpisodes && seasonDataScript == null) episodes.reversed() else episodes
     }
 }
