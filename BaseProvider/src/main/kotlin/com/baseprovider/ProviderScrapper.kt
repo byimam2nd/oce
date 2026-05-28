@@ -101,7 +101,7 @@ class ProviderScrapper(
         val (recommendations, actors) = coroutineScope {
             val recs = async { if (config.loadRecommend.isNotBlank()) document.select(config.loadRecommend).mapNotNull { mapper.toSearchResult(it, currentUrl) } else emptyList() }
             val acts = async {
-                if (config.actorItems.isBlank()) emptyList()
+                if (config.actorItems.isBlank() || config.actorName.isBlank()) emptyList()
                 else document.select(config.actorItems).mapNotNull {
                     val n = it.selectFirst(config.actorName)?.text()?.trim() ?: ""
                     val p = it.selectFirst("img")?.safeExtractImage(config.attrImage) ?: ""
@@ -121,7 +121,7 @@ class ProviderScrapper(
         logSuccess(config.id, "Loaded page: ${metadata.title} (${if (isMovie) "Movie" else "Series"}, tags=${metadata.tags?.size ?: 0})", url = currentUrl, method = "load", selectors = "loadTitle, loadPoster, loadDesc, loadInfoBox")
 
         if (isMovie) {
-            val watchUrl = fixUrlSmart(document.selectFirst(config.watchButtons)?.attr("href"), currentUrl).ifBlank { currentUrl }
+            val watchUrl = if (config.watchButtons.isNotBlank()) fixUrlSmart(document.selectFirst(config.watchButtons)?.attr("href"), currentUrl).ifBlank { currentUrl } else currentUrl
             return api.newMovieLoadResponse(metadata.title, url, type, config.episodeDataUrlPattern.replace("{url}", watchUrl)) {
                 this.posterUrl = tracker?.image ?: metadata.poster; this.backgroundPosterUrl = tracker?.cover ?: metadata.banner
                 this.posterHeaders = config.globalHeaders.toMutableMap().apply { put(VAL_REFERER, config.mainUrl) }; this.plot = metadata.description; this.tags = metadata.tags.ifEmpty { null }; this.year = metadata.year; this.score = Score.from10(metadata.rating)
@@ -186,7 +186,7 @@ class ProviderScrapper(
                 }
             }
 
-            val iframeTagMatches = document.select(config.iframeTag)
+            val iframeTagMatches = if (config.iframeTag.isNotBlank()) document.select(config.iframeTag) else org.jsoup.select.Elements()
             logDebug(config.id, "iframeTag => ${iframeTagMatches.size} iframe(s)")
             iframeTagMatches.forEach { el ->
                 config.iframeSources.forEach { attr -> val s = el.attr(attr); if (s.isNotBlank() && s != "about:blank") allPossibleLinks.add(s to null) }

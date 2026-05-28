@@ -17,7 +17,8 @@ private const val PLAYER_JS_REFRESH_MS = 30 * 60 * 1000L
 
 private suspend fun ensureLk21Scope(ctx: Context): Scriptable {
     synchronized(lk21Lock) {
-        cachedLk21Scope?.let { return it }
+        val now = System.currentTimeMillis()
+        if (cachedLk21Scope != null && now - cachedPlayerJsTime < PLAYER_JS_REFRESH_MS) return cachedLk21Scope!!
         val scope = ctx.initStandardObjects()
         ctx.optimizationLevel = -1
         ScriptableObject.putProperty(scope, "window", scope)
@@ -37,7 +38,6 @@ private suspend fun ensureLk21Scope(ctx: Context): Scriptable {
             };
         """.trimIndent()
         ctx.evaluateString(scope, polyfill, "polyfill", 1, null)
-        val now = System.currentTimeMillis()
         val js = if (cachedPlayerJsText != null && now - cachedPlayerJsTime < PLAYER_JS_REFRESH_MS) {
             cachedPlayerJsText
         } else {
@@ -46,7 +46,7 @@ private suspend fun ensureLk21Scope(ctx: Context): Scriptable {
         }
         ctx.evaluateString(scope, js, "player.js", 1, null)
         cachedLk21Scope = scope
-        cachedPlayerJsTime = System.currentTimeMillis()
+        cachedPlayerJsTime = now
         return scope
     }
 }

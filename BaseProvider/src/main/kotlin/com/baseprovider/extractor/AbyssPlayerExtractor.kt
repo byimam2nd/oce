@@ -29,9 +29,10 @@ class AbyssPlayer : ExtractorApi() {
         val json = JSONObject(response).optJSONObject("result") ?: return
         val sources = json.optJSONArray("sources") ?: return
         for (i in 0 until sources.length()) {
-            val src = sources.getJSONObject(i)
+            val src = sources.optJSONObject(i) ?: continue
             if (src.optBoolean("status", false)) {
-                MasterLinkGenerator.createSmartLink(this.name, src.getString("url"), "https://playhydrax.com", callback = callback)
+                val srcUrl = src.optString("url")
+                if (srcUrl.isNotBlank()) MasterLinkGenerator.createSmartLink(this.name, srcUrl, "https://playhydrax.com", callback = callback)
             }
         }
     }
