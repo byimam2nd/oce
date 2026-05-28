@@ -82,7 +82,7 @@ class ProviderMapper(
             val href = config.episodeDataUrlPattern.replace("{url}", fixUrlSmart(anchor.attr("href"), currentUrl)); if (href.isBlank()) return@runCatching null; val titleEl = (if (config.episodeTitle.isNotBlank()) ep.selectFirst(config.episodeTitle) else null) ?: ep.selectFirst("a") ?: if (ep.tagName() == "a") ep else null
             val epNum = titleEl?.text()?.safeExtractEpNum() ?: (if (config.episodeNum.isNotBlank()) ep.selectFirst(config.episodeNum)?.text()?.safeExtractEpNum() else null) ?: ep.text().safeExtractEpNum(); val rawName = titleEl?.text()?.trim() ?: ""
     val isJustNumber = rawName.matches(JUST_NUMBER_REGEX); api.newEpisode(href) { if (!isJustNumber && rawName.isNotBlank()) this.name = rawName; this.episode = epNum; this.description = if (config.episodeDesc.isNotBlank()) ep.selectFirst(config.episodeDesc)?.text()?.trim() else null
-        this.runTime = if (config.episodeTime.isNotBlank()) ep.selectFirst(config.episodeTime)?.text()?.filter { it.isDigit() }?.toIntOrNull() else null; this.posterUrl = ep.selectFirst("img")?.safeExtractImage(config.attrImage) ?: poster } }.getOrElse { e -> logDebug(config.id, "Episode mapping failed: ${e.message}"); null }) }
+        this.runTime = if (config.episodeTime.isNotBlank()) ep.selectFirst(config.episodeTime)?.text()?.filter { it.isDigit() }?.toIntOrNull() else null; this.posterUrl = ep.selectFirst("img")?.safeExtractImage(config.attrImage) ?: poster } }.onFailure { e -> logDebug(config.id, "Episode mapping failed: ${e.message}") }.getOrNull() }) }
         return if (config.reverseEpisodes && seasonDataScript == null) episodes.reversed() else episodes
     }
 }
