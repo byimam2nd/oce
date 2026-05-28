@@ -15,8 +15,6 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import java.util.concurrent.atomic.AtomicBoolean
-
-private const val MIN_SEARCH_RESULTS = 20
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
@@ -27,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger
 private const val VAL_REFERER = "Referer"
 private const val VAL_USER_AGENT = "User-Agent"
 private const val DEFAULT_TIMEOUT = 15000L
+private const val MIN_SEARCH_RESULTS = 20
 
 class ProviderScrapper(
     private val api: MainAPI,
