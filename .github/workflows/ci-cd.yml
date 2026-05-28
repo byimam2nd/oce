@@ -92,6 +92,9 @@ jobs:
           KAIDEC: ${{ secrets.KAIDEC }}
           KAIENC: ${{ secrets.KAIENC }}
           KAISUB: ${{ secrets.KAISUB }}
+          OCE_TG_TOKEN: ${{ secrets.OCE_TG_TOKEN }}
+          OCE_TG_GROUP_ID: ${{ secrets.OCE_TG_GROUP_ID }}
+          OCE_TG_THREAD_ID: ${{ secrets.OCE_TG_THREAD_ID }}
         run: |
           echo "✅ Secrets loaded"
 
