@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const axios = require('axios');
-const { SocksProxyAgent } = require('socks-proxy-agent');
 const { loadAllProviderConfigs, commitProviderConfig } = require('../lib/github');
 
 const app = express();
@@ -12,7 +11,9 @@ const CACHE_TTL = 60000;
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
-app.use(express.static(path.join(__dirname, '..', 'public')));
+
+const publicDir = path.join(__dirname, '..', 'public');
+app.use(express.static(publicDir));
 
 const DEFAULT_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -20,41 +21,24 @@ const DEFAULT_HEADERS = {
   'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
 };
 
-function makeProxyAgent(proxyUrl) {
-  if (!proxyUrl || !proxyUrl.startsWith('socks')) return null;
-  return new SocksProxyAgent(proxyUrl);
-}
-
 async function getProviders() {
   const now = Date.now();
-  if (providersCache && (now - cacheTime) < CACHE_TTL) {
-    return providersCache;
-  }
-  try {
-    providersCache = await loadAllProviderConfigs();
-    cacheTime = now;
-    console.log(`Loaded ${providersCache.length} provider configs from GitHub`);
-    return providersCache;
-  } catch (e) {
-    console.error('GitHub load error:', e.message);
-    if (providersCache) return providersCache;
-    throw e;
-  }
+  if (providersCache && (now - cacheTime) < CACHE_TTL) return providersCache;
+  providersCache = await loadAllProviderConfigs();
+  cacheTime = now;
+  return providersCache;
 }
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', time: Date.now(), env: { owner: process.env.GITHUB_OWNER, repo: process.env.GITHUB_REPO, hasToken: !!process.env.GITHUB_TOKEN } });
+  res.json({ status: 'ok', time: Date.now(), publicDir });
 });
 
 app.get('/api/providers', async (req, res) => {
   try {
-    console.log('Loading providers...');
     const providers = await getProviders();
-    console.log(`Loaded ${providers.length} providers`);
     res.json(providers);
   } catch (err) {
-    console.error('Providers error:', err.stack || err.message);
-    res.status(500).json({ error: err.message, stack: err.stack?.split('\n').slice(0, 5).join('\n') });
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -69,14 +53,6 @@ app.post('/api/fetch', async (req, res) => {
     responseType: 'text',
   };
 
-  if (proxy) {
-    const agent = makeProxyAgent(proxy);
-    if (agent) {
-      cfg.httpsAgent = agent;
-      cfg.httpAgent = agent;
-    }
-  }
-
   try {
     const response = await axios.get(url, cfg);
     res.json({
@@ -87,12 +63,10 @@ app.post('/api/fetch', async (req, res) => {
       proxy: proxy ? 'enabled' : 'none',
     });
   } catch (err) {
-    const status = err.response?.status || 0;
-    const html = err.response?.data || '';
     res.status(200).json({
       url,
-      html: typeof html === 'string' ? html : '',
-      status,
+      html: typeof err.response?.data === 'string' ? err.response.data : '',
+      status: err.response?.status || 0,
       error: err.message,
       headers: err.response?.headers || {},
       proxy: proxy ? 'enabled' : 'none',
@@ -114,13 +88,8 @@ app.post('/api/commit', async (req, res) => {
   }
 });
 
-app.post('/api/push', async (req, res) => {
+app.post('/api/push', (req, res) => {
   res.json({ success: true, message: 'Push not needed — GitHub API commits directly' });
-});
-
-app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err?.stack || err?.message || err);
-  res.status(500).json({ error: err?.message || 'Internal server error', stack: err?.stack?.split('\n').slice(0, 3).join('\n') });
 });
 
 module.exports = app;
