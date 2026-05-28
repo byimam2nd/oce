@@ -16,9 +16,23 @@ private var cachedPlayerJsTime: Long = 0L
 private const val PLAYER_JS_REFRESH_MS = 30 * 60 * 1000L
 
 private suspend fun ensureLk21Scope(ctx: Context): Scriptable {
+    val now = System.currentTimeMillis()
     synchronized(lk21Lock) {
-        val now = System.currentTimeMillis()
-        if (cachedLk21Scope != null && now - cachedPlayerJsTime < PLAYER_JS_REFRESH_MS) return cachedLk21Scope!!
+        if (cachedLk21Scope != null && now - cachedPlayerJsTime < PLAYER_JS_REFRESH_MS) {
+            return cachedLk21Scope!!
+        }
+    }
+
+    val js = if (cachedPlayerJsText != null && now - cachedPlayerJsTime < PLAYER_JS_REFRESH_MS) {
+        cachedPlayerJsText!!
+    } else {
+        app.get("https://assets.lk21.party/js/player.js?v=4").text.also { cachedPlayerJsText = it }
+    }
+
+    synchronized(lk21Lock) {
+        if (cachedLk21Scope != null && now - cachedPlayerJsTime < PLAYER_JS_REFRESH_MS) {
+            return cachedLk21Scope!!
+        }
         val scope = ctx.initStandardObjects()
         ctx.optimizationLevel = -1
         ScriptableObject.putProperty(scope, "window", scope)
@@ -26,7 +40,7 @@ private suspend fun ensureLk21Scope(ctx: Context): Scriptable {
         ScriptableObject.putProperty(scope, "navigator", ctx.newObject(scope))
         ScriptableObject.putProperty(scope, "location", ctx.newObject(scope))
         ScriptableObject.putProperty(scope, "document", ctx.newObject(scope))
-        val polyfill = """
+        ctx.evaluateString(scope, """
             var setTimeout = function(){};
             var clearTimeout = function(){};
             var console = {log:function(){},warn:function(){},error:function(){}};
@@ -36,14 +50,7 @@ private suspend fun ensureLk21Scope(ctx: Context): Scriptable {
                     return new java.lang.String(b, 0, b.length, "ISO-8859-1");
                 } catch(e) { return ''; }
             };
-        """.trimIndent()
-        ctx.evaluateString(scope, polyfill, "polyfill", 1, null)
-        val js = if (cachedPlayerJsText != null && now - cachedPlayerJsTime < PLAYER_JS_REFRESH_MS) {
-            cachedPlayerJsText
-        } else {
-            val text = app.get("https://assets.lk21.party/js/player.js?v=4").text
-            cachedPlayerJsText = text; cachedPlayerJsTime = now; text
-        }
+        """.trimIndent(), "polyfill", 1, null)
         ctx.evaluateString(scope, js, "player.js", 1, null)
         cachedLk21Scope = scope
         cachedPlayerJsTime = now
