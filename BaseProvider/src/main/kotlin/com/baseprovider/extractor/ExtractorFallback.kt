@@ -19,8 +19,8 @@ suspend fun loadExtractorWithFallbackCustom(
     providerTag: String = "ExtractorEngine",
     callChain: String = "-"
 ): Boolean {
-    val collectedLinks = mutableListOf<ExtractorLink>()
-    val seenUrls = mutableSetOf<String>()
+    val collectedLinks = java.util.Collections.synchronizedList(mutableListOf<ExtractorLink>())
+    val seenUrls = java.util.Collections.synchronizedSet(mutableSetOf<String>())
     val providerId = providerTag
 
     val internalCallback: (ExtractorLink) -> Unit = { link ->
