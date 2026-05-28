@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const axios = require('axios');
+const { SocksProxyAgent } = require('socks-proxy-agent');
 const { loadAllProviderConfigs, commitProviderConfig } = require('../lib/github');
 
 const app = express();
@@ -20,6 +21,11 @@ const DEFAULT_HEADERS = {
   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
   'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
 };
+
+function makeProxyAgent(proxyUrl) {
+  if (!proxyUrl || !proxyUrl.startsWith('socks')) return null;
+  try { return new SocksProxyAgent(proxyUrl); } catch(e) { return null; }
+}
 
 async function getProviders() {
   const now = Date.now();
@@ -52,6 +58,14 @@ app.post('/api/fetch', async (req, res) => {
     maxRedirects: 5,
     responseType: 'text',
   };
+
+  if (proxy) {
+    const agent = makeProxyAgent(proxy);
+    if (agent) {
+      cfg.httpsAgent = agent;
+      cfg.httpAgent = agent;
+    }
+  }
 
   try {
     const response = await axios.get(url, cfg);
