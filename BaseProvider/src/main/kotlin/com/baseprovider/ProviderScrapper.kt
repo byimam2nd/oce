@@ -237,7 +237,7 @@ class ProviderScrapper(
         }.getOrElse { e -> logDebug(config.id, "Link Processor Error on $raw: ${e.message}") }
     }
 
-    private fun decodeRawLink(raw: String): String {
+    private suspend fun decodeRawLink(raw: String): String {
         if (raw.startsWith("http") || raw.startsWith("//") || raw.startsWith("/") || !raw.safeIsBase64()) return raw
         val lk21 = decryptLk21PlayerUrl(raw)
         if (lk21 != null) return lk21
