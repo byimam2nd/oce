@@ -2,19 +2,15 @@
   "name": "oce-ai-agent",
   "version": "1.0.0",
   "description": "OCE AI Agent - CloudStream Provider Config Builder Dashboard",
-  "main": "api/index.js",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
-    "vercel-build": "echo 'Built'"
+    "dev": "node server.js"
   },
   "dependencies": {
     "axios": "^1.7.0",
     "cors": "^2.8.5",
     "express": "^4.21.0",
     "socks-proxy-agent": "^10.0.0"
-  },
-  "devDependencies": {
-    "@vercel/node": "^5.0.0"
   }
 }

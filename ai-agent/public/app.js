@@ -246,19 +246,6 @@ async function fetchUrl(url, retries = 3) {
         const data = await r.json();
         state.baseUrl = data.url || url;
         state.html = data.html || '';
-
-        // Check for Cloudflare block
-        const isBlocked = data.status === 403 || (data.html && /cloudflare|attention.*required|just a moment/i.test(data.html));
-        if (isBlocked) {
-          const useProx = $('#proxyToggle').checked && $('#proxyUrl').value.trim();
-          const msg = useProx ? 'Proxy tidak bisa bypass Cloudflare — coba ganti proxy atau pakai node server.js lokal' : 'Diblokir Cloudflare — centang Proxy atau pakai node server.js lokal';
-          toast(msg, 'error');
-          parseAndRender(state.html);
-          if (state.configMode[state.currentStep] === 'ai') renderAiPanel();
-          updateDataPreview();
-          return;
-        }
-
         if (!state.html) {
           if (attempt < retries) {
             btn.innerHTML = `<span class="loading-spinner"></span>Retry ${attempt}/${retries}…`;
