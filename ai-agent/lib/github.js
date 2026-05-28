@@ -1,3 +1,4 @@
+const axios = require('axios');
 const { loadAllConfigs, parseConfigContent } = require('./config-parser');
 
 const OWNER = process.env.GITHUB_OWNER || 'byimam2nd';
@@ -6,22 +7,38 @@ const TOKEN = process.env.GITHUB_TOKEN || '';
 const CONFIG_DIR = 'BaseProvider/src/main/kotlin/com/baseprovider/config';
 const API_BASE = `https://api.github.com/repos/${OWNER}/${REPO}`;
 
-const headers = {
-  'Accept': 'application/vnd.github.v3+json',
-  'User-Agent': 'oce-ai-agent/1.0',
+const AXIOS_CFG = {
+  headers: {
+    'Accept': 'application/vnd.github.v3+json',
+    'User-Agent': 'oce-ai-agent/1.0',
+  },
+  timeout: 15000,
 };
-if (TOKEN) headers['Authorization'] = `Bearer ${TOKEN}`;
+if (TOKEN) AXIOS_CFG.headers['Authorization'] = `Bearer ${TOKEN}`;
 
 async function githubFetch(url, options = {}) {
-  const res = await fetch(url, {
-    ...options,
-    headers: { ...headers, ...options.headers },
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`GitHub API ${res.status}: ${text.slice(0, 200)}`);
+  try {
+    const res = await axios.get(url, { ...AXIOS_CFG, ...options });
+    return res.data;
+  } catch (err) {
+    const status = err.response?.status || 0;
+    const text = typeof err.response?.data === 'string' ? err.response.data : JSON.stringify(err.response?.data || '');
+    throw new Error(`GitHub API ${status}: ${text.slice(0, 200)}`);
   }
-  return res.json();
+}
+
+async function githubPut(url, data) {
+  try {
+    const res = await axios.put(url, data, {
+      ...AXIOS_CFG,
+      headers: { ...AXIOS_CFG.headers, 'Content-Type': 'application/json' },
+    });
+    return res.data;
+  } catch (err) {
+    const status = err.response?.status || 0;
+    const text = typeof err.response?.data === 'string' ? err.response.data : JSON.stringify(err.response?.data || '');
+    throw new Error(`GitHub API PUT ${status}: ${text.slice(0, 200)}`);
+  }
 }
 
 async function listConfigFiles() {
@@ -30,6 +47,15 @@ async function listConfigFiles() {
   return data
     .filter(f => f.name.endsWith('.kt') && f.type === 'file')
     .map(f => ({ name: f.name, path: f.path, downloadUrl: f.download_url }));
+}
+
+async function rawFetch(url) {
+  const res = await axios.get(url, {
+    headers: { 'User-Agent': 'oce-ai-agent/1.0' },
+    timeout: 15000,
+    responseType: 'text',
+  });
+  return res.data;
 }
 
 async function getFileContent(path) {
@@ -42,16 +68,11 @@ async function updateFileContent(path, content, message) {
   const existing = await getFileContent(path);
   const base64 = Buffer.from(content, 'utf-8').toString('base64');
 
-  const data = await githubFetch(`${API_BASE}/contents/${path}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      message,
-      content: base64,
-      sha: existing.sha,
-    }),
+  return githubPut(`${API_BASE}/contents/${path}`, {
+    message,
+    content: base64,
+    sha: existing.sha,
   });
-  return data;
 }
 
 async function loadAllProviderConfigs() {
@@ -60,12 +81,7 @@ async function loadAllProviderConfigs() {
 
   for (const file of files) {
     try {
-      const resp = await fetch(file.downloadUrl, {
-        headers: { 'User-Agent': 'oce-ai-agent/1.0' },
-      });
-      if (resp.ok) {
-        contentMap[file.name] = await resp.text();
-      }
+      contentMap[file.name] = await rawFetch(file.downloadUrl);
     } catch (e) {
       console.error(`Failed to fetch ${file.name}:`, e.message);
     }
@@ -80,11 +96,7 @@ async function commitProviderConfig(providerId, config, step) {
 
   for (const file of files) {
     try {
-      const resp = await fetch(file.downloadUrl, {
-        headers: { 'User-Agent': 'oce-ai-agent/1.0' },
-      });
-      if (!resp.ok) continue;
-      const content = await resp.text();
+      const content = await rawFetch(file.downloadUrl);
       const parsed = parseConfigContent(content, file.name);
       if (parsed && parsed.id === providerId.toLowerCase()) {
         targetFile = { ...file, content, parsed };
