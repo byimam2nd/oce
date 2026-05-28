@@ -36,7 +36,7 @@ object MasterLinkGenerator {
             if (isM3u8) {
                 if (seenM3u8Sources.add(link.source)) {
                     val refinedName = link.source.replace(Regex("""\d{3,4}p|HD|SD|FHD""", RegexOption.IGNORE_CASE), "").trim()
-                    finalCallback(ExtractorLink(source = link.source, name = refinedName, url = link.url, referer = link.referer, quality = Qualities.Unknown.value, type = link.type, headers = link.headers, extractorData = null))
+                    finalCallback(ExtractorLink(source = link.source, name = refinedName, url = link.url, referer = link.referer, quality = link.quality, type = link.type, headers = link.headers, extractorData = null))
                 }
             } else {
                 val qualityLabel = if (link.quality > 0) "${link.quality}p" else ""

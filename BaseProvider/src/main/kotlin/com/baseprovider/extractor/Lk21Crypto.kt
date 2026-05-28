@@ -11,6 +11,8 @@ import org.mozilla.javascript.ScriptableObject
 
 private var cachedLk21Scope: Scriptable? = null
 private var cachedPlayerJsText: String? = null
+private var cachedPlayerJsTime: Long = 0L
+private const val PLAYER_JS_REFRESH_MS = 30 * 60 * 1000L
 
 suspend fun decryptLk21PlayerUrl(encrypted: String): String? {
     if (encrypted.isBlank() || encrypted.startsWith("http")) return null
@@ -38,12 +40,14 @@ suspend fun decryptLk21PlayerUrl(encrypted: String): String? {
                     };
                 """.trimIndent()
                 ctx.evaluateString(scope, polyfill, "polyfill", 1, null)
-                val js = cachedPlayerJsText ?: run {
+                val now = System.currentTimeMillis()
+                val js = if (cachedPlayerJsText != null && now - cachedPlayerJsTime < PLAYER_JS_REFRESH_MS) cachedPlayerJsText else run {
                     val text = app.get("https://assets.lk21.party/js/player.js?v=4").text
-                    cachedPlayerJsText = text; text
+                    cachedPlayerJsText = text; cachedPlayerJsTime = now; text
                 }
                 ctx.evaluateString(scope, js, "player.js", 1, null)
                 cachedLk21Scope = scope
+                cachedPlayerJsTime = System.currentTimeMillis()
             }
             val fn = scope.get("_L", scope) as Function
             val result = fn.call(ctx, scope, scope, arrayOf(encrypted))

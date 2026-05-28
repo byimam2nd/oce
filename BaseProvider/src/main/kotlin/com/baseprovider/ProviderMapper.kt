@@ -16,15 +16,15 @@ class ProviderMapper(
     fun toSearchResult(element: Element, baseUrl: String? = null): SearchResponse? {
         return runCatching {
             val base = baseUrl ?: config.mainUrl
-            val titleEl = element.selectFirst(config.searchTitle) ?: element.parent()?.selectFirst(config.searchTitle) ?: element.selectFirst("h2, h3")
+            val titleEl = if (config.searchTitle.isNotBlank()) element.selectFirst(config.searchTitle) ?: element.parent()?.selectFirst(config.searchTitle) else element.selectFirst("h2, h3")
             val rawTitle = titleEl?.text()?.trim() ?: titleEl?.selectAttr(config.attrImage) ?: titleEl?.attr("title") ?: return null
             val title = rawTitle.safeCleanBloat(rawTitle, config.bloatRegex).safeDeduplicate()
-            val hrefEl = element.selectFirst(config.searchHref) ?: element.selectFirst("a") ?: element.parent()?.selectFirst("a")
+            val hrefEl = if (config.searchHref.isNotBlank()) element.selectFirst(config.searchHref) ?: element.selectFirst("a") ?: element.parent()?.selectFirst("a") else element.selectFirst("a") ?: element.parent()?.selectFirst("a")
             var href = fixUrlSmart(hrefEl?.attr("href"), base)
             if (config.hrefCleanRegex.isNotBlank() && config.hrefCleanReplace.isNotBlank()) { href = href.replace(Regex(config.hrefCleanRegex), config.hrefCleanReplace) }
-            val poster = element.selectFirst(config.searchPoster)?.safeExtractImage(config.attrImage)
-            val rating = element.selectFirst(config.searchRating)?.text()
-            val eps = element.selectFirst(config.searchEpText)?.text()?.safeExtractEpNum()
+            val poster = if (config.searchPoster.isNotBlank()) element.selectFirst(config.searchPoster)?.safeExtractImage(config.attrImage) else element.selectFirst("img")?.safeExtractImage(config.attrImage)
+            val rating = if (config.searchRating.isNotBlank()) element.selectFirst(config.searchRating)?.text() else null
+            val eps = if (config.searchEpText.isNotBlank()) element.selectFirst(config.searchEpText)?.text()?.safeExtractEpNum() else null
             val hasTvPath = config.tvPathSegment.isNotBlank() && href.contains(config.tvPathSegment)
             val isMovie = !hasTvPath && ((config.moviePathSegment.isNotBlank() && href.contains(config.moviePathSegment)) || href.contains("movie", true))
             val type = if (isMovie) TvType.Movie else if (config.supportedTypes.contains(TvType.Anime)) TvType.Anime else TvType.TvSeries
@@ -41,9 +41,9 @@ class ProviderMapper(
     }
 
     fun extractMetadata(document: Document, currentUrl: String): MetadataPackage {
-        val rawTitle = document.selectFirst(config.loadTitle)?.text() ?: "Unknown Title"
+        val rawTitle = if (config.loadTitle.isNotBlank()) document.selectFirst(config.loadTitle)?.text() ?: "Unknown Title" else "Unknown Title"
         val title = rawTitle.safeCleanBloat(rawTitle, config.bloatRegex).safeDeduplicate()
-        val poster = document.selectFirst(config.loadPoster)?.safeExtractImage(config.attrImage) ?: ""
+        val poster = if (config.loadPoster.isNotBlank()) document.selectFirst(config.loadPoster)?.safeExtractImage(config.attrImage) ?: "" else ""
 
         if (title == "Unknown Title" || poster.isBlank()) {
             val missing = mutableListOf<String>()
@@ -52,24 +52,24 @@ class ProviderMapper(
             logFail(config.id, "Metadata Integrity Failure: Missing ${missing.joinToString(" & ")}", url = currentUrl, method = "extractMetadata", type = FailureType.METADATA_FAILURE, selectors = "loadTitle, loadPoster, loadDesc, loadInfoBox, loadTags, loadRating, loadStatus")
         }
 
-        val banner = document.selectFirst(config.loadBanner)?.safeExtractImage(config.attrImage)
-        val description = document.selectFirst(config.loadDesc)?.text()?.trim() ?: ""
-        val infoText = document.selectFirst(config.loadInfoBox)?.text() ?: ""
+        val banner = if (config.loadBanner.isNotBlank()) document.selectFirst(config.loadBanner)?.safeExtractImage(config.attrImage) else null
+        val description = if (config.loadDesc.isNotBlank()) document.selectFirst(config.loadDesc)?.text()?.trim() ?: "" else ""
+        val infoText = if (config.loadInfoBox.isNotBlank()) document.selectFirst(config.loadInfoBox)?.text() ?: "" else ""
         val year = infoText.safeExtractYear() ?: run {
             if (config.yearSelector.isNotBlank() && config.yearExtractorRegex.isNotBlank()) {
                 Regex(config.yearExtractorRegex).find(document.select(config.yearSelector).text())?.groupValues?.get(1)?.toIntOrNull()
             } else null
         }
-        val statusText = document.selectFirst(config.loadStatus)?.text()
+        val statusText = if (config.loadStatus.isNotBlank()) document.selectFirst(config.loadStatus)?.text() else null
         return MetadataPackage(
             title = title, poster = poster, banner = banner, description = description,
             year = year, statusText = statusText,
             tags = if (config.loadTags.isNotBlank()) document.select(config.loadTags).map { it.text() } else emptyList(),
-            rating = document.selectFirst(config.loadRating)?.text(),
+            rating = if (config.loadRating.isNotBlank()) document.selectFirst(config.loadRating)?.text() else null,
             status = if (statusText?.contains(config.ongoingKeyword, true) == true) ShowStatus.Ongoing else ShowStatus.Completed,
-            imdbId = document.selectFirst(config.imdbExternal)?.selectAttr(config.attrHref)?.split("/")?.filter { it.startsWith("tt") }?.firstOrNull(),
-            tmdbId = document.selectFirst(config.tmdbExternal)?.selectAttr(config.attrHref)?.split("/")?.lastOrNull()?.toIntOrNull(),
-            trailer = document.selectFirst(config.loadTrailer)?.let { if (it.tagName() == "iframe") it.safeExtractImage(config.attrImage) else it.selectAttr(config.attrHref) }
+            imdbId = if (config.imdbExternal.isNotBlank()) document.selectFirst(config.imdbExternal)?.selectAttr(config.attrHref)?.split("/")?.filter { it.startsWith("tt") }?.firstOrNull() else null,
+            tmdbId = if (config.tmdbExternal.isNotBlank()) document.selectFirst(config.tmdbExternal)?.selectAttr(config.attrHref)?.split("/")?.lastOrNull()?.toIntOrNull() else null,
+            trailer = if (config.loadTrailer.isNotBlank()) document.selectFirst(config.loadTrailer)?.let { if (it.tagName() == "iframe") it.safeExtractImage(config.attrImage) else it.selectAttr(config.attrHref) } else null
         )
     }
 

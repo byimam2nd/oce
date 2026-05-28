@@ -46,7 +46,7 @@ class ProviderScrapper(
 
         return runCatching {
             val document = getHtmlParsed(url)
-            val isHorizontal = config.isHorizontal && request.name.contains("Episode Terbaru", true)
+            val isHorizontal = config.isHorizontal
             val home = document.select(config.searchItems).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() }
             newHomePageResponse(list = HomePageList(name = request.name, list = home, isHorizontalImages = isHorizontal), hasNext = home.isNotEmpty())
         }.getOrElse { e ->
@@ -58,7 +58,7 @@ class ProviderScrapper(
     suspend fun search(query: String): List<SearchResponse> {
         val encodedQuery = runCatching { java.net.URLEncoder.encode(query, "UTF-8") }.getOrDefault(query)
         val baseUrl = if (!config.searchUrl.isNullOrBlank()) config.searchUrl!! else config.mainUrl
-        val refer = app.get(config.mainUrl).url
+        val refer = config.mainUrl
         if (config.isJsonSearch) {
             val url = config.searchPathPattern.replace("{baseUrl}", baseUrl).replace("{query}", encodedQuery).replace("{page}", "1")
             return runCatching {

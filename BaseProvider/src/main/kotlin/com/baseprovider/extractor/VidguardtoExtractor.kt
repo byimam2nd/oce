@@ -21,7 +21,7 @@ open class Vidguardto : ExtractorApi() {
 
     override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
         val embedUrl = if (url.contains("/d/") || url.contains("/v/")) url.replace("/d/", "/e/").replace("/v/", "/e/") else url
-        val doc = app.get(embedUrl).document
+        val doc = app.get(embedUrl, referer = referer ?: mainUrl).document
         val script = doc.selectFirst("script:containsData(eval)")?.data() ?: return
         val result = runJS(script)
         val json = JSONObject(result)

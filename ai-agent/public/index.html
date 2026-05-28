@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OCE AI Agent</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>OCE AI Agent</h1>
+    <span class="subtitle">CloudStream Provider Config Builder</span>
+  </header>
+
+  <div class="toolbar">
+    <div class="toolbar-header">
+      <button id="toggleToolbarBtn" class="toggle-panel-btn" title="Toggle toolbar">─</button>
+      <span class="toolbar-title">Tools</span>
+    </div>
+    <div class="url-bar">
+      <select id="providerSelect"><option value="">Select Provider...</option></select>
+      <select id="pageSelect" class="hidden"><option value="">Select page category...</option></select>
+      <input type="text" id="urlInput" placeholder="Enter URL to fetch...">
+      <div class="header-options">
+        <input type="text" id="refererInput" placeholder="Referer (optional)">
+        <input type="text" id="cookieInput" placeholder="Cookie (optional)">
+      </div>
+      <div class="proxy-bar">
+        <label class="proxy-toggle"><input type="checkbox" id="proxyToggle"> Proxy</label>
+        <input type="text" id="proxyUrl" placeholder="socks5://127.0.0.1:9050" class="proxy-input hidden">
+      </div>
+      <button id="fetchBtn">Fetch</button>
+    </div>
+  </div>
+
+  <nav class="steps-nav">
+    <button class="step-tab active" data-step="mainpage">1. MainPage</button>
+    <button class="step-tab" data-step="detail">2. Detail</button>
+    <button class="step-tab" data-step="loadlinks">3. LoadLinks</button>
+  </nav>
+
+  <div class="main-content">
+    <div class="panel dom-panel">
+      <div class="panel-header">
+        <h2>DOM</h2>
+        <button id="toggleDomBtn" class="toggle-panel-btn" title="Toggle DOM panel">─</button>
+        <div class="sub-tabs">
+          <button class="sub-tab active" data-domtab="tree">Tree</button>
+          <button class="sub-tab" data-domtab="visual">Visual</button>
+        </div>
+        <div class="panel-actions" id="domTreeActions">
+          <span id="elementCount" class="badge">0 elements</span>
+          <button id="expandAllBtn">Expand All</button>
+          <button id="collapseAllBtn">Collapse All</button>
+        </div>
+      </div>
+      <div class="dom-find">
+        <input type="text" id="domFindInput" placeholder="Find in DOM tree…" class="dom-find-input">
+        <span id="domFindCount" class="badge dom-find-count hidden">0</span>
+      </div>
+      <div id="domTree" class="dom-tree">
+        <div class="placeholder">Fetch a URL to see the DOM tree</div>
+      </div>
+      <div id="domVisual" class="dom-visual hidden">
+        <div class="placeholder">Fetch a URL to see the visual preview</div>
+      </div>
+      <div id="elementDetail" class="element-detail hidden">
+        <div class="detail-header">
+          <h3>Selected Element</h3>
+          <button id="clearSelection">×</button>
+        </div>
+        <div class="detail-body">
+          <div class="detail-row"><span class="detail-label">Tag</span><code id="detTag"></code></div>
+          <div class="detail-row"><span class="detail-label">ID</span><code id="detId"></code></div>
+          <div class="detail-row"><span class="detail-label">Classes</span><code id="detClasses"></code></div>
+          <div class="detail-row"><span class="detail-label">CSS</span><code id="detSelector" class="selector-text"></code></div>
+          <div class="detail-row"><span class="detail-label">Text</span><span id="detText" class="text-preview"></span></div>
+          <div class="detail-row"><span class="detail-label">Attrs</span><pre id="detAttrs" class="attrs-pre"></pre></div>
+          <div class="detail-row"><span class="detail-label">HTML</span><pre id="detHtml" class="html-pre"></pre></div>
+          <div class="detail-row"><span class="detail-label">Preview</span></div>
+          <div id="detVisualPreview" class="visual-preview"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel config-panel">
+      <div class="panel-header">
+        <h2><span id="stepTitle">MainPage</span></h2>
+        <div class="sub-tabs config-sub-tabs">
+          <button class="sub-tab config-sub-tab active" data-configtab="manual">Manual</button>
+          <button class="sub-tab config-sub-tab" data-configtab="ai">AI</button>
+        </div>
+        <button id="saveConfigBtn">Save</button>
+        <button id="exportBtn">Export</button>
+        <button id="commitBtn" class="btn-success" title="Commit changes to Git">Commit</button>
+        <button id="pushBtn" class="btn-primary" title="Push commits to GitHub">Push</button>
+      </div>
+      <div id="configFields" class="config-fields"></div>
+      <div id="aiPanel" class="hidden ai-panel">
+        <div class="ai-panel-header">
+          <div class="ai-panel-info">
+            <span id="aiMemoryCount" class="badge">0 patterns</span>
+            <span class="ai-provider-label" id="aiProviderLabel"></span>
+          </div>
+          <button id="aiRefreshBtn">⟳ Refresh</button>
+        </div>
+        <div id="aiSuggestions" class="ai-suggestions"></div>
+      </div>
+      <div id="dataPreview" class="data-preview hidden">
+        <div class="preview-header">
+          <h3>Extracted Data</h3>
+          <span id="dataCount" class="badge">0 items</span>
+        </div>
+        <div id="dataTable" class="data-table-wrap"></div>
+      </div>
+      <div id="exportOutput" class="hidden">
+        <h3>Generated Config</h3>
+        <pre id="exportCode"></pre>
+        <button id="copyBtn">Copy</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+  <footer class="app-footer">OCE AI Agent v1.0</footer>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
