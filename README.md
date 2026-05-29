@@ -21,10 +21,10 @@
 | Provider | Domain | Type | Status |
 |---|---|---|---|
 | **Anichin** | anichin.cafe | Donghua Anime | ✅ Stable |
-| **Animasu** | v1.animasu.app | Anime | ✅ Stable |
+| **Animasu** | animasu.ink | Anime | ✅ Stable |
 | **Donghuastream** | donghuastream.org | Donghua Streaming | ✅ Stable |
 | **Dutamovie21** | simplycufflinks.com | Movie, Series, Anime | ✅ Stable |
-| **IndoDrama21** | 89.124.116.48 | Movie, Asian Drama | ✅ Stable |
+| **IndoDrama21** | indodr21.putar.in | Movie, Asian Drama | ✅ Stable |
 | **LayarKaca21** | tv10.lk21official.cc | Movie, Series | ✅ Stable |
 | **Pencurimovie** | ww73.pencurimovie.bond | Movie, Series | ✅ Stable |
 | **Samehadaku** | samehadaku.biz | Anime Sub Indo | ✅ Stable |

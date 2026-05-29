@@ -15,7 +15,7 @@ cloudstream {
             "Movie",
         )
 
-    iconUrl = "https://www.google.com/s2/favicons?domain=89.124.116.48&sz=%size%"
+    iconUrl = "https://www.google.com/s2/favicons?domain=indodr21.putar.in&sz=%size%"
 
     isCrossPlatform = false
 }

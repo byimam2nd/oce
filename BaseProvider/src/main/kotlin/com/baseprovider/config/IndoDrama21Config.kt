@@ -5,7 +5,7 @@ import com.lagradost.cloudstream3.TvType
 val INDODRAMA21 = GLOBAL_CONFIG.copy(
     id = "IndoDrama21",
     name = "IndoDrama",
-    mainUrl = "http://89.124.116.48",
+    mainUrl = "https://indodr21.putar.in",
     seriesUrl = null,
     searchUrl = null,
     lang = "id",

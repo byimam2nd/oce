@@ -300,21 +300,43 @@ class ProviderScrapper(
     }
 
     private suspend fun getHtmlParsed(url: String, referer: String? = null, skipCache: Boolean = false): Document {
-        if (!skipCache) { globalHtmlCache.get(url)?.let { return it } }
-        val host = runCatching { URI(url).host }.getOrNull() ?: ""
-        if (HostCircuitBreaker.isOpen(host)) throw Exception("Host $host is in circuit breaker cooldown")
-        return runCatching {
-            executeWithRetry {
-                rateLimitDelay(url)
-                val res = withTimeout(DEFAULT_TIMEOUT) { app.get(url, timeout = DEFAULT_TIMEOUT, headers = config.globalHeaders, referer = referer) }
-                val doc = if (config.useDocumentLarge) res.documentLarge else res.document
-                if (!skipCache) { globalHtmlCache.put(url, doc) }
-                doc
+        val fallbackUrls = resolveFallbackUrls(url)
+        var lastError: Exception? = null
+
+        for ((attemptUrl, host) in fallbackUrls) {
+            if (!skipCache) { globalHtmlCache.get(attemptUrl)?.let { return it } }
+            if (host.isNotBlank() && HostCircuitBreaker.isOpen(host)) continue
+
+            return try {
+                executeWithRetry {
+                    rateLimitDelay(attemptUrl)
+                    val res = withTimeout(DEFAULT_TIMEOUT) { app.get(attemptUrl, timeout = DEFAULT_TIMEOUT, headers = config.globalHeaders, referer = referer) }
+                    val doc = if (config.useDocumentLarge) res.documentLarge else res.document
+                    if (!skipCache) { globalHtmlCache.put(attemptUrl, doc) }
+                    doc
+                }.also { HostCircuitBreaker.reportSuccess(host) }
+            } catch (e: Exception) {
+                lastError = e
+                HostCircuitBreaker.reportFailure(host)
+                val msg = e.message ?: ""
+                if (NON_RETRYABLE_HTTP.containsMatchIn(msg)) throw e
+                if (attemptUrl != fallbackUrls.last().first) continue
+                throw e
             }
-        }.also { result ->
-            if (result.isSuccess) HostCircuitBreaker.reportSuccess(host)
-            else HostCircuitBreaker.reportFailure(host)
-        }.getOrThrow()
+        }
+
+        throw lastError ?: Exception("All mirrors failed for $url")
+    }
+
+    private fun resolveFallbackUrls(url: String): List<Pair<String, String>> {
+        val host = runCatching { URI(url).host }.getOrNull() ?: return listOf(url to "")
+        val candidates = mutableListOf(url to host)
+        for (mirror in config.mirrorUrls) {
+            val mirrorHost = runCatching { URI(mirror).host }.getOrNull() ?: continue
+            if (mirrorHost == host) continue
+            candidates.add(url.replace(host, mirrorHost, ignoreCase = true) to mirrorHost)
+        }
+        return candidates
     }
 }
 

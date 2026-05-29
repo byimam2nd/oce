@@ -107,7 +107,7 @@ suspend fun rateLimitDelay(url: String = "") {
     }
 }
 
-private val NON_RETRYABLE_HTTP = Regex("""\b(403|404|410|451)\b""")
+internal val NON_RETRYABLE_HTTP = Regex("""\b(403|404|410|451)\b""")
 
 suspend fun <T> executeWithRetry(
     maxRetries: Int = 3,
