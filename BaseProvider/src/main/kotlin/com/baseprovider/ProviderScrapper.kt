@@ -12,6 +12,7 @@ import com.baseprovider.config.ProviderConfig
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -20,6 +21,7 @@ import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import org.jsoup.select.Elements
 import org.json.JSONObject
+import java.net.URI
 import java.util.concurrent.atomic.AtomicInteger
 
 private const val VAL_REFERER = "Referer"
@@ -299,13 +301,20 @@ class ProviderScrapper(
 
     private suspend fun getHtmlParsed(url: String, referer: String? = null, skipCache: Boolean = false): Document {
         if (!skipCache) { globalHtmlCache.get(url)?.let { return it } }
-        return executeWithRetry {
-            rateLimitDelay(url)
-            val res = app.get(url, timeout = DEFAULT_TIMEOUT, headers = config.globalHeaders, referer = referer)
-            val doc = if (config.useDocumentLarge) res.documentLarge else res.document
-            if (!skipCache) { globalHtmlCache.put(url, doc) }
-            doc
-        }
+        val host = runCatching { URI(url).host }.getOrNull() ?: ""
+        if (HostCircuitBreaker.isOpen(host)) throw Exception("Host $host is in circuit breaker cooldown")
+        return runCatching {
+            executeWithRetry {
+                rateLimitDelay(url)
+                val res = withTimeout(DEFAULT_TIMEOUT) { app.get(url, timeout = DEFAULT_TIMEOUT, headers = config.globalHeaders, referer = referer) }
+                val doc = if (config.useDocumentLarge) res.documentLarge else res.document
+                if (!skipCache) { globalHtmlCache.put(url, doc) }
+                doc
+            }
+        }.also { result ->
+            if (result.isSuccess) HostCircuitBreaker.reportSuccess(host)
+            else HostCircuitBreaker.reportFailure(host)
+        }.getOrThrow()
     }
 }
 
