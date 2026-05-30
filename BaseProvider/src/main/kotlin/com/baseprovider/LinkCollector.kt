@@ -4,6 +4,7 @@ import com.baseprovider.config.ProviderConfig
 import com.lagradost.api.Log
 import org.json.JSONObject
 import org.jsoup.nodes.Document
+import org.jsoup.nodes.Element
 
 class LinkCollector(private val config: ProviderConfig) {
 
