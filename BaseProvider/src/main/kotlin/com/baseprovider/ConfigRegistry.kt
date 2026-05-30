@@ -1,7 +1,6 @@
 package com.baseprovider
 
 import com.lagradost.api.Log
-import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 import java.net.URL
 
@@ -46,7 +45,7 @@ object ConfigRegistry {
                 connectTimeout = 10000
                 readTimeout = 10000
             }
-            val jsonStr = withTimeout(15000L) { connection.getInputStream().bufferedReader().readText() }
+            val jsonStr = connection.getInputStream().bufferedReader().readText()
             val json = JSONObject(jsonStr)
             val id = json.optString("id", fileName)
             Log.d(TAG, "Fetched remote config: $fileName.json")
