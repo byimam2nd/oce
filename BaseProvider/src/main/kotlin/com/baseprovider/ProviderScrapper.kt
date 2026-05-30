@@ -42,7 +42,7 @@ class ProviderScrapper(
         return runCatching {
             val document = fetchDocument(url, config)
             val isHorizontal = config.isHorizontal
-            val home = if (config.searchItems.isNotBlank()) document.select(config.searchItems).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() } else emptyList()
+            val home = if (config.searchItems.isNotBlank()) document.select(config.searchItems).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() }.distinctBy { it.url } else emptyList()
             newHomePageResponse(list = HomePageList(name = request.name, list = home, isHorizontalImages = isHorizontal), hasNext = home.isNotEmpty())
         }.getOrElse { e ->
             logFail(config.id, "MainPage Fetch Failure on ${request.name}: ${e.message}", url = url, method = "getMainPage", type = FailureType.NETWORK_FAILURE, selectors = "searchItems")
