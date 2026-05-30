@@ -69,9 +69,8 @@ fun String?.safeExtractEpNum(): Int? {
     return try {
         val keywordMatch = EPISODE_KEYWORD_REGEX.find(this)
         if (keywordMatch != null) return keywordMatch.groupValues[1].toDoubleOrNull()?.toInt()
-        val numbers = EPISODE_NUMBER_REGEX.findAll(this).map { it.groupValues[1] }.filter { it.toDoubleOrNull() != null }.toList()
-        val nonYearNumbers = numbers.filter { it.length != 4 || it.toIntOrNull() !in 1900..2099 }
-        nonYearNumbers.firstOrNull()?.toDoubleOrNull()?.toInt()
+        val numbers = EPISODE_NUMBER_REGEX.findAll(this).map { it.groupValues[1] }.filter { it.toDoubleOrNull() != null }
+        numbers.firstOrNull { it.length != 4 || it.toIntOrNull() !in 1900..2099 }?.toDoubleOrNull()?.toInt()
     } catch (_: Exception) { null }
 }
 

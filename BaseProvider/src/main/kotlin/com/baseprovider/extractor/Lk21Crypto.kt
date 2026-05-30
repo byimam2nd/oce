@@ -19,19 +19,19 @@ private suspend fun ensureLk21Scope(ctx: Context): Scriptable {
     val now = System.currentTimeMillis()
     synchronized(lk21Lock) {
         if (cachedLk21Scope != null && now - cachedPlayerJsTime < PLAYER_JS_REFRESH_MS) {
-            return cachedLk21Scope!!
+            return cachedLk21Scope ?: error("Scope init failed")
         }
     }
 
     val js = if (cachedPlayerJsText != null && now - cachedPlayerJsTime < PLAYER_JS_REFRESH_MS) {
-        cachedPlayerJsText!!
+        cachedPlayerJsText ?: error("Text null after null check")
     } else {
         app.get("https://assets.lk21.party/js/player.js?v=4").text.also { cachedPlayerJsText = it }
     }
 
     synchronized(lk21Lock) {
         if (cachedLk21Scope != null && now - cachedPlayerJsTime < PLAYER_JS_REFRESH_MS) {
-            return cachedLk21Scope!!
+            return cachedLk21Scope ?: error("Scope init failed")
         }
         val scope = ctx.initStandardObjects()
         ctx.optimizationLevel = -1
@@ -64,7 +64,7 @@ suspend fun decryptLk21PlayerUrl(encrypted: String): String? {
         val ctx = Context.enter()
         try {
             val scope = ensureLk21Scope(ctx)
-            val fn = scope.get("_L", scope) as Function
+            val fn = scope.get("_L", scope) as? Function ?: return@runCatching null
             val result = fn.call(ctx, scope, scope, arrayOf(encrypted))
             Context.toString(result)
         } finally { Context.exit() }

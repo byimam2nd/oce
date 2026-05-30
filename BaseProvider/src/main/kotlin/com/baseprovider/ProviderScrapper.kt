@@ -18,7 +18,6 @@ import kotlinx.coroutines.sync.withPermit
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
-import org.jsoup.select.Elements
 import org.json.JSONObject
 import java.net.URI
 import java.util.concurrent.atomic.AtomicInteger
@@ -35,7 +34,7 @@ class ProviderScrapper(
 ) {
 
     suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val baseUrl = if (request.name.contains(config.seriesKeyword, true) && !config.seriesUrl.isNullOrBlank()) config.seriesUrl!! else config.mainUrl
+        val baseUrl = if (request.name.contains(config.seriesKeyword, true)) config.seriesUrl?.takeIf { it.isNotBlank() } ?: config.mainUrl else config.mainUrl
         val url = if (request.data.startsWith("http")) {
             val d = request.data.replace("{page}", page.toString())
             val pagePattern = Regex("""(/page/|page=)$page(\b|/|$)""")
@@ -60,7 +59,7 @@ class ProviderScrapper(
 
     suspend fun search(query: String): List<SearchResponse> {
         val encodedQuery = runCatching { java.net.URLEncoder.encode(query, "UTF-8") }.getOrDefault(query)
-        val baseUrl = if (!config.searchUrl.isNullOrBlank()) config.searchUrl!! else config.mainUrl
+        val baseUrl = config.searchUrl?.takeIf { it.isNotBlank() } ?: config.mainUrl
         val refer = config.mainUrl
         if (config.isJsonSearch) {
             val url = config.searchPathPattern.replace("{baseUrl}", baseUrl).replace("{query}", encodedQuery).replace("{page}", "1")

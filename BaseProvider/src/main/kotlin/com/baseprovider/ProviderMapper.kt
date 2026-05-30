@@ -5,7 +5,6 @@ import com.lagradost.cloudstream3.utils.*
 import com.baseprovider.config.ProviderConfig
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
-import org.jsoup.select.Elements
 import org.json.JSONObject
 
 class ProviderMapper(

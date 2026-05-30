@@ -68,7 +68,6 @@ data class ProviderConfig(
     val loadTags: String = "",
     val loadRating: String = "",
     val loadStatus: String = "",
-    val loadQuality: String = "",
     val loadTrailer: String = "",
     val loadRecommend: String = "",
 
@@ -93,8 +92,6 @@ data class ProviderConfig(
     val tmdbExternal: String = "a[href*='themoviedb.org/']",
     val iframeTag: String = "iframe",
     val followLinkSelector: String = "",
-    val seasonDataSelector: String = "",
-
     // ── Selectors: AJAX Player ──
     val ajaxPlayerUrl: String = "",
     val selectorJsonData: String = "",

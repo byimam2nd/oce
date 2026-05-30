@@ -5,16 +5,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.URI
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.random.Random
 
 /**
@@ -155,7 +150,6 @@ object ProviderLog {
     private val TG_TOKEN: String get() = System.getenv("OCE_TG_TOKEN") ?: ""
     private val TG_GROUP_ID: String get() = System.getenv("OCE_TG_GROUP_ID") ?: ""
     private val TG_THREAD_ID: String get() = System.getenv("OCE_TG_THREAD_ID") ?: "2"
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
 
     private val sentMessages = java.util.concurrent.ConcurrentHashMap<String, Pair<Int, Int>>()
 
@@ -227,7 +221,7 @@ object ProviderLog {
                         "https://api.telegram.org/bot$TG_TOKEN/editMessageText",
                         requestBody = org.json.JSONObject().apply {
                             put("chat_id", TG_GROUP_ID)
-                            if (TG_THREAD_ID.isNotBlank()) put("message_thread_id", TG_THREAD_ID.toInt())
+                            if (TG_THREAD_ID.isNotBlank()) put("message_thread_id", TG_THREAD_ID.toIntOrNull() ?: 0)
                             put("message_id", msgId)
                             put("text", body)
                         }.toString().toRequestBody("application/json".toMediaType())
@@ -241,7 +235,7 @@ object ProviderLog {
                         "https://api.telegram.org/bot$TG_TOKEN/sendMessage",
                         requestBody = org.json.JSONObject().apply {
                             put("chat_id", TG_GROUP_ID)
-                            if (TG_THREAD_ID.isNotBlank()) put("message_thread_id", TG_THREAD_ID.toInt())
+                            if (TG_THREAD_ID.isNotBlank()) put("message_thread_id", TG_THREAD_ID.toIntOrNull() ?: 0)
                             put("text", rawBody)
                             put("disable_web_page_preview", true)
                         }.toString().toRequestBody("application/json".toMediaType())
@@ -264,11 +258,12 @@ fun logSuccess(tag: String, message: String, url: String? = null, method: String
 
 // ── Domain Helpers ──
 
-fun String.normalizeDomain(): String =
-    removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
+fun String.normalizeDomain(stripWww: Boolean = false): String {
+    val base = removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
+    return if (stripWww) base.removePrefix("www.") else base
+}
 
-fun String.normalizeExtractorDomain(): String =
-    removePrefix("http://").removePrefix("https://").replace("www.", "").lowercase()
+fun String.normalizeExtractorDomain(): String = normalizeDomain(stripWww = true)
 
 // ── Media URL Helpers ──
 
