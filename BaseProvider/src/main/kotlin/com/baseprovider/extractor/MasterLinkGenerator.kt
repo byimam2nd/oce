@@ -24,7 +24,7 @@ object MasterLinkGenerator {
             url = url,
             type = if (url.contains(".mpd")) ExtractorLinkType.DASH else if (isAdaptive) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
         ) {
-            this.quality = if (isAdaptive) -1 else (quality ?: detectQualityFromUrl(url))
+            this.quality = if (isAdaptive) 0 else (quality ?: detectQualityFromUrl(url))
             this.referer = referer ?: ""
             this.headers = safeHeaders
         })
@@ -36,13 +36,12 @@ object MasterLinkGenerator {
             val isM3u8 = link.type == ExtractorLinkType.M3U8 || link.type == ExtractorLinkType.DASH
             if (isM3u8) {
                 if (seenM3u8Sources.add(link.source)) {
-                    val refinedName = link.source.replace(QUALITY_STRIP_REGEX, "").trim()
-                    finalCallback(ExtractorLink(source = link.source, name = refinedName, url = link.url, referer = link.referer, quality = -1, type = link.type, headers = link.headers, extractorData = link.extractorData))
+                    val refinedName = link.name.ifBlank { link.source.replace(QUALITY_STRIP_REGEX, "").trim() }
+                    finalCallback(ExtractorLink(source = link.source, name = refinedName, url = link.url, referer = link.referer, quality = 0, type = link.type, headers = link.headers, extractorData = link.extractorData))
                 }
             } else {
-                val qualityLabel = if (link.quality > 0) "${link.quality}p" else ""
-                val cleanSource = link.source.replace(QUALITY_STRIP_REGEX, "").trim()
-                finalCallback(ExtractorLink(source = link.source, name = "$cleanSource $qualityLabel".trim(), url = link.url, referer = link.referer, quality = link.quality, type = link.type, headers = link.headers, extractorData = link.extractorData))
+                val cleanSource = link.name.ifBlank { link.source.replace(QUALITY_STRIP_REGEX, "").trim() }
+                finalCallback(ExtractorLink(source = link.source, name = cleanSource, url = link.url, referer = link.referer, quality = link.quality, type = link.type, headers = link.headers, extractorData = link.extractorData))
             }
         }
     }
