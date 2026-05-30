@@ -1,7 +1,7 @@
 package com.baseprovider
 
 import com.baseprovider.config.ProviderConfig
-import com.lagradost.api.Log
+import com.lagradost.cloudstream3.*
 import org.json.JSONObject
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
