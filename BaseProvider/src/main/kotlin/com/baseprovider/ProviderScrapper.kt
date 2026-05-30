@@ -15,7 +15,6 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-import java.util.concurrent.atomic.AtomicBoolean
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
@@ -83,17 +82,20 @@ class ProviderScrapper(
                 emptyList()
             }
         }
-        val enoughResults = AtomicBoolean(false)
-        return coroutineScope { (1..config.searchPageLimit).map { page -> async {
-            if (enoughResults.get()) return@async emptyList<SearchResponse>()
-            runCatching {
+        return runCatching {
+            val results = mutableListOf<SearchResponse>()
+            for (page in 1..config.searchPageLimit) {
+                if (results.size >= MIN_SEARCH_RESULTS) break
                 val url = config.searchPathPattern.replace("{baseUrl}", baseUrl).replace("{page}", page.toString()).replace("{query}", encodedQuery)
                 val document = getHtmlParsed(url, refer)
                 val pageResults = if (config.searchItems.isNotBlank()) document.select(config.searchItems).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() } else emptyList()
-                if (pageResults.size >= MIN_SEARCH_RESULTS) enoughResults.set(true)
-                pageResults
-            }.getOrElse { e -> logDebug(config.id, "Search Page $page Error: ${e.message}"); emptyList() }
-        } }.awaitAll().flatten().distinctBy { it.url } }
+                results.addAll(pageResults)
+            }
+            results.distinctBy { it.url }
+        }.getOrElse { e ->
+            logFail(config.id, "Search Execution Failed for '$query': ${e.message}", url = baseUrl, method = "search", type = FailureType.NETWORK_FAILURE, selectors = "searchItems")
+            emptyList()
+        }
     }
 
     suspend fun load(url: String): LoadResponse { return loadRecursive(url, 0) }
@@ -329,12 +331,17 @@ class ProviderScrapper(
     }
 
     private fun resolveFallbackUrls(url: String): List<Pair<String, String>> {
-        val host = runCatching { URI(url).host }.getOrNull() ?: return listOf(url to "")
+        val originalUri = runCatching { URI(url) }.getOrNull() ?: return listOf(url to "")
+        val host = originalUri.host ?: return listOf(url to "")
         val candidates = mutableListOf(url to host)
+        val portPart = if (originalUri.port > 0 && originalUri.port != 80 && originalUri.port != 443) ":${originalUri.port}" else ""
+        val pathPart = originalUri.rawPath ?: ""
+        val queryPart = if (originalUri.query != null) "?${originalUri.query}" else ""
+        val fragmentPart = if (originalUri.fragment != null) "#${originalUri.fragment}" else ""
         for (mirror in config.mirrorUrls) {
             val mirrorHost = runCatching { URI(mirror).host }.getOrNull() ?: continue
             if (mirrorHost == host) continue
-            candidates.add(url.replace(host, mirrorHost, ignoreCase = true) to mirrorHost)
+            candidates.add("${originalUri.scheme}://$mirrorHost$portPart$pathPart$queryPart$fragmentPart" to mirrorHost)
         }
         return candidates
     }

@@ -5,10 +5,10 @@ import com.lagradost.cloudstream3.utils.*
 
 private val BASE36_CHARS = "0123456789abcdefghijklmnopqrstuvwxyz"
 private val BASE62_CHARS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+private val PACKED_JS_SCRIPT_REGEX = Regex("<script[^>]*>.*?</script>", setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE))
 
 fun findPackedJsInPage(html: String): Triple<String, List<String>, Int>? {
-    val scriptRegex = Regex("<script[^>]*>.*?</script>", setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE))
-    for (match in scriptRegex.findAll(html)) {
+    for (match in PACKED_JS_SCRIPT_REGEX.findAll(html)) {
         val script = match.value
         if (!script.contains("function(p,a,c,k,e,d)") || !script.contains(".split")) continue
         val start = script.indexOf("}(")

@@ -35,8 +35,8 @@ val DONGHUASTREAM = GLOBAL_CONFIG.copy(
     ),
     mainPageLists = listOf(
         "anime/?status=&type=&order=update&page=" to "Recently Updated",
-        "anime/?status=completed&type=&order=update" to "Completed",
-        "anime/?status=&type=special&sub=&order=update" to "Special Anime"
+        "anime/?status=completed&type=&order=update&page=" to "Completed",
+        "anime/?status=&type=special&sub=&order=update&page=" to "Special Anime"
     ),
     dubKeyword = "dub",
     ongoingKeyword = "Ongoing",

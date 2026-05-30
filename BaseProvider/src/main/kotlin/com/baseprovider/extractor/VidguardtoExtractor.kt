@@ -42,7 +42,7 @@ open class Vidguardto : ExtractorApi() {
         return url.replace(sig, t)
     }
 
-    private suspend fun runJS(js: String): String = withContext(Dispatchers.IO) {
+    private suspend fun runJS(js: String): String = withContext(Dispatchers.Default) {
         try {
             val rhino = Context.enter()
             try {

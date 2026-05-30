@@ -11,6 +11,15 @@ class StreamHG : ExtractorApi() {
     override var mainUrl = "https://hgcloud.to"
     override val requiresReferer = true
 
+    private val resolver by lazy {
+        WebViewResolver(
+            interceptUrl = Regex("(m3u8|master\\.txt)"),
+            additionalUrls = listOf(Regex("(m3u8|master\\.txt)")),
+            useOkhttp = false,
+            timeout = 15_000L
+        )
+    }
+
     override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
         val response = app.get(url, referer = referer)
         val text = response.text
@@ -22,12 +31,6 @@ class StreamHG : ExtractorApi() {
             }
         } else {
             try {
-                val resolver = WebViewResolver(
-                    interceptUrl = Regex("(m3u8|master\\.txt)"),
-                    additionalUrls = listOf(Regex("(m3u8|master\\.txt)")),
-                    useOkhttp = false,
-                    timeout = 15_000L
-                )
                 val interceptedUrl = app.get(url, referer = referer, interceptor = resolver).url
                 if (interceptedUrl.isNotBlank()) {
                     MasterLinkGenerator.createSmartLink(this.name, interceptedUrl, url, callback = callback)

@@ -37,12 +37,12 @@ object MasterLinkGenerator {
             if (isM3u8) {
                 if (seenM3u8Sources.add(link.source)) {
                     val refinedName = link.source.replace(QUALITY_STRIP_REGEX, "").trim()
-                    finalCallback(ExtractorLink(source = link.source, name = refinedName, url = link.url, referer = link.referer, quality = -1, type = link.type, headers = link.headers, extractorData = null))
+                    finalCallback(ExtractorLink(source = link.source, name = refinedName, url = link.url, referer = link.referer, quality = -1, type = link.type, headers = link.headers, extractorData = link.extractorData))
                 }
             } else {
                 val qualityLabel = if (link.quality > 0) "${link.quality}p" else ""
                 val cleanSource = link.source.replace(QUALITY_STRIP_REGEX, "").trim()
-                finalCallback(ExtractorLink(source = link.source, name = "$cleanSource $qualityLabel".trim(), url = link.url, referer = link.referer, quality = link.quality, type = link.type, headers = link.headers, extractorData = null))
+                finalCallback(ExtractorLink(source = link.source, name = "$cleanSource $qualityLabel".trim(), url = link.url, referer = link.referer, quality = link.quality, type = link.type, headers = link.headers, extractorData = link.extractorData))
             }
         }
     }

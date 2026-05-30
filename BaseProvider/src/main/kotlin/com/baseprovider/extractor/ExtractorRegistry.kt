@@ -20,11 +20,11 @@ object ProviderExtractors {
 
     fun getMatchingExtractors(url: String): List<ExtractorApi> {
         val urlDomain = url.normalizeDomain()
-        return normalizedList.filter { (domain, _) -> urlDomain.contains(domain) }.map { it.second }
+        return normalizedList.filter { (domain, _) -> urlDomain == domain || urlDomain.endsWith(".$domain") }.map { it.second }
     }
 
     fun hasMatchingExtractor(url: String): Boolean {
         val urlDomain = url.normalizeDomain()
-        return normalizedList.any { (domain, _) -> urlDomain.contains(domain) }
+        return normalizedList.any { (domain, _) -> urlDomain == domain || urlDomain.endsWith(".$domain") }
     }
 }

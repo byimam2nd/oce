@@ -3,8 +3,6 @@ package com.baseprovider
 import org.jsoup.nodes.Element
 import java.net.URI
 import java.util.Base64
-import com.lagradost.cloudstream3.utils.Qualities
-
 // ── Cached Regex Patterns ──
 
 private val WHITESPACE_REGEX = Regex("\\s+")
@@ -20,10 +18,6 @@ fun Element.safeExtractImage(attributes: List<String>): String {
             .flatMap { it.split(",").map { a -> a.trim() } }
             .map { attr(it) }.filter { it.isNotBlank() && it != "about:blank" }.firstOrNull()?.split(" ")?.firstOrNull() ?: ""
     } catch (_: Exception) { "" }
-}
-
-fun Element.extractImageAttr(): String {
-    return this.safeExtractImage(listOf("data-src", "src", "data-original", "data-lazy-src"))
 }
 
 fun String.safeCleanBloat(original: String, regex: Regex): String {
@@ -75,13 +69,9 @@ fun String?.safeExtractEpNum(): Int? {
     return try {
         val keywordMatch = EPISODE_KEYWORD_REGEX.find(this)
         if (keywordMatch != null) return keywordMatch.groupValues[1].toDoubleOrNull()?.toInt()
-        val numbers = EPISODE_NUMBER_REGEX.findAll(this).toList()
-        for ((i, match) in numbers.withIndex()) {
-            val numStr = match.groupValues[1]; val num = numStr.toDoubleOrNull()?.toInt() ?: continue
-            if (num in 1900..2099 && numStr.length == 4 && numbers.size > 1) continue
-            return num
-        }
-        EPISODE_NUMBER_REGEX.find(this)?.groupValues?.get(1)?.toDoubleOrNull()?.toInt()
+        val numbers = EPISODE_NUMBER_REGEX.findAll(this).map { it.groupValues[1] }.filter { it.toDoubleOrNull() != null }.toList()
+        val nonYearNumbers = numbers.filter { it.length != 4 || it.toIntOrNull() !in 1900..2099 }
+        nonYearNumbers.firstOrNull()?.toDoubleOrNull()?.toInt()
     } catch (_: Exception) { null }
 }
 
@@ -103,29 +93,9 @@ fun getBaseUrl(url: String?): String {
     return try { val uri = URI(url); "${uri.scheme}://${uri.host}" } catch (_: Exception) { "" }
 }
 
-fun optimizeImageUrl(url: String, width: Int = 300): String {
-    if (url.isBlank() || url.contains("w$width")) return url
-    return if (url.contains("?")) "$url&width=$width" else "$url?width=$width"
-}
-
 fun String?.safeIsBase64(): Boolean {
     if (this.isNullOrBlank()) return false
     return try { Base64.getDecoder().decode(this); true } catch (_: Exception) { false }
 }
 
 fun String.safeDecode(): String { return try { String(Base64.getDecoder().decode(this)) } catch (_: Exception) { this } }
-
-fun String?.safeGetQuality(): Int {
-    if (this == null) return Qualities.Unknown.value
-    return try {
-        val q = this.lowercase()
-        when {
-            q.contains("2160") || q.contains("4k") -> Qualities.P2160.value
-            q.contains("1080") || q.contains("fhd") -> Qualities.P1080.value
-            q.contains("720") || q.contains("hd") -> Qualities.P720.value
-            q.contains("480") || q.contains("sd") -> Qualities.P480.value
-            q.contains("360") -> Qualities.P360.value
-            else -> Qualities.Unknown.value
-        }
-    } catch (_: Exception) { Qualities.Unknown.value }
-}

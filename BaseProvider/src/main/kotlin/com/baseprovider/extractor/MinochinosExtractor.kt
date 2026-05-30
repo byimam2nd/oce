@@ -3,6 +3,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.api.Log
+import org.jsoup.Jsoup
 
 
 class Minochinos : ExtractorApi() {
@@ -19,7 +20,7 @@ class Minochinos : ExtractorApi() {
             CompiledRegexPatterns.filterMasterM3u8(urls).forEach { found = true; MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback) }
         }
         if (!found) {
-            val docScripts = try { app.get(url, referer = referer).document.selectFirst("script:containsData(sources:)")?.data() } catch (e: Exception) { Log.d("Minochinos", "Script fetch failed: ${e.message}"); null }
+            val docScripts = try { Jsoup.parse(text).selectFirst("script:containsData(sources:)")?.data() } catch (e: Exception) { Log.d("Minochinos", "Script fetch failed: ${e.message}"); null }
             if (docScripts != null) {
                 CompiledRegexPatterns.extractAllVideoUrls(docScripts).let { urls ->
                     CompiledRegexPatterns.filterMasterM3u8(urls).forEach { MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback) }

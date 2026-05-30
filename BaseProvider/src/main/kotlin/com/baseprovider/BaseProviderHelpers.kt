@@ -101,7 +101,7 @@ val globalHtmlCache = ExpiringCache<org.jsoup.nodes.Document>(5 * 60 * 1000L)
 
 suspend fun rateLimitDelay(url: String = "") {
     if (url.isBlank()) {
-        try { delay(100L + Random.nextLong(200L)) } catch (_: Exception) {}
+        try { delay(100L + Random.nextLong(200L)) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) {}
     } else {
         runCatching { SmartThrottle.wait(URI(url).host ?: "default") }.onFailure { Log.d("OCE", "rateLimitDelay SmartThrottle error for $url: ${it.message}") }
     }
@@ -213,6 +213,8 @@ object ProviderLog {
         }
 
         val key = "$level|$tag|${method ?: ""}|$host"
+
+        if (sentMessages.size > 1000) sentMessages.clear()
 
         kotlinx.coroutines.GlobalScope.launch {
             val existing = sentMessages[key]

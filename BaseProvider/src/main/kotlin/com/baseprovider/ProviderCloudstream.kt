@@ -19,8 +19,10 @@ open class ProviderCloudstream : MainAPI() {
 
     override var name = config.name
     override var mainUrl = config.mainUrl
-    open var seriesUrl: String get() = config.seriesUrl ?: mainUrl; set(_) {}
-    open var searchUrl: String get() = config.searchUrl ?: mainUrl; set(_) {}
+    private var _seriesUrl: String? = null
+    open var seriesUrl: String get() = _seriesUrl ?: config.seriesUrl ?: mainUrl; set(v) { _seriesUrl = v }
+    private var _searchUrl: String? = null
+    open var searchUrl: String get() = _searchUrl ?: config.searchUrl ?: mainUrl; set(v) { _searchUrl = v }
 
     override val hasMainPage = true
     override var lang = config.lang
