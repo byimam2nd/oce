@@ -7,7 +7,8 @@ import com.baseprovider.ProviderExtractors
 @CloudstreamPlugin
 class DonghuastreamPlugin: BasePlugin() {
     override fun load() {
-        registerMainAPI(Donghuastream())
-        ProviderExtractors.list.forEach { registerExtractorAPI(it) }
+        val api = Donghuastream()
+        registerMainAPI(api)
+        ProviderExtractors.filtered(api.config.allowedExtractors).forEach { registerExtractorAPI(it) }
     }
 }

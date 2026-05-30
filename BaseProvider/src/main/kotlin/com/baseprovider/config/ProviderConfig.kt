@@ -44,6 +44,9 @@ data class ProviderConfig(
     // ── Navigation ──
     val mainPageLists: List<Pair<String, String>> = emptyList(),
 
+    // ── Extractor Control ──
+    val allowedExtractors: Set<String> = emptySet(),  // empty = all extractors allowed
+
     // ── UI Keywords ──
     val dubKeyword: String = "dub",
     val ongoingKeyword: String = "Ongoing",

@@ -7,7 +7,8 @@ import com.baseprovider.ProviderExtractors
 @CloudstreamPlugin
 class AnimasuPlugin: BasePlugin() {
     override fun load() {
-        registerMainAPI(Animasu())
-        ProviderExtractors.list.forEach { registerExtractorAPI(it) }
+        val api = Animasu()
+        registerMainAPI(api)
+        ProviderExtractors.filtered(api.config.allowedExtractors).forEach { registerExtractorAPI(it) }
     }
 }

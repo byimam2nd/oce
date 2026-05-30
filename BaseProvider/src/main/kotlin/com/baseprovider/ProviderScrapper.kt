@@ -12,19 +12,10 @@ import com.baseprovider.config.ProviderConfig
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-import org.jsoup.Jsoup
-import org.jsoup.nodes.Document
-import org.jsoup.nodes.Element
 import org.json.JSONObject
-import java.net.URI
 import java.util.concurrent.atomic.AtomicInteger
 
-private const val VAL_REFERER = "Referer"
-private const val VAL_USER_AGENT = "User-Agent"
-private const val DEFAULT_TIMEOUT = 15000L
 private const val MIN_SEARCH_RESULTS = 20
 
 class ProviderScrapper(
@@ -32,6 +23,8 @@ class ProviderScrapper(
     private val config: ProviderConfig,
     private val mapper: ProviderMapper
 ) {
+    private val linkCollector = LinkCollector(config)
+    private val fallbackPipeline = FallbackPipeline(config)
 
     suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
         val baseUrl = if (request.name.contains(config.seriesKeyword, true)) config.seriesUrl?.takeIf { it.isNotBlank() } ?: config.mainUrl else config.mainUrl
@@ -47,7 +40,7 @@ class ProviderScrapper(
         }
 
         return runCatching {
-            val document = getHtmlParsed(url)
+            val document = fetchDocument(url, config)
             val isHorizontal = config.isHorizontal
             val home = if (config.searchItems.isNotBlank()) document.select(config.searchItems).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() } else emptyList()
             newHomePageResponse(list = HomePageList(name = request.name, list = home, isHorizontalImages = isHorizontal), hasNext = home.isNotEmpty())
@@ -73,7 +66,7 @@ class ProviderScrapper(
                     if (!pUrl.startsWith("http") && config.searchJsonPosterPrefix.isNotBlank()) pUrl = config.searchJsonPosterPrefix + pUrl
                     val isTv = item.optString(config.searchJsonType).contains("series", true) || item.optString(config.searchJsonType).contains("tv", true)
                     var finalUrl = if (isTv) "${config.seriesUrl ?: baseUrl}/$slug" else "${config.mainUrl}/$slug"
-                    results.add(api.newAnimeSearchResponse(title, finalUrl, if (isTv) TvType.TvSeries else TvType.Movie) { this.posterUrl = pUrl; this.posterHeaders = config.globalHeaders.toMutableMap().apply { put(VAL_REFERER, config.mainUrl) } })
+                    results.add(api.newAnimeSearchResponse(title, finalUrl, if (isTv) TvType.TvSeries else TvType.Movie) { this.posterUrl = pUrl; this.posterHeaders = config.globalHeaders.toMutableMap().apply { put("Referer", config.mainUrl) } })
                 }
                 results
             }.getOrElse { e ->
@@ -86,7 +79,7 @@ class ProviderScrapper(
             for (page in 1..config.searchPageLimit) {
                 if (results.size >= MIN_SEARCH_RESULTS) break
                 val url = config.searchPathPattern.replace("{baseUrl}", baseUrl).replace("{page}", page.toString()).replace("{query}", encodedQuery)
-                val document = getHtmlParsed(url, refer)
+                val document = fetchDocument(url, config, refer)
                 val pageResults = if (config.searchItems.isNotBlank()) document.select(config.searchItems).mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() } else emptyList()
                 results.addAll(pageResults)
             }
@@ -100,7 +93,7 @@ class ProviderScrapper(
     suspend fun load(url: String): LoadResponse { return loadRecursive(url, 0) }
 
     private suspend fun loadRecursive(url: String, depth: Int): LoadResponse {
-        val document = getHtmlParsed(url)
+        val document = fetchDocument(url, config)
         val currentUrl = url
         if (depth < 2 && config.followLinkSelector.isNotBlank()) {
             val nextAnchor = document.selectFirst(config.followLinkSelector)
@@ -136,31 +129,31 @@ class ProviderScrapper(
             val watchUrl = if (config.watchButtons.isNotBlank()) fixUrlSmart(document.selectFirst(config.watchButtons)?.attr("href"), currentUrl).ifBlank { currentUrl } else currentUrl
             return api.newMovieLoadResponse(metadata.title, url, type, config.episodeDataUrlPattern.replace("{url}", watchUrl)) {
                 this.posterUrl = tracker?.image ?: metadata.poster; this.backgroundPosterUrl = tracker?.cover ?: metadata.banner
-                this.posterHeaders = config.globalHeaders.toMutableMap().apply { put(VAL_REFERER, config.mainUrl) }; this.plot = metadata.description; this.tags = metadata.tags.ifEmpty { null }; this.year = metadata.year; this.score = Score.from10(metadata.rating)
+                this.posterHeaders = config.globalHeaders.toMutableMap().apply { put("Referer", config.mainUrl) }; this.plot = metadata.description; this.tags = metadata.tags.ifEmpty { null }; this.year = metadata.year; this.score = Score.from10(metadata.rating)
                 this.recommendations = recommendations; this.comingSoon = metadata.statusText?.let { st -> config.comingSoonKeywords.split(",").any { st.contains(it, true) } } ?: false
                 addTrailer(metadata.trailer); addActors(actors); addMalId(tracker?.malId); addAniListId(tracker?.aniId?.toIntOrNull()); addImdbId(metadata.imdbId); addTMDbId(metadata.tmdbId?.toString()) }
         } else {
             val episodes = mapper.extractEpisodes(document, currentUrl, seasonDataScript, epItems, metadata.poster)
             return if (type == TvType.Anime || type == TvType.OVA || type == TvType.AnimeMovie) {
-                api.newAnimeLoadResponse(metadata.title, url, type) { this.posterUrl = tracker?.image ?: metadata.poster; this.backgroundPosterUrl = tracker?.cover ?: metadata.banner; this.posterHeaders = config.globalHeaders.toMutableMap().apply { put(VAL_REFERER, config.mainUrl) }; this.plot = metadata.description; this.tags = metadata.tags.ifEmpty { null }
+                api.newAnimeLoadResponse(metadata.title, url, type) { this.posterUrl = tracker?.image ?: metadata.poster; this.backgroundPosterUrl = tracker?.cover ?: metadata.banner; this.posterHeaders = config.globalHeaders.toMutableMap().apply { put("Referer", config.mainUrl) }; this.plot = metadata.description; this.tags = metadata.tags.ifEmpty { null }
                     this.year = metadata.year; this.score = Score.from10(metadata.rating); this.recommendations = recommendations; this.showStatus = metadata.status; addEpisodes(DubStatus.Subbed, episodes); addTrailer(metadata.trailer); addMalId(tracker?.malId); addAniListId(tracker?.aniId?.toIntOrNull()) }
-            } else { api.newTvSeriesLoadResponse(metadata.title, url, type, episodes) { this.posterUrl = tracker?.image ?: metadata.poster; this.backgroundPosterUrl = tracker?.cover ?: metadata.banner; this.posterHeaders = config.globalHeaders.toMutableMap().apply { put(VAL_REFERER, config.mainUrl) }; this.plot = metadata.description; this.tags = metadata.tags.ifEmpty { null }
+            } else { api.newTvSeriesLoadResponse(metadata.title, url, type, episodes) { this.posterUrl = tracker?.image ?: metadata.poster; this.backgroundPosterUrl = tracker?.cover ?: metadata.banner; this.posterHeaders = config.globalHeaders.toMutableMap().apply { put("Referer", config.mainUrl) }; this.plot = metadata.description; this.tags = metadata.tags.ifEmpty { null }
                     this.year = metadata.year; this.score = Score.from10(metadata.rating); this.recommendations = recommendations; this.showStatus = metadata.status; addTrailer(metadata.trailer); addActors(actors); addMalId(tracker?.malId); addAniListId(tracker?.aniId?.toIntOrNull()); addImdbId(metadata.imdbId); addTMDbId(metadata.tmdbId?.toString()) } }
         }
     }
 
     suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
         return runCatching {
-            val document = getHtmlParsed(data, skipCache = true)
+            val document = fetchDocument(data, config, skipCache = true)
             val currentUrl = data
             val allPossibleLinks = mutableSetOf<Pair<String, String?>>()
             val videoCount = AtomicInteger(0)
             val wrappedCallback: (ExtractorLink) -> Unit = { link -> videoCount.incrementAndGet(); callback(link) }
 
-            collectAjaxPlayers(document, currentUrl, allPossibleLinks)
-            collectLinkOptions(document, allPossibleLinks)
-            collectDownloadItems(document, allPossibleLinks)
-            collectIframes(document, allPossibleLinks)
+            linkCollector.collectAjaxPlayers(document, currentUrl, allPossibleLinks)
+            linkCollector.collectLinkOptions(document, allPossibleLinks)
+            linkCollector.collectDownloadItems(document, allPossibleLinks)
+            linkCollector.collectIframes(document, allPossibleLinks)
 
             if (allPossibleLinks.isEmpty()) {
                 logFail(config.id, "No media links or iframes found", url = data, method = "loadLinks", type = FailureType.SELECTOR_FAILURE, selectors = config.linkOptions.ifBlank { "none" })
@@ -168,188 +161,15 @@ class ProviderScrapper(
 
             coroutineScope {
                 allPossibleLinks.filter { it.first.isNotBlank() && !it.first.startsWith("#") }.map { (raw, label) -> async {
-                    linkSemaphore.withPermit { processLink(raw, label, currentUrl, subtitleCallback, wrappedCallback) }
+                    linkSemaphore.withPermit { fallbackPipeline.processLink(raw, label, currentUrl, subtitleCallback, wrappedCallback) }
                 } }.awaitAll()
             }
 
-            logLinkResults(videoCount.get(), allPossibleLinks.size, data)
+            fallbackPipeline.logLinkResults(videoCount.get(), allPossibleLinks.size, data)
             true
         }.getOrElse { e ->
             val ft = if (e.message?.contains("cancel", true) == true) FailureType.CANCELLED else FailureType.NETWORK_FAILURE
             logCritical(config.id, "LoadLinks Critical Failure on data: $data", e, url = data, method = "loadLinks", type = ft); false
         }
     }
-
-    private suspend fun collectAjaxPlayers(document: Document, currentUrl: String, links: MutableSet<Pair<String, String?>>) {
-        if (config.ajaxPlayerUrl.isBlank() || config.selectorJsonData.isBlank()) return
-        val el = document.selectFirst(config.selectorJsonData) ?: return
-        runCatching {
-            val json = JSONObject(el.data())
-            val id = json.optString("id")
-            if (id.isNotBlank()) {
-                logDebug(config.id, "Fetching AJAX players for ID: $id from ${config.ajaxPlayerUrl}")
-                val res = app.post(config.ajaxPlayerUrl, data = mapOf("id" to id), headers = config.globalHeaders, referer = currentUrl).document
-                res.select("li, a, option").forEach { item ->
-                    val label = item.text().trim()
-                    val raw = item.selectAttr(config.attrValue) ?: item.attr("href") ?: ""
-                    if (raw.isNotBlank()) links.add(raw to label)
-                }
-            }
-        }.onFailure { e -> logDebug(config.id, "AJAX player collection failed: ${e.message}") }
-    }
-
-    private fun collectLinkOptions(document: Document, links: MutableSet<Pair<String, String?>>) {
-        if (config.linkOptions.isBlank()) return
-        logDebug(config.id, "LINK_OPTIONS selector: ${config.linkOptions}")
-        val matches = document.select(config.linkOptions)
-        logDebug(config.id, "LINK_OPTIONS => ${matches.size} match(es)")
-        matches.forEach { container ->
-            val anchors = container.select("a")
-            if (anchors.isNotEmpty()) anchors.forEach { a ->
-                val link = a.attr("data-url").ifBlank { a.attr("href") }
-                links.add(link to a.text())
-            }
-            else { val raw = container.selectAttr(config.attrValue) ?: container.attr("href") ?: ""; if (raw.isNotBlank()) links.add(raw to container.text()) }
-        }
-    }
-
-    private fun collectDownloadItems(document: Document, links: MutableSet<Pair<String, String?>>) {
-        if (config.downloadItems.isBlank()) return
-        val dlMatches = document.select(config.downloadItems)
-        logDebug(config.id, "DOWNLOAD_ITEMS selector '${config.downloadItems}' => ${dlMatches.size} match(es)")
-        dlMatches.forEach { container ->
-            container.select("a").forEach { a -> val href = a.attr("href"); if (href.isNotBlank()) links.add(href to a.text()) }
-        }
-    }
-
-    private fun collectIframes(document: Document, links: MutableSet<Pair<String, String?>>) {
-        val iframeTagMatches = if (config.iframeTag.isNotBlank()) document.select(config.iframeTag) else org.jsoup.select.Elements()
-        logDebug(config.id, "iframeTag => ${iframeTagMatches.size} iframe(s)")
-        iframeTagMatches.forEach { el ->
-            config.iframeSources.forEach { attr -> val s = el.attr(attr); if (s.isNotBlank() && s != "about:blank") links.add(s to null) }
-        }
-    }
-
-    private suspend fun processLink(raw: String, label: String?, currentUrl: String, subtitleCallback: (SubtitleFile) -> Unit, wrappedCallback: (ExtractorLink) -> Unit) {
-        runCatching {
-            val decodedRaw = decodeRawLink(raw)
-            val fixedUrl = fixUrlSmart(decodedRaw, currentUrl).safeHttpsify().substringBefore("#")
-            if (fixedUrl.isBlank()) return@runCatching
-
-            logDebug(config.id, "Processing link: $fixedUrl (label: $label)")
-
-            val okDirect = runCatching { loadExtractorWithFallbackCustom(fixedUrl, currentUrl, subtitleCallback, headers = config.globalHeaders, callback = wrappedCallback, providerTag = config.id) }.getOrDefault(false)
-            if (!okDirect) {
-                if (ProviderExtractors.hasMatchingExtractor(fixedUrl)) {
-                    logDebug(config.id, "Skipping manual iframe fetch: extractor already tried for $fixedUrl")
-                    return@runCatching
-                }
-                tryManualIframeFetch(fixedUrl, label, currentUrl, subtitleCallback, wrappedCallback)
-            }
-        }.getOrElse { e -> logDebug(config.id, "Link Processor Error on $raw: ${e.message}") }
-    }
-
-    private suspend fun decodeRawLink(raw: String): String {
-        if (raw.startsWith("http") || raw.startsWith("//") || raw.startsWith("/") || !raw.safeIsBase64()) return raw
-        val lk21 = decryptLk21PlayerUrl(raw)
-        if (lk21 != null) return lk21
-        val dec = raw.safeDecode()
-        if (dec.contains("iframe")) return Jsoup.parse(dec).selectFirst("iframe")?.attr("src") ?: ""
-        if (dec.startsWith("http") || dec.startsWith("//") || dec.startsWith("/")) return dec
-        return ""
-    }
-
-    private suspend fun tryManualIframeFetch(fixedUrl: String, label: String?, currentUrl: String, subtitleCallback: (SubtitleFile) -> Unit, wrappedCallback: (ExtractorLink) -> Unit) {
-        val refererForPlayer = if (config.refererPlayerMode == "series_url") "${config.seriesUrl ?: config.mainUrl}/" else currentUrl
-        logDebug(config.id, "Direct extraction failed, trying manual iframe fetch for: $fixedUrl (Referer: $refererForPlayer)")
-
-        val playerDoc = app.get(fixedUrl, referer = refererForPlayer, headers = config.globalHeaders).document
-        val iframeSelectors = config.iframeSelectors
-        val iframeAttributes = config.iframeSources
-
-        logDebug(config.id, "Manual iframe: selectors=$iframeSelectors, attrs=$iframeAttributes")
-
-        val iframeEl = if (iframeSelectors.isNotBlank()) playerDoc.selectFirst(iframeSelectors) else null
-        if (iframeEl == null) {
-            logFail(config.id, "No iframe found", url = currentUrl, method = "loadLinks", type = FailureType.INVALID_IFRAME, selectors = iframeSelectors)
-            return
-        }
-
-        val iframeSrc = iframeAttributes.firstNotNullOfOrNull { iframeEl.attr(it).takeIf { v -> v.isNotBlank() && v != "about:blank" } }
-        if (iframeSrc == null) {
-            logFail(config.id, "Iframe has no src", url = currentUrl, method = "loadLinks", type = FailureType.INVALID_IFRAME, selectors = iframeAttributes.joinToString(", "))
-            return
-        }
-
-        val finalIframe = fixUrlSmart(iframeSrc, fixedUrl)
-        val refererForExtractor = getBaseUrl(fixedUrl)
-
-        logDebug(config.id, "Found iframe: $finalIframe, extracting...")
-
-        val okRecursive = runCatching { loadExtractorWithFallbackCustom(finalIframe, refererForExtractor, subtitleCallback, headers = config.globalHeaders, callback = wrappedCallback, providerTag = config.id) }.getOrDefault(false)
-        if (!okRecursive && finalIframe.isDirectMediaUrl()) {
-            MasterLinkGenerator.createSmartLink(label ?: config.name, finalIframe, refererForExtractor, headers = config.globalHeaders, callback = wrappedCallback)
-        }
-    }
-
-    private fun logLinkResults(extracted: Int, totalLinks: Int, data: String) {
-        if (extracted > 0) {
-            logSuccess(config.id, "$extracted/$totalLinks video(s) extracted", url = data, method = "loadLinks", selectors = config.linkOptions)
-        } else if (totalLinks > 0) {
-            logFail(config.id, "0/$totalLinks links produced video", url = data, method = "loadLinks", type = FailureType.EXTRACTOR_FAILURE, selectors = config.linkOptions)
-        }
-    }
-
-    private suspend fun getHtmlParsed(url: String, referer: String? = null, skipCache: Boolean = false): Document {
-        val fallbackUrls = resolveFallbackUrls(url)
-        var lastError: Exception? = null
-
-        for ((attemptUrl, host) in fallbackUrls) {
-            if (!skipCache) { globalHtmlCache.get(attemptUrl)?.let { return it } }
-            if (host.isNotBlank() && HostCircuitBreaker.isOpen(host)) continue
-
-            return try {
-                executeWithRetry {
-                    rateLimitDelay(attemptUrl)
-                    val res = withTimeout(DEFAULT_TIMEOUT) { app.get(attemptUrl, timeout = DEFAULT_TIMEOUT, headers = config.globalHeaders, referer = referer) }
-                    val doc = if (config.useDocumentLarge) res.documentLarge else res.document
-                    if (!skipCache) { globalHtmlCache.put(attemptUrl, doc) }
-                    doc
-                }.also { HostCircuitBreaker.reportSuccess(host) }
-            } catch (e: Exception) {
-                lastError = e
-                HostCircuitBreaker.reportFailure(host)
-                val msg = e.message ?: ""
-                if (NON_RETRYABLE_HTTP.containsMatchIn(msg)) throw e
-                if (attemptUrl != fallbackUrls.last().first) continue
-                throw e
-            }
-        }
-
-        throw lastError ?: Exception("All mirrors failed for $url")
-    }
-
-    private fun resolveFallbackUrls(url: String): List<Pair<String, String>> {
-        val originalUri = runCatching { URI(url) }.getOrNull() ?: return listOf(url to "")
-        val host = originalUri.host ?: return listOf(url to "")
-        val candidates = mutableListOf(url to host)
-        val portPart = if (originalUri.port > 0 && originalUri.port != 80 && originalUri.port != 443) ":${originalUri.port}" else ""
-        val pathPart = originalUri.rawPath ?: ""
-        val queryPart = if (originalUri.query != null) "?${originalUri.query}" else ""
-        val fragmentPart = if (originalUri.fragment != null) "#${originalUri.fragment}" else ""
-        for (mirror in config.mirrorUrls) {
-            val mirrorHost = runCatching { URI(mirror).host }.getOrNull() ?: continue
-            if (mirrorHost == host) continue
-            candidates.add("${originalUri.scheme}://$mirrorHost$portPart$pathPart$queryPart$fragmentPart" to mirrorHost)
-        }
-        return candidates
-    }
-}
-
-fun Element.selectAttr(attrNames: List<String>): String? {
-    for (name in attrNames) {
-        val v = attr(name)
-        if (v.isNotBlank() && v != "about:blank") return v
-    }
-    return null
 }

@@ -32,13 +32,17 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Set Build Environment
+        run: |
+          TAG_NAME=${GITHUB_REF_NAME#v}
+          echo "BUILD_TIMESTAMP=$(TZ='Asia/Jakarta' date +'%Y-%m-%d %H:%M')" >> $GITHUB_ENV
+          echo "OCE_VERSION=${TAG_NAME}" >> $GITHUB_ENV
+          echo "✅ Build environment set for tag: $TAG_NAME"
+
       - name: Build Plugins
         run: |
           chmod +x ./gradlew
-          # Generate .cs3 files
-          ./gradlew make --no-daemon --stacktrace
-          # Generate plugins.json
-          ./gradlew makePluginsJson --no-daemon --stacktrace
+          ./gradlew make makePluginsJson --stacktrace
           
       - name: Patch plugins.json for Release
         run: |

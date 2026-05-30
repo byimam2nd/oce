@@ -27,4 +27,9 @@ object ProviderExtractors {
         val urlDomain = url.normalizeDomain()
         return normalizedList.any { (domain, _) -> urlDomain == domain || urlDomain.endsWith(".$domain") }
     }
+
+    fun filtered(allowed: Set<String>): List<ExtractorApi> {
+        if (allowed.isEmpty()) return list
+        return list.filter { it.javaClass.simpleName in allowed || it.name in allowed || it.mainUrl in allowed }
+    }
 }

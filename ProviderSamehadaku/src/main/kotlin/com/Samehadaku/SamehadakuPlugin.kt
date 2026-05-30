@@ -7,7 +7,8 @@ import com.baseprovider.ProviderExtractors
 @CloudstreamPlugin
 class SamehadakuPlugin: BasePlugin() {
     override fun load() {
-        registerMainAPI(Samehadaku())
-        ProviderExtractors.list.forEach { registerExtractorAPI(it) }
+        val api = Samehadaku()
+        registerMainAPI(api)
+        ProviderExtractors.filtered(api.config.allowedExtractors).forEach { registerExtractorAPI(it) }
     }
 }

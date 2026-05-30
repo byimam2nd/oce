@@ -7,7 +7,8 @@ import com.baseprovider.ProviderExtractors
 @CloudstreamPlugin
 class PencurimoviePlugin: BasePlugin() {
     override fun load() {
-        registerMainAPI(Pencurimovie())
-        ProviderExtractors.list.forEach { registerExtractorAPI(it) }
+        val api = Pencurimovie()
+        registerMainAPI(api)
+        ProviderExtractors.filtered(api.config.allowedExtractors).forEach { registerExtractorAPI(it) }
     }
 }

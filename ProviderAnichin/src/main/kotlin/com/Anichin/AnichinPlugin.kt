@@ -7,7 +7,8 @@ import com.baseprovider.ProviderExtractors
 @CloudstreamPlugin
 class AnichinPlugin: BasePlugin() {
     override fun load() {
-        registerMainAPI(Anichin())
-        ProviderExtractors.list.forEach { registerExtractorAPI(it) }
+        val api = Anichin()
+        registerMainAPI(api)
+        ProviderExtractors.filtered(api.config.allowedExtractors).forEach { registerExtractorAPI(it) }
     }
 }

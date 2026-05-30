@@ -7,7 +7,8 @@ import com.baseprovider.ProviderExtractors
 @CloudstreamPlugin
 class LayarKaca21Plugin: BasePlugin() {
     override fun load() {
-        registerMainAPI(LayarKaca21())
-        ProviderExtractors.list.forEach { registerExtractorAPI(it) }
+        val api = LayarKaca21()
+        registerMainAPI(api)
+        ProviderExtractors.filtered(api.config.allowedExtractors).forEach { registerExtractorAPI(it) }
     }
 }

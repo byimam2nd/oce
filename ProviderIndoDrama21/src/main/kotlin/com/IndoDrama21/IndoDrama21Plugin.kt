@@ -7,7 +7,8 @@ import com.baseprovider.ProviderExtractors
 @CloudstreamPlugin
 class IndoDrama21Plugin: BasePlugin() {
     override fun load() {
-        registerMainAPI(IndoDrama21())
-        ProviderExtractors.list.forEach { registerExtractorAPI(it) }
+        val api = IndoDrama21()
+        registerMainAPI(api)
+        ProviderExtractors.filtered(api.config.allowedExtractors).forEach { registerExtractorAPI(it) }
     }
 }

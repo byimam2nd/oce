@@ -7,7 +7,8 @@ import com.baseprovider.ProviderExtractors
 @CloudstreamPlugin
 class Dutamovie21Plugin: BasePlugin() {
     override fun load() {
-        registerMainAPI(Dutamovie21())
-        ProviderExtractors.list.forEach { registerExtractorAPI(it) }
+        val api = Dutamovie21()
+        registerMainAPI(api)
+        ProviderExtractors.filtered(api.config.allowedExtractors).forEach { registerExtractorAPI(it) }
     }
 }

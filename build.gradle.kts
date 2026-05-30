@@ -199,6 +199,26 @@ subprojects {
     }
 }
 
+// Inject build timestamp and version from CI/CD environment
+// (#3) Gantikan sed -i yang rawan race condition
+// (#13) Auto-bump version dari tag release tanpa edit 11 file manual
+gradle.projectsEvaluated {
+    subprojects.forEach { project ->
+        if (project.name != "BaseProvider") {
+            val ts = System.getenv("BUILD_TIMESTAMP")
+            if (!ts.isNullOrBlank()) {
+                val ext = project.extensions.findByType(CloudstreamExtension::class.java)
+                ext?.description = "[Build $ts WIB] ${ext?.description ?: ""}"
+            }
+
+            val envVersion = System.getenv("OCE_VERSION")?.removePrefix("v")?.filter { it.isDigit() }?.toIntOrNull()
+            if (envVersion != null) {
+                project.version = envVersion
+            }
+        }
+    }
+}
+
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
