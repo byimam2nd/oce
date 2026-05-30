@@ -1,9 +1,12 @@
 package com.baseprovider
 
 import com.lagradost.api.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.withTimeout
@@ -147,11 +150,15 @@ enum class LogLevel { DEBUG, SUCCESS, FAIL, ERROR, CRITICAL }
 
 object ProviderLog {
     private const val GLOBAL_PREFIX = "OCE"
+    private const val SENT_MESSAGE_LIMIT = 1000
+
     private val TG_TOKEN: String get() = System.getenv("OCE_TG_TOKEN") ?: ""
     private val TG_GROUP_ID: String get() = System.getenv("OCE_TG_GROUP_ID") ?: ""
     private val TG_THREAD_ID: String get() = System.getenv("OCE_TG_THREAD_ID") ?: "2"
 
     private val sentMessages = java.util.concurrent.ConcurrentHashMap<String, Pair<Int, Int>>()
+    private val logScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val tgJob = Job()
 
     fun log(level: LogLevel, tag: String, message: String, error: Throwable? = null, url: String? = null, method: String? = null, type: FailureType? = null, selectors: String = "") {
         val errTrace = error?.let {
@@ -186,6 +193,13 @@ object ProviderLog {
         }
     }
 
+    private fun trimSentMessages() {
+        if (sentMessages.size > SENT_MESSAGE_LIMIT) {
+            val keysToEvict = sentMessages.keys.take(sentMessages.size - (SENT_MESSAGE_LIMIT / 2))
+            keysToEvict.forEach { sentMessages.remove(it) }
+        }
+    }
+
     private fun sendToTelegram(level: String, tag: String, message: String, url: String?, host: String, method: String?, type: FailureType, selectors: String = "") {
         if (TG_TOKEN.isBlank()) return
         val emoji = when (level) {
@@ -208,9 +222,9 @@ object ProviderLog {
 
         val key = "$level|$tag|${method ?: ""}|$host"
 
-        if (sentMessages.size > 1000) sentMessages.clear()
+        synchronized(sentMessages) { trimSentMessages() }
 
-        kotlinx.coroutines.GlobalScope.launch {
+        logScope.launch(tgJob) {
             val existing = sentMessages[key]
             if (existing != null) {
                 val (msgId, count) = existing
@@ -260,6 +274,7 @@ fun logSuccess(tag: String, message: String, url: String? = null, method: String
 
 fun String.normalizeDomain(stripWww: Boolean = false): String {
     val base = removePrefix("http://").removePrefix("https://").split("/").first().lowercase()
+    if (base.isBlank()) return this
     return if (stripWww) base.removePrefix("www.") else base
 }
 

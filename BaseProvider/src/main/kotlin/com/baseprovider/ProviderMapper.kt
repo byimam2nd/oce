@@ -20,7 +20,7 @@ class ProviderMapper(
             val title = rawTitle.safeCleanBloat(rawTitle, config.bloatRegex).safeDeduplicate()
             val hrefEl = if (config.searchHref.isNotBlank()) element.selectFirst(config.searchHref) ?: element.selectFirst("a") ?: element.parent()?.selectFirst("a") else element.selectFirst("a") ?: element.parent()?.selectFirst("a")
             var href = fixUrlSmart(hrefEl?.attr("href"), base)
-            if (config.hrefCleanRegex.isNotBlank() && config.hrefCleanReplace.isNotBlank()) { href = href.replace(Regex(config.hrefCleanRegex), config.hrefCleanReplace) }
+            if (config.hrefCleanRegex.isNotBlank() && config.hrefCleanReplace.isNotBlank()) { href = try { href.replace(Regex(config.hrefCleanRegex), config.hrefCleanReplace) } catch (_: Exception) { href } }
             val poster = if (config.searchPoster.isNotBlank()) element.selectFirst(config.searchPoster)?.safeExtractImage(config.attrImage) else element.selectFirst("img")?.safeExtractImage(config.attrImage)
             val rating = if (config.searchRating.isNotBlank()) element.selectFirst(config.searchRating)?.text() else null
             val eps = if (config.searchEpText.isNotBlank()) element.selectFirst(config.searchEpText)?.text()?.safeExtractEpNum() else null
@@ -57,7 +57,7 @@ class ProviderMapper(
         val year = infoText.safeExtractYear() ?: run {
             if (config.yearSelector.isNotBlank() && config.yearExtractorRegex.isNotBlank()) {
                 val yearEl = document.selectFirst(config.yearSelector)
-                Regex(config.yearExtractorRegex).find(yearEl?.text() ?: "")?.groupValues?.get(1)?.toIntOrNull()
+                try { Regex(config.yearExtractorRegex).find(yearEl?.text() ?: "")?.groupValues?.get(1)?.toIntOrNull() } catch (_: Exception) { null }
             } else null
         }
         val statusText = if (config.loadStatus.isNotBlank()) document.selectFirst(config.loadStatus)?.text() else null

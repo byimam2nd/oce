@@ -94,6 +94,7 @@ fun getBaseUrl(url: String?): String {
 
 fun String?.safeIsBase64(): Boolean {
     if (this.isNullOrBlank()) return false
+    if (this.length > 10000) return false
     return try { Base64.getDecoder().decode(this); true } catch (_: Exception) { false }
 }
 

@@ -15,12 +15,13 @@ class LinkCollector(private val config: ProviderConfig) {
             val json = JSONObject(el.data())
             val id = json.optString("id")
             if (id.isNotBlank()) {
+                if (!config.ajaxPlayerUrl.startsWith("http")) return
                 logDebug(config.id, "Fetching AJAX players for ID: $id from ${config.ajaxPlayerUrl}")
                 val res = app.post(config.ajaxPlayerUrl, data = mapOf("id" to id), headers = config.globalHeaders, referer = currentUrl).document
                 res.select("li, a, option").forEach { item ->
                     val label = item.text().trim()
                     val raw = item.selectAttr(config.attrValue) ?: item.attr("href") ?: ""
-                    if (raw.isNotBlank()) links.add(raw to label)
+                    if (raw.isNotBlank()) links.add(raw to label.ifBlank { null })
                 }
             }
         }.onFailure { e -> logDebug(config.id, "AJAX player collection failed: ${e.message}") }

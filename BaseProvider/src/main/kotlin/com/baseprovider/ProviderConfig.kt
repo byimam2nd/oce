@@ -224,10 +224,10 @@ data class ProviderConfig(
                 attrHref = jsonArrayToList(json.optJSONArray("attrHref"), listOf("href")),
                 attrValue = jsonArrayToList(json.optJSONArray("attrValue"), listOf("value", "data-index", "data-id", "data-url", "data-link", "data-litespeed-src")),
                 iframeSources = jsonArrayToList(json.optJSONArray("iframeSources"), listOf("src", "data-src", "data-link", "data-litespeed-src")),
-                hrefCleanRegex = json.optString("hrefCleanRegex", ""),
+                hrefCleanRegex = validateRegex(json.optString("hrefCleanRegex", "")),
                 hrefCleanReplace = json.optString("hrefCleanReplace", ""),
                 yearSelector = json.optString("yearSelector", ""),
-                yearExtractorRegex = json.optString("yearExtractorRegex", ""),
+                yearExtractorRegex = validateRegex(json.optString("yearExtractorRegex", "")),
                 bloatRegex = try { Regex(json.optString("bloatRegex", BLOAT_REGEX_DEFAULT.pattern)) } catch (_: Exception) { BLOAT_REGEX_DEFAULT },
             )
         }
@@ -281,6 +281,11 @@ data class ProviderConfig(
         private fun jsonArrayToSet(arr: JSONArray?): Set<String> {
             if (arr == null) return emptySet()
             return (0 until arr.length()).map { arr.optString(it, "") }.toSet()
+        }
+
+        private fun validateRegex(pattern: String): String {
+            if (pattern.isBlank()) return ""
+            return try { Regex(pattern); pattern } catch (_: Exception) { "" }
         }
     }
 }

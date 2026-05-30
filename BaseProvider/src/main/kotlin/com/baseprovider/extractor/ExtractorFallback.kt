@@ -9,6 +9,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withTimeout
 
 suspend fun loadExtractorWithFallbackCustom(
     url: String,
@@ -65,7 +66,7 @@ suspend fun loadExtractorWithFallbackCustom(
 
     if (collectedLinks.isEmpty()) {
         runCatching {
-            val response = app.get(url, referer = referer, headers = headers ?: emptyMap()).text
+            val response = withTimeout(15000L) { app.get(url, referer = referer, headers = headers ?: emptyMap(), timeout = 15000L).text }
             val urls = CompiledRegexPatterns.extractAllVideoUrls(response)
             val filtered = CompiledRegexPatterns.filterMasterM3u8(urls)
             if (filtered.isNotEmpty()) {
