@@ -1,6 +1,6 @@
 package com.baseprovider
 
-import com.baseprovider.config.ProviderConfig
+import com.baseprovider.ProviderConfig
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.Jsoup

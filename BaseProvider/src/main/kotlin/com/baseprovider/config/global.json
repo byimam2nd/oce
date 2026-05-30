@@ -1,0 +1,21 @@
+{
+  "id": "GLOBAL",
+  "name": "Base HTML Provider",
+  "mainUrl": "https://example.com",
+  "lang": "id",
+  "supportedTypes": ["Anime", "AnimeMovie", "TvSeries", "Movie", "AsianDrama"],
+  "searchPathPattern": "{baseUrl}/page/{page}/?s={query}",
+  "mainPagePathPattern": "{baseUrl}/{data}{page}",
+  "moviePathSegment": "/movie/",
+  "tvPathSegment": "/anime/",
+  "searchPageLimit": 2,
+  "reverseEpisodes": true,
+  "globalHeaders": {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"
+  },
+  "mainPageLists": [
+    ["trending/page/", "Sedang Tren"],
+    ["terbaru/page/", "Update Terbaru"]
+  ]
+}

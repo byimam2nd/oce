@@ -1,0 +1,34 @@
+{
+  "id": "Donghuastream",
+  "name": "Donghuastream",
+  "mainUrl": "https://donghuastream.org",
+  "lang": "id",
+  "supportedTypes": ["Anime"],
+  "searchPathPattern": "{baseUrl}/pagg/{page}/?s={query}",
+  "moviePathSegment": "-movie-",
+  "tvPathSegment": "/anime/",
+  "searchPageLimit": 3,
+  "globalHeaders": {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"
+  },
+  "mainPageLists": [
+    ["anime/?status=&type=&order=update&page=", "Recently Updated"],
+    ["anime/?status=completed&type=&order=update&page=", "Completed"],
+    ["anime/?status=&type=special&sub=&order=update&page=", "Special Anime"]
+  ],
+  "searchItems": "div.listupd > article",
+  "searchTitle": "div.bsx h2, .tt, a[title]",
+  "searchHref": "a",
+  "searchPoster": "div.bsx a img",
+  "loadTitle": "h1.entry-title, h1.title, .entry-title h1",
+  "loadPoster": "div.thumb > img, img.ts-post-image",
+  "loadDesc": "div.description, .entry-content, .desc",
+  "loadInfoBox": ".spe",
+  "loadRecommend": ".listupd article, .listupd .bsx, .related-post article, .relat article",
+  "episodeItems": ".eplister li",
+  "episodeHref": ".eplister li > a",
+  "episodeTitle": ".epl-title",
+  "episodeNum": ".epl-num",
+  "linkOptions": "option[data-index], option[value]"
+}

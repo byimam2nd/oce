@@ -95,6 +95,7 @@ jobs:
             git add *.cs3 2>/dev/null || true
             git add *.jar 2>/dev/null || true
             git add plugins.json 2>/dev/null || true
+
             
             if ! git diff --cached --quiet; then
               git commit -m "Build artifacts from $(date +'%Y-%m-%d %H:%M:%S')"

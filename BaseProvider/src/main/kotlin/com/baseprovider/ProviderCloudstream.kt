@@ -2,8 +2,8 @@ package com.baseprovider
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import com.baseprovider.config.providerConfig
-import com.baseprovider.config.ProviderConfig
+import com.baseprovider.ConfigRegistry
+import com.baseprovider.ProviderConfig
 
 open class ProviderCloudstream : MainAPI() {
 
@@ -15,7 +15,7 @@ open class ProviderCloudstream : MainAPI() {
         logDebug(providerId, "Initializing BaseProvider Engine V2.2.0")
     }
 
-    val config: ProviderConfig by lazy { providerConfig(providerId) }
+    val config: ProviderConfig by lazy { ConfigRegistry.get(providerId) }
 
     override var name = config.name
     override var mainUrl = config.mainUrl

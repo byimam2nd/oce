@@ -1,0 +1,39 @@
+{
+  "id": "Animasu",
+  "name": "Animasu",
+  "mainUrl": "https://animasu.ink",
+  "mirrorUrls": ["https://v1.animasu.work"],
+  "lang": "id",
+  "supportedTypes": ["Anime", "AnimeMovie", "OVA"],
+  "searchPathPattern": "{baseUrl}/?s={query}",
+  "tvPathSegment": "/anime/",
+  "searchPageLimit": 1,
+  "globalHeaders": {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"
+  },
+  "mainPageLists": [
+    ["page/", "Terbaru"],
+    ["series/?status=&type=&order=update&page=", "Series Update"],
+    ["series/?status=&type=&order=popular&page=", "Series Populer"],
+    ["anime/page/", "Anime"],
+    ["donghua/page/", "Donghua"]
+  ],
+  "searchItems": "div.listupd .bsx, div.listupd .bs, div.listupd article.bs",
+  "searchTitle": "div.tt",
+  "searchHref": "a",
+  "searchPoster": "div.limit img, img[data-src], .thumb img",
+  "searchEpText": "span.epx",
+  "loadTitle": "h1.entry-title, h1[itemprop=headline], div.infox h1",
+  "loadPoster": "div.thumb img, .ts-post-image, div.bigcontent img",
+  "loadDesc": "p.mindesc, div.sinopsis, .desc",
+  "loadInfoBox": "div.infox div.spe",
+  "loadTags": "div.genxed a",
+  "loadStatus": "span:contains(Status:)",
+  "loadRecommend": ".listupd article, .listupd .bsx, .related-post article, .relat article",
+  "episodeItems": ".eplister ul > li",
+  "episodeHref": "a",
+  "episodeTitle": "a",
+  "episodeNum": ".ep-num, .epl-num",
+  "linkOptions": "select.mirror option"
+}

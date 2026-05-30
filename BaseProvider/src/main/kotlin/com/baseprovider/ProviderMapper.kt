@@ -2,7 +2,7 @@ package com.baseprovider
 
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import com.baseprovider.config.ProviderConfig
+import com.baseprovider.ProviderConfig
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import org.json.JSONObject

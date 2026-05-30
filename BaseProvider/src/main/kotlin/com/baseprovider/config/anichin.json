@@ -1,0 +1,38 @@
+{
+  "id": "Anichin",
+  "name": "Anichin",
+  "mainUrl": "https://anichin.cafe",
+  "lang": "id",
+  "supportedTypes": ["Anime", "AnimeMovie", "TvSeries"],
+  "searchPathPattern": "{baseUrl}/page/{page}/?s={query}",
+  "moviePathSegment": "-movie-",
+  "tvPathSegment": "/anime/",
+  "searchPageLimit": 3,
+  "globalHeaders": {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"
+  },
+  "mainPageLists": [
+    ["seri/?status=&type=&order=popular&page=", "Popular Donghua"],
+    ["seri/?status=&type=&order=update&page=", "Recently Updated"],
+    ["seri/?sub=&order=latest&page=", "Latest Added"],
+    ["seri/?status=ongoing&type=&order=update&page=", "Ongoing"],
+    ["seri/?status=completed&type=&order=update&page=", "Completed"]
+  ],
+  "searchItems": "div.listupd > article",
+  "searchTitle": "div.bsx h2, .tt, a[title]",
+  "searchHref": "a",
+  "searchPoster": "div.bsx img, .ts-post-image, .wp-post-image",
+  "searchRating": ".rtng, .score, .rating",
+  "searchEpText": ".eps span, .epx, .bt span.epx",
+  "loadTitle": "h1.entry-title, h1.title, .entry-title h1",
+  "loadPoster": "div.thumb img, .ts-post-image, .wp-post-image",
+  "loadDesc": "div.description, .entry-content, .desc",
+  "loadInfoBox": ".spe",
+  "loadRecommend": ".listupd article, .listupd .bsx, .related-post article, .relat article",
+  "episodeItems": ".eplister li",
+  "episodeHref": ".eplister li > a",
+  "episodeTitle": ".epl-title",
+  "episodeNum": ".epl-num",
+  "linkOptions": "option[data-index], option[value]"
+}
