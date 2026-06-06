@@ -72,8 +72,8 @@ jobs:
           chmod +x ./gradlew
           shopt -s globstar nullglob
 
-          echo "═══ Clean rebuild (CI run: $BUILD_TIMESTAMP) ═══"
-          ./gradlew clean make makePluginsJson ensureJarCompatibility --stacktrace || true
+          echo "═══ Forced rebuild (CI run: $BUILD_TIMESTAMP) ═══"
+          ./gradlew make makePluginsJson ensureJarCompatibility --rerun-tasks --stacktrace || true
 
           # Collect build artifacts
           cs3_files=(**/build/*.cs3)
