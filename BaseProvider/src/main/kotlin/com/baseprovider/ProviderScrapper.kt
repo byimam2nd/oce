@@ -58,7 +58,7 @@ class ProviderScrapper(
             val url = config.searchPathPattern.replace("{baseUrl}", baseUrl).replace("{query}", encodedQuery).replace("{page}", "1")
             return runCatching {
                 val response = app.get(url, referer = refer, headers = config.globalHeaders).text; val root = JSONObject(response)
-                val items = if (config.searchJsonRoot.isBlank()) root.getJSONArray("results") else root.getJSONArray(config.searchJsonRoot)
+                val items = root.getJSONArray(config.searchJsonRoot.ifBlank { "data" })
                 val results = mutableListOf<SearchResponse>()
                 for (i in 0 until items.length()) { val item = items.getJSONObject(i)
                     val title = item.optString(config.searchJsonTitle).safeCleanBloat(item.optString(config.searchJsonTitle), config.bloatRegex)

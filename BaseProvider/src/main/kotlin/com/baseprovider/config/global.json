@@ -2,20 +2,103 @@
   "id": "GLOBAL",
   "name": "Base HTML Provider",
   "mainUrl": "https://example.com",
+  "seriesUrl": null,
+  "searchUrl": null,
   "lang": "id",
   "supportedTypes": ["Anime", "AnimeMovie", "TvSeries", "Movie", "AsianDrama"],
+
   "searchPathPattern": "{baseUrl}/page/{page}/?s={query}",
   "mainPagePathPattern": "{baseUrl}/{data}{page}",
   "moviePathSegment": "/movie/",
   "tvPathSegment": "/anime/",
+  "episodeDataUrlPattern": "{url}",
+
   "searchPageLimit": 2,
   "reverseEpisodes": true,
+  "isJsonSearch": false,
+  "searchJsonRoot": "data",
+  "searchJsonTitle": "title",
+  "searchJsonHref": "slug",
+  "searchJsonPoster": "poster",
+  "searchJsonPosterPrefix": "",
+  "searchJsonType": "type",
+  "useDocumentLarge": false,
+  "cacheTtlMinutes": 5,
+  "isHorizontal": false,
+  "mirrorUrls": [],
+  "refererPlayerMode": "current_url",
+  "iframeSelectors": "iframe",
+
+  "qualityStripRegex": "\\d{3,4}p|HD|SD|FHD",
+
   "globalHeaders": {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"
   },
+
   "mainPageLists": [
     ["trending/page/", "Sedang Tren"],
     ["terbaru/page/", "Update Terbaru"]
-  ]
+  ],
+
+  "allowedExtractors": [],
+
+  "dubKeyword": "dub",
+  "ongoingKeyword": "Ongoing",
+  "episodeKeyword": "Episode",
+  "seriesKeyword": "Series",
+  "comingSoonKeywords": "Coming Soon",
+
+  "searchItems": "",
+  "searchTitle": "",
+  "searchHref": "",
+  "searchPoster": "",
+  "searchRating": "",
+  "searchEpText": "",
+
+  "loadTitle": "",
+  "loadPoster": "",
+  "loadBanner": "",
+  "loadDesc": "",
+  "loadInfoBox": "",
+  "loadTags": "",
+  "loadRating": "",
+  "loadStatus": "",
+  "loadTrailer": "",
+  "loadRecommend": "",
+
+  "episodeItems": "",
+  "episodeHref": "",
+  "episodeTitle": "",
+  "episodeNum": "",
+  "episodeDesc": "",
+  "episodeTime": "",
+
+  "linkOptions": "",
+  "downloadItems": "",
+  "actorItems": "",
+  "actorName": "",
+
+  "watchButtons": ".play-button, .watch-now, .btn-watch",
+  "seasonContainer": ".tvseason, #season-data",
+  "imdbExternal": "a[href*='imdb.com/title/']",
+  "tmdbExternal": "a[href*='themoviedb.org/']",
+  "iframeTag": "iframe",
+  "followLinkSelector": "",
+
+  "ajaxPlayerUrl": "",
+  "selectorJsonData": "",
+
+  "attrImage": ["data-original", "data-src", "data-lazy-src", "data-litespeed-src", "src", "content"],
+  "attrHref": ["href"],
+  "attrValue": ["value", "data-index", "data-id", "data-url", "data-link", "data-litespeed-src"],
+  "iframeSources": ["src", "data-src", "data-link", "data-litespeed-src"],
+
+  "hrefCleanRegex": "",
+  "hrefCleanReplace": "",
+
+  "yearSelector": "",
+  "yearExtractorRegex": "",
+
+  "bloatRegex": "(?i)(\\bONA\\b|\\bOngoing\\b|\\bCompleted\\b|\\bSpecial\\b|\\bTAMAT\\b|\\bIndo\\b|\\bFull\\b|\\bSeason\\b|\\bEpisode\\s*\\d*|Subtitle\\s*Indonesia|Nonton|Anime|Movie|TV|Series|Lengkap|HD|Free|\\d{3,4}p|Dual\\s*Audio|\\s*–\\s*|\\s*\\|\\s*)"
 }

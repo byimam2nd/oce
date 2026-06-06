@@ -49,12 +49,7 @@ open class ProviderCloudstream : MainAPI() {
     open var useDocumentLarge = config.useDocumentLarge
     open var cacheTtlMinutes = config.cacheTtlMinutes
 
-    open var globalHeaders: Map<String, String> = config.globalHeaders.ifEmpty {
-        mapOf(
-            "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept-Language" to "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"
-        )
-    }
+    open var globalHeaders: Map<String, String> = config.globalHeaders
 
     override val mainPage = mainPageOf(*config.mainPageLists.toTypedArray())
 
