@@ -297,6 +297,6 @@ data class ProviderConfig(
 }
 
 private val BLOAT_REGEX_DEFAULT = Regex(
-    """(?i)(\bONA\b|\bOngoing\b|\bCompleted\b|\bSpecial\b|\bTAMAT\b|\bIndo\b|\bFull\b|\bSeason\b|\bEpisode\s*\d*|Subtitle\s*Indonesia|Nonton|Anime|Movie|TV|Series|Lengkap|HD|Free|\d{3,4}p|Dual\s*Audio|\s*–\s*|\s*\|\s*)""",
+    """(?i)(\bONA\b|\bOngoing\b|\bCompleted\b|\bSpecial\b|\bTAMAT\b|\bIndo\b|\bFull\b|\bSeason\b|\bEpisode\s*\d*|Subtitle\s*Indonesia|Donghua\s*Sub|Nonton|Anime|Movie|TV|Series|Lengkap|HD|Free|\d{3,4}p|Dual\s*Audio|\s*–\s*|\s*\|\s*)""",
     RegexOption.IGNORE_CASE
 )
