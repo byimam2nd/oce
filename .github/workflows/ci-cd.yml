@@ -47,11 +47,24 @@ jobs:
 
       - name: Pre-populate JitPack artifact in local Maven repo
         run: |
-          JITPACK="https://jitpack.io/com/github/recloudstream/gradle"
-          LOCAL_REPO="$GITHUB_WORKSPACE/jitpack-local/com/github/recloudstream/gradle/master-SNAPSHOT"
+          JITPACK="https://jitpack.io/com/github/recloudstream/gradle/gradle"
+          LOCAL_REPO="$GITHUB_WORKSPACE/jitpack-local/com/github/recloudstream/gradle/gradle/master-SNAPSHOT"
           mkdir -p "$LOCAL_REPO"
           curl -sL "$JITPACK/master-81b1d424d2-1/gradle-master-81b1d424d2-1.jar" -o "$LOCAL_REPO/gradle-master-SNAPSHOT.jar"
           curl -sL "$JITPACK/master-81b1d424d2-1/gradle-master-81b1d424d2-1.pom" -o "$LOCAL_REPO/gradle-master-SNAPSHOT.pom"
+          cat > "$LOCAL_REPO/maven-metadata-local.xml" << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <groupId>com.github.recloudstream.gradle</groupId>
+  <artifactId>gradle</artifactId>
+  <version>master-SNAPSHOT</version>
+  <versioning>
+    <snapshot>
+      <localCopy>true</localCopy>
+    </snapshot>
+  </versioning>
+</metadata>
+EOF
           echo "✅ Local JitPack repo ready (master-SNAPSHOT)"
 
       - name: Setup JDK 17
