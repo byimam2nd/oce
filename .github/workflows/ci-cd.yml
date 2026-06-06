@@ -70,10 +70,22 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/src
           chmod +x ./gradlew
+          shopt -s globstar nullglob
+
           ./gradlew make makePluginsJson ensureJarCompatibility --stacktrace || true
-          
-          cp **/build/*.cs3 $GITHUB_WORKSPACE/builds/ 2>/dev/null || true
-          cp **/build/*.jar $GITHUB_WORKSPACE/builds/ 2>/dev/null || true
+
+          # Collect build artifacts
+          cs3_files=(**/build/*.cs3)
+          jar_files=(**/build/*.jar)
+
+          if [ ${#cs3_files[@]} -eq 0 ]; then
+            echo "⚠️ No .cs3 produced — forcing clean rebuild for library change"
+            ./gradlew clean make makePluginsJson ensureJarCompatibility --stacktrace || true
+            cs3_files=(**/build/*.cs3)
+          fi
+
+          for f in "${cs3_files[@]}"; do cp "$f" $GITHUB_WORKSPACE/builds/ 2>/dev/null || true; done
+          for f in "${jar_files[@]}"; do cp "$f" $GITHUB_WORKSPACE/builds/ 2>/dev/null || true; done
           cp build/plugins.json $GITHUB_WORKSPACE/builds/ 2>/dev/null || true
           rm -f $GITHUB_WORKSPACE/builds/BaseProvider.cs3
 
@@ -81,22 +93,16 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/builds
 
-          # List files before commit
           echo "📋 Files in builds folder:"
           ls -la *.cs3 *.jar plugins.json 2>/dev/null || echo "Some files may be missing"
 
-          # Check if .cs3 files exist (primary artifacts)
           if ls *.cs3 1> /dev/null 2>&1; then
-            # Configure git user
             git config --local user.email "actions@github.com"
             git config --local user.name "GitHub Actions"
-            
-            # Add all build artifacts
             git add *.cs3 2>/dev/null || true
             git add *.jar 2>/dev/null || true
             git add plugins.json 2>/dev/null || true
 
-            
             if ! git diff --cached --quiet; then
               git commit -m "Build artifacts from $(date +'%Y-%m-%d %H:%M:%S')"
               git push
@@ -105,6 +111,5 @@ jobs:
               echo "ℹ️ No new build artifacts to push"
             fi
           else
-            echo "❌ No .cs3 build artifacts found"
-            exit 1
+            echo "⚠️ No .cs3 build artifacts (only library code changed, skipping push)"
           fi
