@@ -22,7 +22,7 @@ buildscript {
 
     dependencies {
         classpath("com.android.tools.build:gradle:8.13.2")
-        classpath("com.github.recloudstream:gradle:master-SNAPSHOT")
+        classpath("com.github.recloudstream:gradle:master-81b1d424d2-1")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.0")
         
         // Code quality plugins
