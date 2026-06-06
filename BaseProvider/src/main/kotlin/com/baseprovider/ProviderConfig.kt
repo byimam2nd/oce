@@ -42,7 +42,6 @@ data class ProviderConfig(
 
     // ── Name Cleaning ──
     val qualityStripRegex: String = """\d{3,4}p|HD|SD|FHD""",
-    val qualityStripRegexCompiled: Regex by lazy { try { Regex(qualityStripRegex, RegexOption.IGNORE_CASE) } catch (_: Exception) { Regex("""\d{3,4}p|HD|SD|FHD""", RegexOption.IGNORE_CASE) } },
 
     // ── Headers ──
     val globalHeaders: Map<String, String> = emptyMap(),
@@ -123,6 +122,8 @@ data class ProviderConfig(
     // ── Bloat Regex ──
     val bloatRegex: Regex = BLOAT_REGEX_DEFAULT,
 ) {
+    val qualityStripRegexCompiled: Regex by lazy { try { Regex(qualityStripRegex, RegexOption.IGNORE_CASE) } catch (_: Exception) { Regex("""\d{3,4}p|HD|SD|FHD""", RegexOption.IGNORE_CASE) } }
+
     init { validate() }
 
     private fun validate() {
