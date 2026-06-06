@@ -7,25 +7,16 @@ import java.util.Properties
 
 buildscript {
     repositories {
+        maven { url = uri("../jitpack-local") }
         google()
         mavenCentral()
         maven("https://jitpack.io")
         gradlePluginPortal()
     }
 
-    configurations.all {
-        resolutionStrategy {
-            // Force jadb to use stable version instead of master-SNAPSHOT
-            force("com.github.vidstige:jadb:v1.2.1")
-            // JitPack SNAPSHOT (redirect-based) incompatible with Gradle's resolved-version-filename logic.
-            // Cache forever so Gradle never re-checks remote metadata.
-            cacheChangingModulesFor(365, "days")
-        }
-    }
-
     dependencies {
         classpath("com.android.tools.build:gradle:8.13.2")
-        classpath("com.github.recloudstream:gradle:master-SNAPSHOT")
+        classpath("com.github.recloudstream:gradle:master-81b1d424d2-1")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.0")
         
         // Code quality plugins
