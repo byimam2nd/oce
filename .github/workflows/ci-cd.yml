@@ -72,17 +72,12 @@ jobs:
           chmod +x ./gradlew
           shopt -s globstar nullglob
 
-          ./gradlew make makePluginsJson ensureJarCompatibility --stacktrace || true
+          echo "═══ Clean rebuild (CI run: $BUILD_TIMESTAMP) ═══"
+          ./gradlew clean make makePluginsJson ensureJarCompatibility --stacktrace || true
 
           # Collect build artifacts
           cs3_files=(**/build/*.cs3)
           jar_files=(**/build/*.jar)
-
-          if [ ${#cs3_files[@]} -eq 0 ]; then
-            echo "⚠️ No .cs3 produced — forcing clean rebuild for library change"
-            ./gradlew clean make makePluginsJson ensureJarCompatibility --stacktrace || true
-            cs3_files=(**/build/*.cs3)
-          fi
 
           for f in "${cs3_files[@]}"; do cp "$f" $GITHUB_WORKSPACE/builds/ 2>/dev/null || true; done
           for f in "${jar_files[@]}"; do cp "$f" $GITHUB_WORKSPACE/builds/ 2>/dev/null || true; done
