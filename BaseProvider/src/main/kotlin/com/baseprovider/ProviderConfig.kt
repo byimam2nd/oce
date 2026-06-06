@@ -40,6 +40,10 @@ data class ProviderConfig(
     val refererPlayerMode: String = "current_url",
     val iframeSelectors: String = "iframe",
 
+    // ── Name Cleaning ──
+    val qualityStripRegex: String = """\d{3,4}p|HD|SD|FHD""",
+    val qualityStripRegexCompiled: Regex by lazy { try { Regex(qualityStripRegex, RegexOption.IGNORE_CASE) } catch (_: Exception) { Regex("""\d{3,4}p|HD|SD|FHD""", RegexOption.IGNORE_CASE) } },
+
     // ── Headers ──
     val globalHeaders: Map<String, String> = emptyMap(),
 
@@ -134,7 +138,8 @@ data class ProviderConfig(
         listOf(
             "bloatRegex" to bloatRegex.pattern,
             "yearExtractorRegex" to yearExtractorRegex,
-            "hrefCleanRegex" to hrefCleanRegex
+            "hrefCleanRegex" to hrefCleanRegex,
+            "qualityStripRegex" to qualityStripRegex
         ).forEach { (name, pattern) ->
             if (pattern.isNotBlank()) {
                 try { Regex(pattern) } catch (e: Exception) {
@@ -178,6 +183,7 @@ data class ProviderConfig(
                 mirrorUrls = jsonArrayToList(json.optJSONArray("mirrorUrls")),
                 refererPlayerMode = json.optString("refererPlayerMode", "current_url"),
                 iframeSelectors = json.optString("iframeSelectors", "iframe"),
+                qualityStripRegex = json.optString("qualityStripRegex", """\d{3,4}p|HD|SD|FHD"""),
                 globalHeaders = jsonObjectToMap(json.optJSONObject("globalHeaders")),
                 mainPageLists = parsePairsList(json.optJSONArray("mainPageLists")),
                 allowedExtractors = jsonArrayToSet(json.optJSONArray("allowedExtractors")),

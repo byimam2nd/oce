@@ -6,18 +6,21 @@ import com.lagradost.cloudstream3.utils.*
 
 object MasterLinkGenerator {
 
+    private val DEFAULT_QUALITY_STRIP = Regex("""\d{3,4}p|HD|SD|FHD""", RegexOption.IGNORE_CASE)
+
     suspend fun createSmartLink(
         source: String,
         url: String,
         referer: String?,
         quality: Int? = null,
         headers: Map<String, String>? = null,
+        qualityStripRegex: Regex = DEFAULT_QUALITY_STRIP,
         callback: (ExtractorLink) -> Unit
     ) {
         val isAdaptive = url.contains(".m3u8") || url.contains(".mpd")
         val safeHeaders = headers ?: emptyMap()
 
-        val cleanName = source.replace(QUALITY_STRIP_REGEX, "").trim()
+        val cleanName = source.replace(qualityStripRegex, "").trim()
         callback(newExtractorLink(
             source = source,
             name = cleanName,
@@ -30,17 +33,17 @@ object MasterLinkGenerator {
         })
     }
 
-    fun refineAndDeliver(links: List<ExtractorLink>, finalCallback: (ExtractorLink) -> Unit) {
+    fun refineAndDeliver(links: List<ExtractorLink>, finalCallback: (ExtractorLink) -> Unit, qualityStripRegex: Regex = DEFAULT_QUALITY_STRIP) {
         val seenM3u8Sources = mutableSetOf<String>()
         links.forEach { link ->
             val isM3u8 = link.type == ExtractorLinkType.M3U8 || link.type == ExtractorLinkType.DASH
             if (isM3u8) {
                 if (seenM3u8Sources.add(link.source)) {
-                    val refinedName = link.name.ifBlank { link.source.replace(QUALITY_STRIP_REGEX, "").trim() }
+                    val refinedName = link.name.ifBlank { link.source.replace(qualityStripRegex, "").trim() }
                     finalCallback(ExtractorLink(source = link.source, name = refinedName, url = link.url, referer = link.referer, quality = 0, type = link.type, headers = link.headers, extractorData = link.extractorData))
                 }
             } else {
-                val cleanSource = link.name.ifBlank { link.source.replace(QUALITY_STRIP_REGEX, "").trim() }
+                val cleanSource = link.name.ifBlank { link.source.replace(qualityStripRegex, "").trim() }
                 finalCallback(ExtractorLink(source = link.source, name = cleanSource, url = link.url, referer = link.referer, quality = link.quality, type = link.type, headers = link.headers, extractorData = link.extractorData))
             }
         }

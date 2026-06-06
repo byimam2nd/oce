@@ -18,7 +18,8 @@ suspend fun loadExtractorWithFallbackCustom(
     headers: Map<String, String>? = null,
     callback: (ExtractorLink) -> Unit,
     providerTag: String = "ExtractorEngine",
-    callChain: String = "-"
+    callChain: String = "-",
+    qualityStripRegex: Regex = Regex("""\d{3,4}p|HD|SD|FHD""", RegexOption.IGNORE_CASE)
 ): Boolean {
     val collectedLinks = java.util.Collections.synchronizedList(mutableListOf<ExtractorLink>())
     val seenUrls = java.util.Collections.synchronizedSet(mutableSetOf<String>())
@@ -61,7 +62,7 @@ suspend fun loadExtractorWithFallbackCustom(
     }
 
     if (collectedLinks.isEmpty() && url.isDirectMediaUrl()) {
-        MasterLinkGenerator.createSmartLink("Direct", url, referer, headers = headers, callback = internalCallback)
+        MasterLinkGenerator.createSmartLink("Direct", url, referer, headers = headers, qualityStripRegex = qualityStripRegex, callback = internalCallback)
     }
 
     if (collectedLinks.isEmpty()) {
@@ -71,7 +72,7 @@ suspend fun loadExtractorWithFallbackCustom(
             val filtered = CompiledRegexPatterns.filterMasterM3u8(urls)
             if (filtered.isNotEmpty()) {
                 filtered.forEach { videoUrl ->
-                    MasterLinkGenerator.createSmartLink("DeepScan", videoUrl, url, headers = headers, callback = internalCallback)
+                    MasterLinkGenerator.createSmartLink("DeepScan", videoUrl, url, headers = headers, qualityStripRegex = qualityStripRegex, callback = internalCallback)
                 }
             } else {
                 logFail(providerId, "DeepScan found no video URLs in HTML source of $url", url = url, method = "extractLinks", type = FailureType.EMPTY_RESPONSE, selectors = callChain)
@@ -91,6 +92,6 @@ suspend fun loadExtractorWithFallbackCustom(
         logSuccess(providerId, "${collectedLinks.size} links", url = url, method = "extractLinks", selectors = chainInfo)
     }
 
-    MasterLinkGenerator.refineAndDeliver(collectedLinks, callback)
+    MasterLinkGenerator.refineAndDeliver(collectedLinks, callback, qualityStripRegex)
     return collectedLinks.isNotEmpty()
 }

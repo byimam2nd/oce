@@ -16,7 +16,7 @@ class FallbackPipeline(private val config: ProviderConfig) {
 
             logDebug(config.id, "Processing link: $fixedUrl (label: $label)")
 
-            val okDirect = runCatching { loadExtractorWithFallbackCustom(fixedUrl, currentUrl, subtitleCallback, headers = config.globalHeaders, callback = wrappedCallback, providerTag = config.id) }.getOrDefault(false)
+            val okDirect = runCatching { loadExtractorWithFallbackCustom(fixedUrl, currentUrl, subtitleCallback, headers = config.globalHeaders, callback = wrappedCallback, providerTag = config.id, qualityStripRegex = config.qualityStripRegexCompiled) }.getOrDefault(false)
             if (!okDirect) {
                 if (ProviderExtractors.hasMatchingExtractor(fixedUrl)) {
                     logDebug(config.id, "Skipping manual iframe fetch: extractor already tried for $fixedUrl")
@@ -67,7 +67,7 @@ class FallbackPipeline(private val config: ProviderConfig) {
 
         val okRecursive = runCatching { loadExtractorWithFallbackCustom(finalIframe, refererForExtractor, subtitleCallback, headers = config.globalHeaders, callback = wrappedCallback, providerTag = config.id) }.getOrDefault(false)
         if (!okRecursive && finalIframe.isDirectMediaUrl()) {
-            MasterLinkGenerator.createSmartLink(label ?: config.name, finalIframe, refererForExtractor, headers = config.globalHeaders, callback = wrappedCallback)
+            MasterLinkGenerator.createSmartLink(label ?: config.name, finalIframe, refererForExtractor, headers = config.globalHeaders, qualityStripRegex = config.qualityStripRegexCompiled, callback = wrappedCallback)
         }
     }
 

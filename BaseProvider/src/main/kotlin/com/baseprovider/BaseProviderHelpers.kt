@@ -287,6 +287,3 @@ private val DIRECT_MEDIA_EXTENSIONS = listOf(".mp4", ".m3u8", ".mkv", ".mpd")
 fun String.isDirectMediaUrl(): Boolean =
     DIRECT_MEDIA_EXTENSIONS.any { contains(it, ignoreCase = true) }
 
-// ── Quality Regex ──
-
-val QUALITY_STRIP_REGEX = Regex("""\d{3,4}p|HD|SD|FHD""", RegexOption.IGNORE_CASE)
