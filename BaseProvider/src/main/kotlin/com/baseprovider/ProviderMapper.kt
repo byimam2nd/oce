@@ -16,7 +16,7 @@ class ProviderMapper(
         return runCatching {
             val base = baseUrl ?: config.mainUrl
             val titleEl = if (config.searchTitle.isNotBlank()) element.selectFirst(config.searchTitle) ?: element.parent()?.selectFirst(config.searchTitle) else element.selectFirst("h2, h3")
-            val rawTitle = titleEl?.text()?.trim() ?: titleEl?.selectAttr(config.attrImage) ?: titleEl?.attr("title") ?: return null
+            val rawTitle = titleEl?.attr("title")?.takeIf { it.isNotBlank() } ?: titleEl?.text()?.trim()?.takeIf { it.isNotBlank() } ?: titleEl?.selectAttr(config.attrImage) ?: return null
             val title = rawTitle.safeCleanBloat(rawTitle, config.bloatRegex).safeDeduplicate()
             val hrefEl = if (config.searchHref.isNotBlank()) element.selectFirst(config.searchHref) ?: element.selectFirst("a") ?: element.parent()?.selectFirst("a") else element.selectFirst("a") ?: element.parent()?.selectFirst("a")
             var href = fixUrlSmart(hrefEl?.attr("href"), base)
