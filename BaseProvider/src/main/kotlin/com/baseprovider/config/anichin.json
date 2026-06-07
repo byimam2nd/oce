@@ -20,7 +20,8 @@
     ["seri/?status=completed&type=&order=update&page=", "Completed"]
   ],
   "searchItems": "div.listupd > article",
-  "searchTitle": "div.bsx h2, .tt, a[title]",
+  "bloatRegex": "(?i)(\\bONA\\b|\\bOngoing\\b|\\bCompleted\\b|\\bSpecial\\b|\\bTAMAT\\b|\\bIndo\\b|\\bFull\\b|\\bSeason\\b|\\bEpisode\\s*\\d*|Subtitle\\s*Indonesia|\\bDonghua\\b|\\bSub\\b|Nonton|Anime|Movie|TV|Series|Lengkap|HD|Free|\\d{3,4}p|Dual\\s*Audio|\\s*–\\s*|\\s*\\|\\s*)",
+  "searchTitle": "h2",
   "searchHref": "a",
   "searchPoster": "div.bsx img, .ts-post-image, .wp-post-image",
   "searchRating": ".rtng, .score, .rating",
