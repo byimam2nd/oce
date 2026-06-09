@@ -1,10 +1,10 @@
-package com.baseprovider
+package com.baseprovider.extractor
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.*
 import com.lagradost.cloudstream3.utils.*
 
 
-class wishfast : ExtractorApi() {
+class Wishfast : ExtractorApi() {
     override var name = "wishfast";
     override var mainUrl = "https://wishfast.to";
     override val requiresReferer = true

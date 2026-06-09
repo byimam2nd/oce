@@ -1,4 +1,5 @@
-package com.baseprovider
+package com.baseprovider.extractor
+import com.baseprovider.fixUrlSmart
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.*
 import com.lagradost.cloudstream3.utils.*

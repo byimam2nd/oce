@@ -1,4 +1,5 @@
-package com.baseprovider
+package com.baseprovider.extractor
+import com.baseprovider.*
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.*
 import com.lagradost.cloudstream3.utils.*
@@ -8,7 +9,7 @@ object ProviderExtractors {
         Dailymotion(), Odnoklassniki(), Rumble(), StreamRuby(), Svanila(), Svilla(),
         ByseSX(), Hownetwork(), Cloudhownetwork(),
         PlayStreamplay(), AnichinStream(), AbyssPlayer(), Filedon(), BloggerVideo(),
-        Ultrahd(), Vtbe(), wishfast(),
+        Ultrahd(), Vtbe(), Wishfast(),
         Minochinos(), Vidhide(), ShortIcu(), PlayPutarIn(), StreamHG(),
         MegaPlay(), AWSStream(), LuluStream(), Dhcplay(), Voe(), Xtwap(), Gdplayer(), Vidguardto2(), Movearnpre(),
         Lk21PlayerPage()
