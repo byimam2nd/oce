@@ -25,10 +25,32 @@ jobs:
       - name: Pre-populate JitPack artifact in local Maven repo
         run: |
           JITPACK="https://jitpack.io/com/github/recloudstream/gradle"
-          LOCAL_REPO="$GITHUB_WORKSPACE/../jitpack-local/com/github/recloudstream/gradle/master-SNAPSHOT"
+          BASE="$GITHUB_WORKSPACE/../jitpack-local/com/github/recloudstream"
+
+          # Primary path: groupId/com.github.recloudstream + artifactId/gradle + version
+          LOCAL_REPO="$BASE/gradle/master-SNAPSHOT"
           mkdir -p "$LOCAL_REPO"
           curl -sL "$JITPACK/master-81b1d424d2-1/gradle-master-81b1d424d2-1.jar" -o "$LOCAL_REPO/gradle-master-SNAPSHOT.jar"
           curl -sL "$JITPACK/master-81b1d424d2-1/gradle-master-81b1d424d2-1.pom" -o "$LOCAL_REPO/gradle-master-SNAPSHOT.pom"
+          printf '%s\n' \
+            '<?xml version="1.0" encoding="UTF-8"?>' \
+            '<metadata>' \
+            '  <groupId>com.github.recloudstream</groupId>' \
+            '  <artifactId>gradle</artifactId>' \
+            '  <version>master-SNAPSHOT</version>' \
+            '  <versioning>' \
+            '    <snapshot>' \
+            '      <localCopy>true</localCopy>' \
+            '    </snapshot>' \
+            '  </versioning>' \
+            '</metadata>' > "$LOCAL_REPO/maven-metadata-local.xml"
+
+          # Duplicate path with artifact subdirectory for POM self-dependency
+          # (com.github.recloudstream.gradle:gradle:master-SNAPSHOT)
+          LOCAL_REPO_ART="$BASE/gradle/gradle/master-SNAPSHOT"
+          mkdir -p "$LOCAL_REPO_ART"
+          cp "$BASE/gradle/master-SNAPSHOT/gradle-master-SNAPSHOT.jar" "$LOCAL_REPO_ART/gradle-master-SNAPSHOT.jar"
+          cp "$BASE/gradle/master-SNAPSHOT/gradle-master-SNAPSHOT.pom" "$LOCAL_REPO_ART/gradle-master-SNAPSHOT.pom"
           printf '%s\n' \
             '<?xml version="1.0" encoding="UTF-8"?>' \
             '<metadata>' \
@@ -40,7 +62,7 @@ jobs:
             '      <localCopy>true</localCopy>' \
             '    </snapshot>' \
             '  </versioning>' \
-            '</metadata>' > "$LOCAL_REPO/maven-metadata-local.xml"
+            '</metadata>' > "$LOCAL_REPO_ART/maven-metadata-local.xml"
 
           echo "✅ Local JitPack repo ready (master-SNAPSHOT)"
 
