@@ -2,7 +2,7 @@ package com.IndoDrama21
 
 import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
 import com.lagradost.cloudstream3.plugins.BasePlugin
-import com.baseprovider.ProviderExtractors
+import com.baseprovider.extractor.ProviderExtractors
 
 @CloudstreamPlugin
 class IndoDrama21Plugin: BasePlugin() {

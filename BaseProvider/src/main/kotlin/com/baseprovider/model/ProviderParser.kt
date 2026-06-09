@@ -1,4 +1,4 @@
-package com.baseprovider
+package com.baseprovider.model
 
 import org.jsoup.nodes.Element
 import java.net.URI

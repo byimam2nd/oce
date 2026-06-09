@@ -1,5 +1,5 @@
 package com.Pencurimovie
 
-import com.baseprovider.ProviderCloudstream
+import com.baseprovider.core.ProviderCloudstream
 
 class Pencurimovie : ProviderCloudstream()

@@ -1,4 +1,4 @@
-package com.baseprovider
+package com.baseprovider.config
 
 import com.lagradost.api.Log
 import org.json.JSONObject
@@ -49,7 +49,7 @@ object ConfigRegistry {
             val json = JSONObject(jsonStr)
             val id = json.optString("id", fileName)
             Log.d(TAG, "Fetched remote config: $fileName.json")
-            ProviderConfig.fromJson(id, json)
+            fromJson(id, json)
         } catch (e: Exception) {
             Log.w(TAG, "Remote fetch failed for $fileName.json: ${e.message}")
             null
@@ -64,7 +64,7 @@ object ConfigRegistry {
             val json = JSONObject(jsonStr)
             val id = json.optString("id", fileName)
             Log.d(TAG, "Loaded bundled config: $fileName.json")
-            ProviderConfig.fromJson(id, json)
+            fromJson(id, json)
         } catch (e: Exception) {
             Log.w(TAG, "Bundled load failed for $fileName.json: ${e.message}")
             null

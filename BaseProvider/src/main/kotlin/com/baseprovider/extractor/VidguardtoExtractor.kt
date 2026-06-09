@@ -14,8 +14,6 @@ import org.mozilla.javascript.Scriptable
 import org.mozilla.javascript.ScriptableObject
 import java.util.Base64
 
-class Vidguardto2 : Vidguardto() { override var mainUrl = "https://listeamed.net" }
-
 open class Vidguardto : ExtractorApi() {
     override var name = "Vidguard"
     override var mainUrl = "https://vidguard.to"

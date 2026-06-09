@@ -33,4 +33,8 @@ dependencies {
     implementation("org.mozilla:rhino:1.9.0")
     implementation("com.google.code.gson:gson:2.13.2")
     implementation("me.xdrop:fuzzywuzzy:1.4.0")
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("io.mockk:mockk:1.13.12")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+    testImplementation("org.json:json:20231013")
 }

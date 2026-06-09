@@ -14,7 +14,12 @@ class BloggerVideo : ExtractorApi() {
         doc.select("video source[src], video[src], iframe[src]").forEach { el ->
             val src = el.attr("src")
             if (src.isNotBlank() && (src.contains(".mp4") || src.contains(".m3u8") || src.contains("youtube"))) {
-                loadExtractorWithFallbackCustom(src, url, subtitleCallback, callback = callback, providerTag = name, callChain = "BloggerVideo")
+                loadExtractorWithFallbackCustom(
+                    src, url, subtitleCallback,
+                    callback = callback,
+                    providerTag = name,
+                    callChain = "BloggerVideo"
+                )
             }
         }
     }

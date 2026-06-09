@@ -1,5 +1,5 @@
 package com.Anichin
 
-import com.baseprovider.ProviderCloudstream
+import com.baseprovider.core.ProviderCloudstream
 
 class Anichin : ProviderCloudstream()

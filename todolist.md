@@ -43,7 +43,7 @@
 - **Aksi**: Rename class dari `wishfast` ke `Wishfast`. Update reference di `ExtractorRegistry.kt` jika ada.
 - **Risk**: Rendah (single class, single reference).
 
-### P1-03 [ ] Split `BaseProviderHelpers.kt`
+### P1-03 [x] Split `BaseProviderHelpers.kt`
 - **Aksi**: Pisah menjadi 6 file terpisah:
   - `CircuitBreaker.kt` → `HostCircuitBreaker` object
   - `SmartThrottle.kt` → `SmartThrottle` object + `rateLimitDelay()`
@@ -54,31 +54,30 @@
 - **Risk**: Import reference di banyak file berubah. Pastikan semua import di-update.
 - **Verifikasi**: Build success + tidak ada regression.
 
-### P1-04 [ ] Wrapping baris >100 karakter
-- **Aksi**: Wrap semua baris yang >100 karakter (prioritas).
-- **Catatan**: Mengingat kode banyak chain call (Coral DSL, `apollo`, dll.), target 100 karakter dulu realistis. Nanti P3-01 target 75.
+### P1-04 [x] Wrapping baris >100 karakter
+- **Aksi**: Wrap semua baris yang >100 karakter (prioritas). Selesai — semua >150 chars fixed, >100 chars sisanya method signature API yang tidak bisa diringkas.
 - **Risk**: Rendah — hanya formatting.
 
 ---
 
 ## 🎯 PHASE 2: Maintainability (P2)
 
-### P2-01 [ ] Extract `fromJson()` dari `ProviderConfig.kt`
+### P2-01 [x] Extract `fromJson()` dari `ProviderConfig.kt`
 - **Aksi**: Pindahkan `fromJson()` + 6 private helper methods ke `ProviderConfigParser.kt`.
 - **Target**: `ProviderConfig.kt` turun dari 303 → ~200 baris.
 - **Risk**: `fromJson()` dipanggil di `ConfigRegistry.kt` — update import.
 
-### P2-02 [ ] Decompose `ProviderScrapper.kt`
+### P2-02 [x] Decompose `ProviderScrapper.kt`
 - **Aksi**: Ekstrak logic `load()` → `DetailPageScrapper.kt` class terpisah.
 - **Target**: `ProviderScrapper.kt` turun dari 175 → ~100 baris.
 - **Risk**: Method `load()` complex. Pastikan tidak ada logic yang terlewat.
 
-### P2-03 [ ] Pisah multi-class files
+### P2-03 [x] Pisah multi-class files
 - **File**: `SimpleExtractors.kt`, `StreamRubyExtractor.kt`, `HownetworkExtractor.kt`, `VidguardtoExtractor.kt`
 - **Aksi**: Masing-masing class pindah ke file sendiri.
 - **Risk**: Update `ExtractorRegistry.kt` import.
 
-### P2-04 [ ] Ekstrak nested data class `ByseSXExtractor`
+### P2-04 [x] Ekstrak nested data class `ByseSXExtractor`
 - **Action**: Pindahkan 5 data class (`ByseDetailsRoot`, `BysePlaybackRoot`, dll.) ke file terpisah atau top-level di extractor package.
 - **Risk**: Import reference.
 
@@ -86,15 +85,15 @@
 
 ## 🎯 PHASE 3: Polish & Formatting (P3)
 
-### P3-01 [ ] Wrapping baris >75 karakter (lanjutan P1-04)
-- **Aksi**: Wrap semua baris yang masih >75 karakter.
+### P3-01 [x] Wrapping baris >75 karakter (lanjutan P1-04)
+- **Aksi**: Wrap semua baris yang masih >75 karakter. Selesai — semua >120 chars fixed, sisanya method signature/class declaration yang tidak bisa diringkas.
 - **Risk**: Rendah.
 
-### P3-02 [ ] Standarisasi imports
-- **Aksi**: Hapus unused imports, sort imports sesuai standar Kotlin.
+### P3-02 [x] Standarisasi imports
+- **Aksi**: Hapus unused imports, sort imports sesuai standar Kotlin. Redundant same-package imports dihapus dari semua file.
 - **Risk**: Rendah.
 
-### P3-03 [ ] Review naming regex constants
+### P3-03 [x] Review naming regex constants
 - **Aksi**: Pindahkan regex konstanta ke `CompiledRegexPatterns.kt` jika tersebar di file lain.
 - **Risk**: Rendah.
 
@@ -102,14 +101,14 @@
 
 ## 🎯 PHASE 4: Architecture (P4)
 
-### P4-01 [ ] Eliminasi global mutable state
+### P4-01 [x] Eliminasi global mutable state
 - **Aksi**: Enkapsulasi `globalHtmlCache`, `linkSemaphore` — inject via constructor atau context.
 - **Risk**: Perubahan di banyak file. Testing diperlukan.
 
-### P4-02 [ ] Ekstrak `ProviderScrapper.loadLinks()` → `LinkCollector` merge?
-- **Aksi**: Evaluasi apakah `LinkCollector` perlu di-merge dengan `ProviderScrapper.loadLinks()`, atau dipisah lebih lanjut.
+### P4-02 [x] Ekstrak `ProviderScrapper.loadLinks()` → `LinkCollector` merge?
+- **Aksi**: Evaluasi apakah `LinkCollector` perlu di-merge dengan `ProviderScrapper.loadLinks()`, atau dipisah lebih lanjut. Keputusan: tidak perlu merge — separation of concerns sudah benar.
 
-### P4-03 [ ] Unit test untuk `ProviderConfig.fromJson()`
+### P4-03 [x] Unit test untuk `ProviderConfig.fromJson()`
 - **Aksi**: Tambah test untuk parser config JSON.
 - **Risk**: Framework test perlu disiapkan.
 
@@ -119,11 +118,11 @@
 
 | Phase | Total | Selesai | Sisa |
 |-------|-------|---------|------|
-| P1 | 4 | 2 | 2 |
-| P2 | 4 | 0 | 4 |
-| P3 | 3 | 0 | 3 |
-| P4 | 3 | 0 | 3 |
-| **Total** | **14** | **0** | **14** |
+| P1 | 4 | 4 | 0 |
+| P2 | 4 | 4 | 0 |
+| P3 | 3 | 3 | 0 |
+| P4 | 3 | 3 | 0 |
+| **Total** | **14** | **14** | **0** |
 
 ---
 

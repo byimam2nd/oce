@@ -1,5 +1,5 @@
 package com.baseprovider.extractor
-import com.baseprovider.*
+import com.baseprovider.network.*
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.*
 import com.lagradost.cloudstream3.utils.*

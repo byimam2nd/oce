@@ -25,7 +25,9 @@ object MasterLinkGenerator {
             source = source,
             name = cleanName,
             url = url,
-            type = if (url.contains(".mpd")) ExtractorLinkType.DASH else if (isAdaptive) ExtractorLinkType.M3U8 else ExtractorLinkType.VIDEO
+            type = if (url.contains(".mpd")) ExtractorLinkType.DASH
+                else if (isAdaptive) ExtractorLinkType.M3U8
+                else ExtractorLinkType.VIDEO
         ) {
             this.quality = if (isAdaptive) 0 else (quality ?: detectQualityFromUrl(url))
             this.referer = referer ?: ""
@@ -33,18 +35,48 @@ object MasterLinkGenerator {
         })
     }
 
-    fun refineAndDeliver(links: List<ExtractorLink>, finalCallback: (ExtractorLink) -> Unit, qualityStripRegex: Regex = DEFAULT_QUALITY_STRIP) {
+    fun refineAndDeliver(
+        links: List<ExtractorLink>,
+        finalCallback: (ExtractorLink) -> Unit,
+        qualityStripRegex: Regex = DEFAULT_QUALITY_STRIP
+    ) {
         val seenM3u8Sources = mutableSetOf<String>()
         links.forEach { link ->
             val isM3u8 = link.type == ExtractorLinkType.M3U8 || link.type == ExtractorLinkType.DASH
             if (isM3u8) {
                 if (seenM3u8Sources.add(link.source)) {
-                    val refinedName = link.name.ifBlank { link.source.replace(qualityStripRegex, "").trim() }
-                    finalCallback(ExtractorLink(source = link.source, name = refinedName, url = link.url, referer = link.referer, quality = 0, type = link.type, headers = link.headers, extractorData = link.extractorData))
+                    val refinedName = link.name.ifBlank {
+                        link.source.replace(qualityStripRegex, "").trim()
+                    }
+                    finalCallback(
+                        ExtractorLink(
+                            source = link.source,
+                            name = refinedName,
+                            url = link.url,
+                            referer = link.referer,
+                            quality = 0,
+                            type = link.type,
+                            headers = link.headers,
+                            extractorData = link.extractorData
+                        )
+                    )
                 }
             } else {
-                val cleanSource = link.name.ifBlank { link.source.replace(qualityStripRegex, "").trim() }
-                finalCallback(ExtractorLink(source = link.source, name = cleanSource, url = link.url, referer = link.referer, quality = link.quality, type = link.type, headers = link.headers, extractorData = link.extractorData))
+                val cleanSource = link.name.ifBlank {
+                    link.source.replace(qualityStripRegex, "").trim()
+                }
+                finalCallback(
+                    ExtractorLink(
+                        source = link.source,
+                        name = cleanSource,
+                        url = link.url,
+                        referer = link.referer,
+                        quality = link.quality,
+                        type = link.type,
+                        headers = link.headers,
+                        extractorData = link.extractorData
+                    )
+                )
             }
         }
     }

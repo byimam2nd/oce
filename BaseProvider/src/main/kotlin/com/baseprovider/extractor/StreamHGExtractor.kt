@@ -27,7 +27,9 @@ class StreamHG : ExtractorApi() {
         if (packed != null) {
             val unpacked = decodePackedJs(packed.first, packed.second, packed.third)
             CompiledRegexPatterns.extractAllVideoUrls(unpacked).let { urls ->
-                CompiledRegexPatterns.filterMasterM3u8(urls).forEach { MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback) }
+                CompiledRegexPatterns.filterMasterM3u8(urls).forEach {
+                    MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback)
+                }
             }
         } else {
             try {

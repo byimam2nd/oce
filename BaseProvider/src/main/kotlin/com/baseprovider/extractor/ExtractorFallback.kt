@@ -1,5 +1,6 @@
 package com.baseprovider.extractor
-import com.baseprovider.*
+import com.baseprovider.log.*
+import com.baseprovider.network.*
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.*
 import com.lagradost.cloudstream3.utils.*
@@ -47,7 +48,13 @@ suspend fun loadExtractorWithFallbackCustom(
                     runCatching {
                         extractor.getUrl(url, referer, subtitleCallback, internalCallback)
                     }.onFailure { e ->
-                        logFail(providerId, "Local Extractor (${extractor.name}) failed for $url: ${e.message}", url = url, method = "extractLinks", type = FailureType.EXTRACTOR_FAILURE, selectors = extractor.name)
+                        logFail(
+                            providerId,
+                            "Local Extractor (${extractor.name}) failed for $url: ${e.message}",
+                            url = url, method = "extractLinks",
+                            type = FailureType.EXTRACTOR_FAILURE,
+                            selectors = extractor.name
+                        )
                     }
                 } }
             }
@@ -58,12 +65,22 @@ suspend fun loadExtractorWithFallbackCustom(
         runCatching {
             loadExtractor(url, referer, subtitleCallback, internalCallback)
         }.onFailure { e ->
-            logFail(providerId, "Global Extractor failed for $url: ${e.message}", url = url, method = "extractLinks", type = FailureType.EXTRACTOR_FAILURE, selectors = callChain)
+            logFail(
+                providerId, "Global Extractor failed for $url: ${e.message}",
+                url = url, method = "extractLinks",
+                type = FailureType.EXTRACTOR_FAILURE,
+                selectors = callChain
+            )
         }
     }
 
     if (collectedLinks.isEmpty() && url.isDirectMediaUrl()) {
-        MasterLinkGenerator.createSmartLink("Direct", url, referer, headers = headers, qualityStripRegex = qualityStripRegex, callback = internalCallback)
+        MasterLinkGenerator.createSmartLink(
+            "Direct", url, referer,
+            headers = headers,
+            qualityStripRegex = qualityStripRegex,
+            callback = internalCallback
+        )
     }
 
     if (collectedLinks.isEmpty()) {
@@ -73,13 +90,28 @@ suspend fun loadExtractorWithFallbackCustom(
             val filtered = CompiledRegexPatterns.filterMasterM3u8(urls)
             if (filtered.isNotEmpty()) {
                 filtered.forEach { videoUrl ->
-                    MasterLinkGenerator.createSmartLink("DeepScan", videoUrl, url, headers = headers, qualityStripRegex = qualityStripRegex, callback = internalCallback)
+                    MasterLinkGenerator.createSmartLink(
+                        "DeepScan", videoUrl, url,
+                        headers = headers,
+                        qualityStripRegex = qualityStripRegex,
+                        callback = internalCallback
+                    )
                 }
             } else {
-                logFail(providerId, "DeepScan found no video URLs in HTML source of $url", url = url, method = "extractLinks", type = FailureType.EMPTY_RESPONSE, selectors = callChain)
+                logFail(
+                    providerId, "DeepScan found no video URLs in HTML source of $url",
+                    url = url, method = "extractLinks",
+                    type = FailureType.EMPTY_RESPONSE,
+                    selectors = callChain
+                )
             }
         }.onFailure { e ->
-            logFail(providerId, "DeepScan network failure for $url: ${e.message}", url = url, method = "extractLinks", type = FailureType.NETWORK_FAILURE, selectors = callChain)
+            logFail(
+                providerId, "DeepScan network failure for $url: ${e.message}",
+                url = url, method = "extractLinks",
+                type = FailureType.NETWORK_FAILURE,
+                selectors = callChain
+            )
         }
     }
 
@@ -88,7 +120,11 @@ suspend fun loadExtractorWithFallbackCustom(
     if (collectedLinks.isEmpty() && urlDomain.isNotBlank() && url.startsWith("http")) {
         val ft = if (urlDomain.contains("short.") || urlDomain.contains("shorte")) FailureType.SHORTLINK_FAILURE
             else FailureType.EXTRACTOR_FAILURE
-        logFail(providerId, "All extraction methods failed to find playable links for host: $urlDomain", url = url, method = "extractLinks", type = ft, selectors = chainInfo)
+        logFail(
+            providerId, "All extraction methods failed to find playable links for host: $urlDomain",
+            url = url, method = "extractLinks",
+            type = ft, selectors = chainInfo
+        )
     } else if (collectedLinks.isNotEmpty()) {
         logSuccess(providerId, "${collectedLinks.size} links", url = url, method = "extractLinks", selectors = chainInfo)
     }

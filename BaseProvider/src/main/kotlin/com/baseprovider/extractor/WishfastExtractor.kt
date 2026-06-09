@@ -27,6 +27,8 @@ class Wishfast : ExtractorApi() {
         }
 
         val urls = CompiledRegexPatterns.extractAllVideoUrls(text)
-        CompiledRegexPatterns.filterMasterM3u8(urls).forEach { MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback) }
+        CompiledRegexPatterns.filterMasterM3u8(urls).forEach {
+            MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback)
+        }
     }
 }

@@ -1,6 +1,8 @@
-package com.baseprovider
+package com.baseprovider.collector
 
-import com.baseprovider.ProviderConfig
+import com.baseprovider.config.ProviderConfig
+import com.baseprovider.log.*
+import com.baseprovider.network.*
 import com.lagradost.cloudstream3.*
 import org.json.JSONObject
 import org.jsoup.nodes.Document
@@ -38,7 +40,12 @@ class LinkCollector(private val config: ProviderConfig) {
                 val link = a.attr("data-url").ifBlank { a.attr("href") }
                 links.add(link to a.text())
             }
-            else { val raw = container.selectAttr(config.attrValue) ?: container.attr("href") ?: ""; if (raw.isNotBlank()) links.add(raw to container.text()) }
+            else {
+                val raw = container.selectAttr(config.attrValue)
+                    ?: container.attr("href")
+                    ?: ""
+                if (raw.isNotBlank()) links.add(raw to container.text())
+            }
         }
     }
 

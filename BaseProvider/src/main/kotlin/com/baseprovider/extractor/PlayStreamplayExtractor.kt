@@ -1,5 +1,5 @@
 package com.baseprovider.extractor
-import com.baseprovider.fixUrlSmart
+import com.baseprovider.model.fixUrlSmart
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.*
 import com.lagradost.cloudstream3.utils.*
@@ -17,7 +17,12 @@ class PlayStreamplay : ExtractorApi() {
         doc.select("iframe[src]").forEach { iframe ->
             val src = iframe.attr("src")
             if (src.isNotBlank() && !src.contains("ads") && !src.contains("ads?")) {
-                loadExtractorWithFallbackCustom(fixUrlSmart(src, url), url, subtitleCallback, callback = callback, providerTag = name, callChain = "PlayStreamplay")
+                loadExtractorWithFallbackCustom(
+                    fixUrlSmart(src, url), url, subtitleCallback,
+                    callback = callback,
+                    providerTag = name,
+                    callChain = "PlayStreamplay"
+                )
             }
         }
         var urls = CompiledRegexPatterns.extractAllVideoUrls(html)
@@ -26,7 +31,9 @@ class PlayStreamplay : ExtractorApi() {
             urls = CompiledRegexPatterns.extractAllVideoUrls(decoded)
         }
         if (urls.isNotEmpty()) {
-            CompiledRegexPatterns.filterMasterM3u8(urls).forEach { MasterLinkGenerator.createSmartLink(this.name, it, mainUrl, callback = callback) }
+            CompiledRegexPatterns.filterMasterM3u8(urls).forEach {
+                MasterLinkGenerator.createSmartLink(this.name, it, mainUrl, callback = callback)
+            }
         }
     }
 }

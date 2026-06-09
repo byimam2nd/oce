@@ -1,5 +1,5 @@
 package com.Donghuastream
 
-import com.baseprovider.ProviderCloudstream
+import com.baseprovider.core.ProviderCloudstream
 
 class Donghuastream : ProviderCloudstream()

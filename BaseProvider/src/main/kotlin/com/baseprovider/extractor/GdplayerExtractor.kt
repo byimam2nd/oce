@@ -14,7 +14,10 @@ open class Gdplayer : ExtractorApi() {
         val doc = app.get(url, referer = referer).document
         val script = doc.selectFirst("script:containsData(player = \"\")")?.data() ?: return
         val kaken = script.substringAfter("kaken = \"").substringBefore("\"")
-        val json = JSONObject(app.get("$mainUrl/api/?${kaken}=&_=${System.currentTimeMillis()}", headers = mapOf("X-Requested-With" to "XMLHttpRequest")).text)
+        val apiUrl = "$mainUrl/api/?${kaken}=&_=${System.currentTimeMillis()}"
+        val json = JSONObject(
+            app.get(apiUrl, headers = mapOf("X-Requested-With" to "XMLHttpRequest")).text
+        )
         val sources = json.optJSONArray("sources") ?: return
         for (i in 0 until sources.length()) {
             val file = sources.optJSONObject(i)?.optString("file") ?: ""

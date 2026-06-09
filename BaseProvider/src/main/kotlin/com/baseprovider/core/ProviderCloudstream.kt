@@ -1,9 +1,9 @@
-package com.baseprovider
+package com.baseprovider.core
 
+import com.baseprovider.config.*
+import com.baseprovider.log.*
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import com.baseprovider.ConfigRegistry
-import com.baseprovider.ProviderConfig
 
 open class ProviderCloudstream : MainAPI() {
 
@@ -53,33 +53,25 @@ open class ProviderCloudstream : MainAPI() {
 
     override val mainPage = mainPageOf(*config.mainPageLists.toTypedArray())
 
-    private val mapper by lazy {
-        ProviderMapper(
-            api = this,
-            config = config,
-        )
-    }
-
-    private val scrapper by lazy {
-        ProviderScrapper(
-            api = this,
-            config = config,
-            mapper = mapper
-        )
-    }
+    private val engine by lazy { BaseProviderEngine(api = this, config = config) }
 
     override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse =
-        scrapper.getMainPage(page, request)
+        engine.getMainPage(page, request)
 
     override suspend fun search(query: String): List<SearchResponse> =
-        scrapper.search(query)
+        engine.search(query)
 
     override suspend fun quickSearch(query: String): List<SearchResponse>? =
-        scrapper.search(query)
+        engine.search(query)
 
     override suspend fun load(url: String): LoadResponse =
-        scrapper.load(url)
+        engine.load(url)
 
-    override suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean =
-        scrapper.loadLinks(data, isCasting, subtitleCallback, callback)
+    override suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit
+    ): Boolean =
+        engine.loadLinks(data, isCasting, subtitleCallback, callback)
 }

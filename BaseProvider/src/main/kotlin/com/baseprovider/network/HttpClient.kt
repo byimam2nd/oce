@@ -1,6 +1,7 @@
-package com.baseprovider
+package com.baseprovider.network
 
-import com.baseprovider.ProviderConfig
+import com.baseprovider.cache.ExpiringCache
+import com.baseprovider.config.ProviderConfig
 import com.lagradost.cloudstream3.*
 import kotlinx.coroutines.withTimeout
 import org.jsoup.nodes.Document
@@ -9,20 +10,33 @@ import java.net.URI
 
 private const val DEFAULT_TIMEOUT = 15000L
 
-suspend fun fetchDocument(url: String, config: ProviderConfig, referer: String? = null, skipCache: Boolean = false): Document {
+suspend fun fetchDocument(
+    url: String,
+    config: ProviderConfig,
+    referer: String? = null,
+    skipCache: Boolean = false,
+    htmlCache: ExpiringCache<Document>? = null
+): Document {
     val fallbackUrls = resolveFallbackUrls(url, config)
     var lastError: Exception? = null
 
     for ((attemptUrl, host) in fallbackUrls) {
-        if (!skipCache) { globalHtmlCache.get(attemptUrl)?.let { return it } }
+        if (!skipCache) { htmlCache?.get(attemptUrl)?.let { return it } }
         if (host.isNotBlank() && HostCircuitBreaker.isOpen(host)) continue
 
         return try {
             executeWithRetry {
                 rateLimitDelay(attemptUrl)
-                val res = withTimeout(DEFAULT_TIMEOUT) { app.get(attemptUrl, timeout = DEFAULT_TIMEOUT, headers = config.globalHeaders, referer = referer) }
+                val res = withTimeout(DEFAULT_TIMEOUT) {
+                    app.get(
+                        attemptUrl,
+                        timeout = DEFAULT_TIMEOUT,
+                        headers = config.globalHeaders,
+                        referer = referer
+                    )
+                }
                 val doc = if (config.useDocumentLarge) res.documentLarge else res.document
-                if (!skipCache) { globalHtmlCache.put(attemptUrl, doc) }
+                if (!skipCache) { htmlCache?.put(attemptUrl, doc) }
                 doc
             }.also { HostCircuitBreaker.reportSuccess(host) }
         } catch (e: Exception) {

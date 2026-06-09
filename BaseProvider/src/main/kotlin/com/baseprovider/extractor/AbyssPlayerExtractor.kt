@@ -32,7 +32,9 @@ class AbyssPlayer : ExtractorApi() {
             val src = sources.optJSONObject(i) ?: continue
             if (src.optBoolean("status", false)) {
                 val srcUrl = src.optString("url")
-                if (srcUrl.isNotBlank()) MasterLinkGenerator.createSmartLink(this.name, srcUrl, "https://playhydrax.com", callback = callback)
+                if (srcUrl.isNotBlank()) {
+                    MasterLinkGenerator.createSmartLink(this.name, srcUrl, "https://playhydrax.com", callback = callback)
+                }
             }
         }
     }

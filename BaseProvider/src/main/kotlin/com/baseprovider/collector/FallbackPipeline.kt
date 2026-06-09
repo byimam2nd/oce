@@ -1,10 +1,10 @@
-package com.baseprovider
+package com.baseprovider.collector
 
-import com.baseprovider.ProviderConfig
-import com.baseprovider.extractor.MasterLinkGenerator
-import com.baseprovider.extractor.ProviderExtractors
-import com.baseprovider.extractor.decryptLk21PlayerUrl
-import com.baseprovider.extractor.loadExtractorWithFallbackCustom
+import com.baseprovider.config.*
+import com.baseprovider.extractor.*
+import com.baseprovider.log.*
+import com.baseprovider.model.*
+import com.baseprovider.network.*
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import kotlinx.coroutines.withTimeout
@@ -12,7 +12,11 @@ import org.jsoup.Jsoup
 
 class FallbackPipeline(private val config: ProviderConfig) {
 
-    suspend fun processLink(raw: String, label: String?, currentUrl: String, subtitleCallback: (SubtitleFile) -> Unit, wrappedCallback: (ExtractorLink) -> Unit) {
+    suspend fun processLink(
+        raw: String, label: String?, currentUrl: String,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        wrappedCallback: (ExtractorLink) -> Unit
+    ) {
         runCatching {
             val decodedRaw = decodeRawLink(raw)
             val fixedUrl = fixUrlSmart(decodedRaw, currentUrl).safeHttpsify().substringBefore("#")
@@ -20,7 +24,15 @@ class FallbackPipeline(private val config: ProviderConfig) {
 
             logDebug(config.id, "Processing link: $fixedUrl (label: $label)")
 
-            val okDirect = runCatching { loadExtractorWithFallbackCustom(fixedUrl, currentUrl, subtitleCallback, headers = config.globalHeaders, callback = wrappedCallback, providerTag = config.id, qualityStripRegex = config.qualityStripRegexCompiled) }.getOrDefault(false)
+            val okDirect = runCatching {
+                loadExtractorWithFallbackCustom(
+                    fixedUrl, currentUrl, subtitleCallback,
+                    headers = config.globalHeaders,
+                    callback = wrappedCallback,
+                    providerTag = config.id,
+                    qualityStripRegex = config.qualityStripRegexCompiled
+                )
+            }.getOrDefault(false)
             if (!okDirect) {
                 if (ProviderExtractors.hasMatchingExtractor(fixedUrl)) {
                     logDebug(config.id, "Skipping manual iframe fetch: extractor already tried for $fixedUrl")
@@ -41,12 +53,21 @@ class FallbackPipeline(private val config: ProviderConfig) {
         return ""
     }
 
-    suspend fun tryManualIframeFetch(fixedUrl: String, label: String?, currentUrl: String, subtitleCallback: (SubtitleFile) -> Unit, wrappedCallback: (ExtractorLink) -> Unit) {
+    suspend fun tryManualIframeFetch(
+        fixedUrl: String, label: String?, currentUrl: String,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        wrappedCallback: (ExtractorLink) -> Unit
+    ) {
         val baseForReferer = config.seriesUrl ?: config.mainUrl
         val refererForPlayer = if (config.refererPlayerMode == "series_url") "${baseForReferer.trimEnd('/')}/" else currentUrl
         logDebug(config.id, "Direct extraction failed, trying manual iframe fetch for: $fixedUrl (Referer: $refererForPlayer)")
 
-        val playerDoc = withTimeout(15000L) { app.get(fixedUrl, referer = refererForPlayer, headers = config.globalHeaders, timeout = 15000L).document }
+        val playerDoc = withTimeout(15000L) {
+            app.get(
+                fixedUrl, referer = refererForPlayer,
+                headers = config.globalHeaders, timeout = 15000L
+            ).document
+        }
         val iframeSelectors = config.iframeSelectors
         val iframeAttributes = config.iframeSources
 
@@ -54,13 +75,23 @@ class FallbackPipeline(private val config: ProviderConfig) {
 
         val iframeEl = if (iframeSelectors.isNotBlank()) playerDoc.selectFirst(iframeSelectors) else null
         if (iframeEl == null) {
-            logFail(config.id, "No iframe found", url = currentUrl, method = "loadLinks", type = FailureType.INVALID_IFRAME, selectors = iframeSelectors)
+            logFail(
+                config.id, "No iframe found",
+                url = currentUrl, method = "loadLinks",
+                type = FailureType.INVALID_IFRAME,
+                selectors = iframeSelectors
+            )
             return
         }
 
         val iframeSrc = iframeAttributes.firstNotNullOfOrNull { iframeEl.attr(it).takeIf { v -> v.isNotBlank() && v != "about:blank" } }
         if (iframeSrc == null) {
-            logFail(config.id, "Iframe has no src", url = currentUrl, method = "loadLinks", type = FailureType.INVALID_IFRAME, selectors = iframeAttributes.joinToString(", "))
+            logFail(
+                config.id, "Iframe has no src",
+                url = currentUrl, method = "loadLinks",
+                type = FailureType.INVALID_IFRAME,
+                selectors = iframeAttributes.joinToString(", ")
+            )
             return
         }
 
@@ -69,9 +100,21 @@ class FallbackPipeline(private val config: ProviderConfig) {
 
         logDebug(config.id, "Found iframe: $finalIframe, extracting...")
 
-        val okRecursive = runCatching { loadExtractorWithFallbackCustom(finalIframe, refererForExtractor, subtitleCallback, headers = config.globalHeaders, callback = wrappedCallback, providerTag = config.id) }.getOrDefault(false)
+        val okRecursive = runCatching {
+            loadExtractorWithFallbackCustom(
+                finalIframe, refererForExtractor, subtitleCallback,
+                headers = config.globalHeaders,
+                callback = wrappedCallback,
+                providerTag = config.id
+            )
+        }.getOrDefault(false)
         if (!okRecursive && finalIframe.isDirectMediaUrl()) {
-            MasterLinkGenerator.createSmartLink(label ?: config.name, finalIframe, refererForExtractor, headers = config.globalHeaders, qualityStripRegex = config.qualityStripRegexCompiled, callback = wrappedCallback)
+            MasterLinkGenerator.createSmartLink(
+                label ?: config.name, finalIframe, refererForExtractor,
+                headers = config.globalHeaders,
+                qualityStripRegex = config.qualityStripRegexCompiled,
+                callback = wrappedCallback
+            )
         }
     }
 
@@ -79,7 +122,12 @@ class FallbackPipeline(private val config: ProviderConfig) {
         if (extracted > 0) {
             logSuccess(config.id, "$extracted/$totalLinks video(s) extracted", url = data, method = "loadLinks", selectors = config.linkOptions)
         } else if (totalLinks > 0) {
-            logFail(config.id, "0/$totalLinks links produced video", url = data, method = "loadLinks", type = FailureType.EXTRACTOR_FAILURE, selectors = config.linkOptions)
+            logFail(
+                config.id, "0/$totalLinks links produced video",
+                url = data, method = "loadLinks",
+                type = FailureType.EXTRACTOR_FAILURE,
+                selectors = config.linkOptions
+            )
         }
     }
 }

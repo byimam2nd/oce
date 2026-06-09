@@ -13,7 +13,9 @@ class Filedon : ExtractorApi() {
         val response = app.get(url, referer = referer)
         val urls = CompiledRegexPatterns.extractAllVideoUrls(response.text)
         if (urls.isNotEmpty()) {
-            CompiledRegexPatterns.filterMasterM3u8(urls).forEach { MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback) }
+            CompiledRegexPatterns.filterMasterM3u8(urls).forEach {
+                MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback)
+            }
         }
     }
 }

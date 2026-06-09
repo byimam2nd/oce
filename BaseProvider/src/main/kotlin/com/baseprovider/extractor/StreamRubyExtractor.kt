@@ -25,9 +25,9 @@ open class StreamRuby : ExtractorApi() {
             }
             urls = CompiledRegexPatterns.extractAllVideoUrls(decoded)
         }
-        CompiledRegexPatterns.filterMasterM3u8(urls).forEach { MasterLinkGenerator.createSmartLink(this.name, it, mainUrl, callback = callback) }
+        CompiledRegexPatterns.filterMasterM3u8(urls).forEach {
+            MasterLinkGenerator.createSmartLink(this.name, it, mainUrl, callback = callback)
+        }
     }
 }
 
-class Svanila : StreamRuby() { override var name = "svanila"; override var mainUrl = "https://streamruby.net" }
-class Svilla : StreamRuby() { override var name = "svilla"; override var mainUrl = "https://streamruby.com" }

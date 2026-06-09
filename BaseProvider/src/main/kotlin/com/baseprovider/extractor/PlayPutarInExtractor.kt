@@ -12,7 +12,14 @@ class PlayPutarIn : ExtractorApi() {
     override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
         val targetUrl = url.substringAfter("?url=").let { java.net.URLDecoder.decode(it, "UTF-8") }
         if (targetUrl.isNotBlank() && targetUrl.startsWith("http")) {
-            loadExtractorWithFallbackCustom(targetUrl, url, subtitleCallback, callback = callback, providerTag = this.name, callChain = "PlayPutarIn")
+            loadExtractorWithFallbackCustom(
+                targetUrl,
+                url,
+                subtitleCallback,
+                callback = callback,
+                providerTag = this.name,
+                callChain = "PlayPutarIn"
+            )
         }
     }
 }
