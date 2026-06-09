@@ -10,7 +10,6 @@
 .cxx
 local.properties
 .vscodetest.txt
-log*
 node_modules/
 
 # ========================================
