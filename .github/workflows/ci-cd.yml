@@ -99,7 +99,7 @@ jobs:
           shopt -s globstar nullglob
 
           echo "═══ Build (CI run: $BUILD_TIMESTAMP) ═══"
-          ./gradlew make makePluginsJson ensureJarCompatibility --stacktrace || true
+          ./gradlew make makePluginsJson ensureJarCompatibility --stacktrace
 
           # Collect build artifacts
           cs3_files=(**/build/*.cs3)
