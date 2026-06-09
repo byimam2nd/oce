@@ -73,7 +73,8 @@ jobs:
           LOCAL_REPO_ART="$BASE/gradle/gradle/master-SNAPSHOT"
           mkdir -p "$LOCAL_REPO_ART"
           cp "$BASE/gradle/master-SNAPSHOT/gradle-master-SNAPSHOT.jar" "$LOCAL_REPO_ART/gradle-master-SNAPSHOT.jar"
-          cp "$BASE/gradle/master-SNAPSHOT/gradle-master-SNAPSHOT.pom" "$LOCAL_REPO_ART/gradle-master-SNAPSHOT.pom"
+          sed 's|<groupId>com.github.recloudstream</groupId>|<groupId>com.github.recloudstream.gradle</groupId>|' \
+            "$BASE/gradle/master-SNAPSHOT/gradle-master-SNAPSHOT.pom" > "$LOCAL_REPO_ART/gradle-master-SNAPSHOT.pom"
           printf '%s\n' \
             '<?xml version="1.0" encoding="UTF-8"?>' \
             '<metadata>' \
