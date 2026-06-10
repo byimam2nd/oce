@@ -21,10 +21,13 @@ suspend fun loadExtractorWithFallbackCustom(
     callback: (ExtractorLink) -> Unit,
     providerTag: String = "ExtractorEngine",
     callChain: String = "-",
-    qualityStripRegex: Regex = Regex("""\d{3,4}p|HD|SD|FHD""", RegexOption.IGNORE_CASE)
+    qualityStripRegex: Regex = Regex("""\d{3,4}p|HD|SD|FHD""", RegexOption
+        .IGNORE_CASE)
 ): Boolean {
-    val collectedLinks = java.util.Collections.synchronizedList(mutableListOf<ExtractorLink>())
-    val seenUrls = java.util.Collections.synchronizedSet(mutableSetOf<String>())
+    val collectedLinks = java.util.Collections
+        .synchronizedList(mutableListOf<ExtractorLink>())
+    val seenUrls = java.util.Collections
+        .synchronizedSet(mutableSetOf<String>())
     val providerId = providerTag
 
     val internalCallback: (ExtractorLink) -> Unit = { link ->
@@ -46,7 +49,8 @@ suspend fun loadExtractorWithFallbackCustom(
             matchingExtractors.forEach { extractor ->
                 launch { semaphore.withPermit {
                     runCatching {
-                        extractor.getUrl(url, referer, subtitleCallback, internalCallback)
+                        extractor.getUrl(url, referer, subtitleCallback,
+                            internalCallback)
                     }.onFailure { e ->
                         logFail(
                             providerId,
@@ -85,7 +89,9 @@ suspend fun loadExtractorWithFallbackCustom(
 
     if (collectedLinks.isEmpty()) {
         runCatching {
-            val response = withTimeout(15000L) { app.get(url, referer = referer, headers = headers ?: emptyMap(), timeout = 15000L).text }
+            val response = withTimeout(15000L) { app.get(url, referer =
+                referer, headers = headers ?: emptyMap(), timeout = 15000L)
+                    .text }
             val urls = CompiledRegexPatterns.extractAllVideoUrls(response)
             val filtered = CompiledRegexPatterns.filterMasterM3u8(urls)
             if (filtered.isNotEmpty()) {
@@ -115,9 +121,11 @@ suspend fun loadExtractorWithFallbackCustom(
         }
     }
 
-    val extractorNames = matchingExtractors.joinToString(", ") { it.name }.ifBlank { "none" }
+    val extractorNames = matchingExtractors.joinToString(", ") { it.name }
+        .ifBlank { "none" }
     val chainInfo = if (callChain == "-") extractorNames else "$callChain → $extractorNames"
-    if (collectedLinks.isEmpty() && urlDomain.isNotBlank() && url.startsWith("http")) {
+    if (collectedLinks.isEmpty() && urlDomain.isNotBlank() && url
+        .startsWith("http")) {
         val ft = if (urlDomain.contains("short.") || urlDomain.contains("shorte")) FailureType.SHORTLINK_FAILURE
             else FailureType.EXTRACTOR_FAILURE
         logFail(
@@ -126,9 +134,11 @@ suspend fun loadExtractorWithFallbackCustom(
             type = ft, selectors = chainInfo
         )
     } else if (collectedLinks.isNotEmpty()) {
-        logSuccess(providerId, "${collectedLinks.size} links", url = url, method = "extractLinks", selectors = chainInfo)
+        logSuccess(providerId, "${collectedLinks.size} links", url = url,
+            method = "extractLinks", selectors = chainInfo)
     }
 
-    MasterLinkGenerator.refineAndDeliver(collectedLinks, callback, qualityStripRegex)
+    MasterLinkGenerator.refineAndDeliver(collectedLinks, callback,
+        qualityStripRegex)
     return collectedLinks.isNotEmpty()
 }

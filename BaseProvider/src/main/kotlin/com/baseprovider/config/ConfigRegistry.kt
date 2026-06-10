@@ -45,7 +45,8 @@ object ConfigRegistry {
                 connectTimeout = 10000
                 readTimeout = 10000
             }
-            val jsonStr = connection.getInputStream().bufferedReader().readText()
+            val jsonStr = connection.getInputStream().bufferedReader()
+                .readText()
             val json = JSONObject(jsonStr)
             val id = json.optString("id", fileName)
             Log.d(TAG, "Fetched remote config: $fileName.json")

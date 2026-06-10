@@ -39,7 +39,8 @@ open class ByseSX : ExtractorApi() {
             val embedBase =
                 URI(embedFrameUrl).let { "${it.scheme}://${it.host}" }
             val embedCode =
-                URI(embedFrameUrl).path.trimEnd('/').substringAfterLast('/')
+                URI(embedFrameUrl).path.trimEnd('/')
+                    .substringAfterLast('/')
             val headers = mapOf(
                 "referer" to embedFrameUrl,
                 "x-embed-parent" to url
@@ -63,7 +64,8 @@ open class ByseSX : ExtractorApi() {
             val decrypted =
                 cipher.doFinal(b64UrlDecode(playback.payload))
             val jsonStr = String(decrypted, StandardCharsets.UTF_8)
-                .let { if (it.startsWith("\uFEFF")) it.substring(1) else it }
+                .let { if (it.startsWith("\uFEFF")) it
+                    .substring(1) else it }
 
             tryParseJson<BysePlaybackDecrypt>(jsonStr)?.sources?.forEach {
                 MasterLinkGenerator.createSmartLink(

@@ -19,7 +19,8 @@ class FallbackPipeline(private val config: ProviderConfig) {
     ) {
         runCatching {
             val decodedRaw = decodeRawLink(raw)
-            val fixedUrl = fixUrlSmart(decodedRaw, currentUrl).safeHttpsify().substringBefore("#")
+            val fixedUrl = fixUrlSmart(decodedRaw, currentUrl)
+                .safeHttpsify().substringBefore("#")
             if (fixedUrl.isBlank()) return@runCatching
 
             logDebug(config.id, "Processing link: $fixedUrl (label: $label)")
@@ -38,18 +39,21 @@ class FallbackPipeline(private val config: ProviderConfig) {
                     logDebug(config.id, "Skipping manual iframe fetch: extractor already tried for $fixedUrl")
                     return@runCatching
                 }
-                tryManualIframeFetch(fixedUrl, label, currentUrl, subtitleCallback, wrappedCallback)
+                tryManualIframeFetch(fixedUrl, label, currentUrl,
+                    subtitleCallback, wrappedCallback)
             }
         }.getOrElse { e -> logDebug(config.id, "Link Processor Error on $raw: ${e.message}") }
     }
 
     private suspend fun decodeRawLink(raw: String): String {
-        if (raw.startsWith("http") || raw.startsWith("//") || raw.startsWith("/") || !raw.safeIsBase64()) return raw
+        if (raw.startsWith("http") || raw.startsWith("//") || raw
+            .startsWith("/") || !raw.safeIsBase64()) return raw
         val lk21 = decryptLk21PlayerUrl(raw)
         if (lk21 != null) return lk21
         val dec = raw.safeDecode()
         if (dec.contains("iframe")) return Jsoup.parse(dec).selectFirst("iframe")?.attr("src") ?: ""
-        if (dec.startsWith("http") || dec.startsWith("//") || dec.startsWith("/")) return dec
+        if (dec.startsWith("http") || dec.startsWith("//") || dec
+            .startsWith("/")) return dec
         return ""
     }
 
@@ -73,7 +77,8 @@ class FallbackPipeline(private val config: ProviderConfig) {
 
         logDebug(config.id, "Manual iframe: selectors=$iframeSelectors, attrs=$iframeAttributes")
 
-        val iframeEl = if (iframeSelectors.isNotBlank()) playerDoc.selectFirst(iframeSelectors) else null
+        val iframeEl = if (iframeSelectors.isNotBlank()) playerDoc
+            .selectFirst(iframeSelectors) else null
         if (iframeEl == null) {
             logFail(
                 config.id, "No iframe found",
@@ -84,7 +89,8 @@ class FallbackPipeline(private val config: ProviderConfig) {
             return
         }
 
-        val iframeSrc = iframeAttributes.firstNotNullOfOrNull { iframeEl.attr(it).takeIf { v -> v.isNotBlank() && v != "about:blank" } }
+        val iframeSrc = iframeAttributes.firstNotNullOfOrNull { iframeEl
+            .attr(it).takeIf { v -> v.isNotBlank() && v != "about:blank" } }
         if (iframeSrc == null) {
             logFail(
                 config.id, "Iframe has no src",

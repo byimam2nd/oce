@@ -34,7 +34,8 @@ fun fromJson(id: String, json: JSONObject): ProviderConfig {
         refererPlayerMode = json.optString("refererPlayerMode", "current_url"),
         iframeSelectors = json.optString("iframeSelectors", "iframe"),
         qualityStripRegex = json.optString("qualityStripRegex", """\d{3,4}p|HD|SD|FHD"""),
-        globalHeaders = jsonObjectToMap(json.optJSONObject("globalHeaders")),
+        globalHeaders = jsonObjectToMap(json
+            .optJSONObject("globalHeaders")),
         mainPageLists = parsePairsList(json.optJSONArray("mainPageLists")),
         allowedExtractors = jsonArrayToSet(json.optJSONArray("allowedExtractors")),
         dubKeyword = json.optString("dubKeyword", "dub"),
@@ -85,12 +86,15 @@ fun fromJson(id: String, json: JSONObject): ProviderConfig {
             json.optJSONArray("attrValue"),
             listOf("value", "data-index", "data-id", "data-url", "data-link", "data-litespeed-src")
         ),
-        iframeSources = jsonArrayToList(json.optJSONArray("iframeSources"), listOf("src", "data-src", "data-link", "data-litespeed-src")),
+        iframeSources = jsonArrayToList(json.optJSONArray("iframeSources"),
+            listOf("src", "data-src", "data-link", "data-litespeed-src")),
         hrefCleanRegex = validateRegex(json.optString("hrefCleanRegex", "")),
         hrefCleanReplace = json.optString("hrefCleanReplace", ""),
         yearSelector = json.optString("yearSelector", ""),
         yearExtractorRegex = validateRegex(json.optString("yearExtractorRegex", "")),
-        bloatRegex = try { Regex(json.optString("bloatRegex", BLOAT_REGEX_DEFAULT.pattern)) } catch (_: Exception) { BLOAT_REGEX_DEFAULT },
+        bloatRegex = try { Regex(json.optString("bloatRegex",
+            BLOAT_REGEX_DEFAULT
+                .pattern)) } catch (_: Exception) { BLOAT_REGEX_DEFAULT },
     )
 }
 
@@ -135,7 +139,8 @@ private fun jsonArrayToList(arr: JSONArray?): List<String> {
     return (0 until arr.length()).map { arr.optString(it, "") }
 }
 
-private fun jsonArrayToList(arr: JSONArray?, default: List<String>): List<String> {
+private fun jsonArrayToList(arr: JSONArray?,
+    default: List<String>): List<String> {
     if (arr == null) return default
     return (0 until arr.length()).map { arr.optString(it, "") }
 }

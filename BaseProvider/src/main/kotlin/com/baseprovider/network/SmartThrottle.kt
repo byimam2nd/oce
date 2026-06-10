@@ -6,8 +6,10 @@ import java.net.URI
 import kotlin.random.Random
 
 object SmartThrottle {
-    private val lastRequestMap = java.util.concurrent.ConcurrentHashMap<String, Long>()
-    private val failureCount = java.util.concurrent.ConcurrentHashMap<String, Int>()
+    private val lastRequestMap = java.util.concurrent
+        .ConcurrentHashMap<String, Long>()
+    private val failureCount = java.util.concurrent
+        .ConcurrentHashMap<String, Int>()
     private const val MIN_DELAY = 500L
     private const val MAX_DELAY = 5000L
     private const val BACKOFF_PER_FAILURE = 500L
@@ -24,13 +26,16 @@ object SmartThrottle {
         lastRequestMap[domain] = System.currentTimeMillis()
     }
 
-    fun reportFailure(domain: String) { failureCount.merge(domain, 1, Int::plus) }
-    fun reportSuccess(domain: String) { failureCount[domain] = (failureCount[domain] ?: 1) / 2 }
+    fun reportFailure(domain: String) { failureCount.merge(domain, 1,
+        Int::plus) }
+    fun reportSuccess(domain: String) { failureCount[domain] =
+        (failureCount[domain] ?: 1) / 2 }
 }
 
 suspend fun rateLimitDelay(url: String = "") {
     if (url.isBlank()) {
-        try { delay(100L + Random.nextLong(200L)) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) {}
+        try { delay(100L + Random.nextLong(200L)) } catch (e: kotlinx
+            .coroutines.CancellationException) { throw e } catch (_: Exception) {}
     } else {
         runCatching {
             SmartThrottle.wait(URI(url).host ?: "default")

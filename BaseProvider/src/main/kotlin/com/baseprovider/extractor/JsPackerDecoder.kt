@@ -5,7 +5,8 @@ import com.lagradost.cloudstream3.utils.*
 
 private val BASE36_CHARS = "0123456789abcdefghijklmnopqrstuvwxyz"
 private val BASE62_CHARS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-private val PACKED_JS_SCRIPT_REGEX = Regex("<script[^>]*>.*?</script>", setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE))
+private val PACKED_JS_SCRIPT_REGEX = Regex("<script[^>]*>.*?</script>",
+    setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE))
 
 fun findPackedJsInPage(html: String): Triple<String, List<String>, Int>? {
     for (match in PACKED_JS_SCRIPT_REGEX.findAll(html)) {
@@ -18,7 +19,8 @@ fun findPackedJsInPage(html: String): Triple<String, List<String>, Int>? {
         if (endIdx < 0) continue
         val raw = snippet.substring(2, endIdx + 1)
         val parts = splitPackedJsArgs(raw) ?: continue
-        val payloadRaw = parts[0].replace("\\'", "'").replace("\\\"", "\"").replace("\\n", "\n").replace("\\/", "/")
+        val payloadRaw = parts[0].replace("\\'", "'").replace("\\\"", "\"")
+            .replace("\\n", "\n").replace("\\/", "/")
         val base = parts.getOrNull(1)?.toIntOrNull() ?: 36
         val keywords = parts.getOrNull(3)?.split("|") ?: continue
         return Triple(payloadRaw, keywords, base)
@@ -26,7 +28,8 @@ fun findPackedJsInPage(html: String): Triple<String, List<String>, Int>? {
     return null
 }
 
-fun decodePackedJs(payload: String, keywords: List<String>, base: Int): String {
+fun decodePackedJs(payload: String, keywords: List<String>,
+    base: Int): String {
     var result = payload
     for (i in keywords.size - 1 downTo 0) {
         val kw = keywords.getOrNull(i) ?: continue
@@ -75,7 +78,8 @@ private fun splitPackedJsArgs(s: String): List<String>? {
         } else if (s[i] == ',' || s[i] == ' ') {
             i++
         } else {
-            val end = s.indexOfAny(charArrayOf(',', ')', ' '), i).let { if (it < 0) s.length else it }
+            val end = s.indexOfAny(charArrayOf(',', ')', ' '), i)
+                .let { if (it < 0) s.length else it }
             args.add(s.substring(i, end))
             i = end
         }

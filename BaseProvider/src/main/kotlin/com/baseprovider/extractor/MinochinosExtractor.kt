@@ -11,15 +11,19 @@ class Minochinos : ExtractorApi() {
     override var mainUrl = "https://minochinos.com";
     override val requiresReferer = true
 
-    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
+    override suspend fun getUrl(url: String, referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+            callback: (ExtractorLink) -> Unit) {
         val text = app.get(url, referer = referer).text
         val packed = findPackedJsInPage(text)
-        val script = if (packed != null) decodePackedJs(packed.first, packed.second, packed.third) else text
+        val script = if (packed != null) decodePackedJs(packed.first,
+            packed.second, packed.third) else text
         var found = false
         CompiledRegexPatterns.extractAllVideoUrls(script).let { urls ->
             CompiledRegexPatterns.filterMasterM3u8(urls).forEach {
                 found = true
-                MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback)
+                MasterLinkGenerator.createSmartLink(this.name, it, url,
+                    callback = callback)
             }
         }
         if (!found) {
@@ -30,9 +34,11 @@ class Minochinos : ExtractorApi() {
                 null
             }
             if (docScripts != null) {
-                CompiledRegexPatterns.extractAllVideoUrls(docScripts).let { urls ->
+                CompiledRegexPatterns.extractAllVideoUrls(docScripts)
+                    .let { urls ->
                     CompiledRegexPatterns.filterMasterM3u8(urls).forEach {
-                        MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback)
+                        MasterLinkGenerator.createSmartLink(this.name, it,
+                            url, callback = callback)
                     }
                 }
             }

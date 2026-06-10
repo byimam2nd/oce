@@ -20,22 +20,29 @@ class StreamHG : ExtractorApi() {
         )
     }
 
-    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
+    override suspend fun getUrl(url: String, referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+            callback: (ExtractorLink) -> Unit) {
         val response = app.get(url, referer = referer)
         val text = response.text
         val packed = findPackedJsInPage(text)
         if (packed != null) {
-            val unpacked = decodePackedJs(packed.first, packed.second, packed.third)
-            CompiledRegexPatterns.extractAllVideoUrls(unpacked).let { urls ->
+            val unpacked = decodePackedJs(packed.first, packed.second,
+                packed.third)
+            CompiledRegexPatterns.extractAllVideoUrls(unpacked)
+                .let { urls ->
                 CompiledRegexPatterns.filterMasterM3u8(urls).forEach {
-                    MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback)
+                    MasterLinkGenerator.createSmartLink(this.name, it, url,
+                        callback = callback)
                 }
             }
         } else {
             try {
-                val interceptedUrl = app.get(url, referer = referer, interceptor = resolver).url
+                val interceptedUrl = app.get(url, referer = referer,
+                    interceptor = resolver).url
                 if (interceptedUrl.isNotBlank()) {
-                    MasterLinkGenerator.createSmartLink(this.name, interceptedUrl, url, callback = callback)
+                    MasterLinkGenerator.createSmartLink(this.name,
+                        interceptedUrl, url, callback = callback)
                 }
             } catch (e: Exception) { Log.d("StreamHG", "WebViewResolver failed: ${e.message}") }
         }

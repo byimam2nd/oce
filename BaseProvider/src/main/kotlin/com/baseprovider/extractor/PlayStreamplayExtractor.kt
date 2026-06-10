@@ -11,7 +11,9 @@ class PlayStreamplay : ExtractorApi() {
     override var mainUrl = "https://play.streamplay.co.in"
     override val requiresReferer = true
 
-    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
+    override suspend fun getUrl(url: String, referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+            callback: (ExtractorLink) -> Unit) {
         val html = app.get(url, referer = referer).text
         val doc = Jsoup.parse(html)
         doc.select("iframe[src]").forEach { iframe ->
@@ -27,12 +29,14 @@ class PlayStreamplay : ExtractorApi() {
         }
         var urls = CompiledRegexPatterns.extractAllVideoUrls(html)
         if (urls.isEmpty()) {
-            val decoded = findPackedJsInPage(html)?.let { (p, k, b) -> decodePackedJs(p, k, b) } ?: html
+            val decoded = findPackedJsInPage(html)?.let { (p, k,
+                b) -> decodePackedJs(p, k, b) } ?: html
             urls = CompiledRegexPatterns.extractAllVideoUrls(decoded)
         }
         if (urls.isNotEmpty()) {
             CompiledRegexPatterns.filterMasterM3u8(urls).forEach {
-                MasterLinkGenerator.createSmartLink(this.name, it, mainUrl, callback = callback)
+                MasterLinkGenerator.createSmartLink(this.name, it, mainUrl,
+                    callback = callback)
             }
         }
     }

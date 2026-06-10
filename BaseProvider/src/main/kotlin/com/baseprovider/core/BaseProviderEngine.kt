@@ -20,7 +20,8 @@ class BaseProviderEngine(
         mapper = mapper
     )
 
-    suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse =
+    suspend fun getMainPage(page: Int,
+        request: MainPageRequest): HomePageResponse =
         scrapper.getMainPage(page, request)
 
     suspend fun search(query: String): List<SearchResponse> =

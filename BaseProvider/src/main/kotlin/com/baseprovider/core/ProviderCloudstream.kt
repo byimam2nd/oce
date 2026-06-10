@@ -20,9 +20,11 @@ open class ProviderCloudstream : MainAPI() {
     override var name = config.name
     override var mainUrl = config.mainUrl
     private var _seriesUrl: String? = null
-    open var seriesUrl: String get() = _seriesUrl ?: config.seriesUrl ?: mainUrl; set(v) { _seriesUrl = v }
+    open var seriesUrl: String get() = _seriesUrl ?: config
+        .seriesUrl ?: mainUrl; set(v) { _seriesUrl = v }
     private var _searchUrl: String? = null
-    open var searchUrl: String get() = _searchUrl ?: config.searchUrl ?: mainUrl; set(v) { _searchUrl = v }
+    open var searchUrl: String get() = _searchUrl ?: config
+        .searchUrl ?: mainUrl; set(v) { _searchUrl = v }
 
     override val hasMainPage = true
     override var lang = config.lang
@@ -51,11 +53,14 @@ open class ProviderCloudstream : MainAPI() {
 
     open var globalHeaders: Map<String, String> = config.globalHeaders
 
-    override val mainPage = mainPageOf(*config.mainPageLists.toTypedArray())
+    override val mainPage = mainPageOf(*config.mainPageLists
+        .toTypedArray())
 
-    private val engine by lazy { BaseProviderEngine(api = this, config = config) }
+    private val engine by lazy { BaseProviderEngine(api = this, config =
+        config) }
 
-    override suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse =
+    override suspend fun getMainPage(page: Int,
+        request: MainPageRequest): HomePageResponse =
         engine.getMainPage(page, request)
 
     override suspend fun search(query: String): List<SearchResponse> =

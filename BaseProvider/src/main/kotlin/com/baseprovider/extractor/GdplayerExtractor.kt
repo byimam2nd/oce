@@ -10,9 +10,12 @@ open class Gdplayer : ExtractorApi() {
     override var mainUrl = "https://gdplayer.to"
     override val requiresReferer = true
 
-    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
+    override suspend fun getUrl(url: String, referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+            callback: (ExtractorLink) -> Unit) {
         val doc = app.get(url, referer = referer).document
-        val script = doc.selectFirst("script:containsData(player = \"\")")?.data() ?: return
+        val script = doc.selectFirst("script:containsData(player = \"\")")
+            ?.data() ?: return
         val kaken = script.substringAfter("kaken = \"").substringBefore("\"")
         val apiUrl = "$mainUrl/api/?${kaken}=&_=${System.currentTimeMillis()}"
         val json = JSONObject(
@@ -21,7 +24,8 @@ open class Gdplayer : ExtractorApi() {
         val sources = json.optJSONArray("sources") ?: return
         for (i in 0 until sources.length()) {
             val file = sources.optJSONObject(i)?.optString("file") ?: ""
-            if (file.isNotBlank()) MasterLinkGenerator.createSmartLink(this.name, file, mainUrl, callback = callback)
+            if (file.isNotBlank()) MasterLinkGenerator.createSmartLink(this
+                .name, file, mainUrl, callback = callback)
         }
     }
 }

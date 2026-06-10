@@ -20,4 +20,5 @@ data class BysePlayback(
 )
 
 data class BysePlaybackDecrypt(val sources: List<BysePlaybackSource>)
-data class BysePlaybackSource(val quality: String, val label: String, val url: String)
+data class BysePlaybackSource(val quality: String, val label: String,
+    val url: String)

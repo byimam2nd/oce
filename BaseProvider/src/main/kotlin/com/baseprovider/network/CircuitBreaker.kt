@@ -3,8 +3,10 @@ package com.baseprovider.network
 import com.lagradost.api.Log
 
 object HostCircuitBreaker {
-    private val failureCount = java.util.concurrent.ConcurrentHashMap<String, Int>()
-    private val cooldownUntil = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private val failureCount = java.util.concurrent
+        .ConcurrentHashMap<String, Int>()
+    private val cooldownUntil = java.util.concurrent
+        .ConcurrentHashMap<String, Long>()
     private const val MAX_FAILURES = 3
     private const val COOLDOWN_MS = 60_000L
 

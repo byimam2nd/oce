@@ -1,7 +1,7 @@
 {
   "id": "Samehadaku",
   "name": "Samehadaku",
-  "mainUrl": "https://samehadaku.biz",
+  "mainUrl": "https://samehadaku.li",
   "lang": "id",
   "supportedTypes": ["Anime", "AnimeMovie", "OVA"],
   "searchPathPattern": "{baseUrl}/?s={query}",

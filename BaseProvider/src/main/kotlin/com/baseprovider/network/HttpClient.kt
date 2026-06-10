@@ -35,7 +35,8 @@ suspend fun fetchDocument(
                         referer = referer
                     )
                 }
-                val doc = if (config.useDocumentLarge) res.documentLarge else res.document
+                val doc = if (config.useDocumentLarge) res
+                    .documentLarge else res.document
                 if (!skipCache) { htmlCache?.put(attemptUrl, doc) }
                 doc
             }.also { HostCircuitBreaker.reportSuccess(host) }
@@ -52,16 +53,21 @@ suspend fun fetchDocument(
     throw lastError ?: Exception("All mirrors failed for $url")
 }
 
-private suspend fun resolveFallbackUrls(url: String, config: ProviderConfig): List<Pair<String, String>> {
-    val originalUri = runCatching { URI(url) }.getOrNull() ?: return listOf(url to "")
+private suspend fun resolveFallbackUrls(url: String,
+    config: ProviderConfig): List<Pair<String, String>> {
+    val originalUri = runCatching { URI(url) }
+        .getOrNull() ?: return listOf(url to "")
     val host = originalUri.host ?: return listOf(url to "")
     val candidates = mutableListOf(url to host)
-    val portPart = if (originalUri.port > 0 && originalUri.port != 80 && originalUri.port != 443) ":${originalUri.port}" else ""
+    val portPart = if (originalUri.port > 0 && originalUri.port != 80
+        && originalUri.port != 443) ":${originalUri.port}" else ""
     val pathPart = originalUri.rawPath ?: ""
-    val queryPart = if (originalUri.query != null) "?${originalUri.query}" else ""
+    val queryPart = if (originalUri.query !=
+        null) "?${originalUri.query}" else ""
     val fragmentPart = if (originalUri.fragment != null) "#${originalUri.fragment}" else ""
     for (mirror in config.mirrorUrls) {
-        val mirrorHost = runCatching { URI(mirror).host }.getOrNull() ?: continue
+        val mirrorHost = runCatching { URI(mirror).host }
+            .getOrNull() ?: continue
         if (mirrorHost == host) continue
         candidates.add("${originalUri.scheme}://$mirrorHost$portPart$pathPart$queryPart$fragmentPart" to mirrorHost)
     }

@@ -22,15 +22,18 @@ class DetailPageScrapper(
 ) {
     suspend fun load(url: String): LoadResponse = loadRecursive(url, 0)
 
-    private suspend fun loadRecursive(url: String, depth: Int): LoadResponse {
+    private suspend fun loadRecursive(url: String,
+        depth: Int): LoadResponse {
         val document = fetchDocument(url, config)
         val currentUrl = url
         if (depth < 2 && config.followLinkSelector.isNotBlank()) {
-            val nextAnchor = document.selectFirst(config.followLinkSelector)
+            val nextAnchor = document.selectFirst(config
+                .followLinkSelector)
             val nextHref = nextAnchor?.attr("href")
             if (!nextHref.isNullOrBlank() && !nextHref.startsWith("javascript:", true)) {
                 val nextUrl = fixUrlSmart(nextHref, currentUrl)
-                if (nextUrl != currentUrl && nextUrl != url) return loadRecursive(nextUrl, depth + 1)
+                if (nextUrl != currentUrl && nextUrl !=
+                    url) return loadRecursive(nextUrl, depth + 1)
             }
         }
 
@@ -39,30 +42,43 @@ class DetailPageScrapper(
         val (recommendations, actors) = coroutineScope {
             val recs = async {
                 if (config.loadRecommend.isNotBlank()) {
-                    document.select(config.loadRecommend).mapNotNull { mapper.toSearchResult(it, currentUrl) }
+                    document.select(config.loadRecommend)
+                        .mapNotNull { mapper.toSearchResult(it,
+                            currentUrl) }
                 } else emptyList()
             }
             val acts = async {
-                if (config.actorItems.isBlank() || config.actorName.isBlank()) emptyList()
+                if (config.actorItems.isBlank() || config.actorName
+                    .isBlank()) emptyList()
                 else document.select(config.actorItems).mapNotNull {
-                    val n = it.selectFirst(config.actorName)?.text()?.trim() ?: ""
-                    val p = it.selectFirst("img")?.safeExtractImage(config.attrImage) ?: ""
-                    if (n.isNotBlank() && n.length < 100) Actor(n, p) else null
+                    val n = it.selectFirst(config.actorName)?.text()
+                        ?.trim() ?: ""
+                    val p = it.selectFirst("img")?.safeExtractImage(config
+                        .attrImage) ?: ""
+                    if (n.isNotBlank() && n.length < 100) Actor(n,
+                        p) else null
                 }
             }
             recs.await() to acts.await()
         }
 
-        val epItems = if (config.episodeItems.isNotBlank()) document.select(config.episodeItems) else org.jsoup.select.Elements()
-        val seasonDataScript = if (config.seasonContainer.isNotBlank()) document.selectFirst(config.seasonContainer) else null
-        val hasTvPath = config.tvPathSegment.isNotBlank() && currentUrl.contains(config.tvPathSegment)
+        val epItems = if (config.episodeItems.isNotBlank()) document
+            .select(config.episodeItems) else org.jsoup.select.Elements()
+        val seasonDataScript = if (config.seasonContainer
+            .isNotBlank()) document.selectFirst(config
+                .seasonContainer) else null
+        val hasTvPath = config.tvPathSegment.isNotBlank() && currentUrl
+            .contains(config.tvPathSegment)
         val isMovie = (seasonDataScript == null) && !hasTvPath && (
-            (config.moviePathSegment.isNotBlank() && currentUrl.contains(config.moviePathSegment))
+            (config.moviePathSegment.isNotBlank() && currentUrl
+                .contains(config.moviePathSegment))
                 || epItems.isEmpty()
         )
-        val type = if (isMovie) TvType.Movie else if (config.supportedTypes.contains(TvType.Anime)) TvType.Anime else TvType.TvSeries
+        val type = if (isMovie) TvType.Movie else if (config.supportedTypes
+            .contains(TvType.Anime)) TvType.Anime else TvType.TvSeries
         val tracker = runCatching {
-            APIHolder.getTracker(listOf(metadata.title), TrackerType.getTypes(type), metadata.year, true)
+            APIHolder.getTracker(listOf(metadata.title), TrackerType
+                .getTypes(type), metadata.year, true)
         }.getOrElse { e ->
             logDebug(config.id, "Tracker Fetch Warning: ${e.message}")
             null
@@ -77,20 +93,25 @@ class DetailPageScrapper(
 
         if (isMovie) {
             val watchUrl = if (config.watchButtons.isNotBlank()) {
-                fixUrlSmart(document.selectFirst(config.watchButtons)?.attr("href"), currentUrl)
+                fixUrlSmart(document.selectFirst(config.watchButtons)
+                    ?.attr("href"), currentUrl)
                     .ifBlank { currentUrl }
             } else currentUrl
-            return api.newMovieLoadResponse(metadata.title, url, type, config.episodeDataUrlPattern.replace("{url}", watchUrl)) {
+            return api.newMovieLoadResponse(metadata.title, url, type,
+                config.episodeDataUrlPattern.replace("{url}", watchUrl)) {
                 this.posterUrl = tracker?.image ?: metadata.poster
-                this.backgroundPosterUrl = tracker?.cover ?: metadata.banner
-                this.posterHeaders = config.globalHeaders.toMutableMap().apply { put("Referer", config.mainUrl) }
+                this.backgroundPosterUrl = tracker?.cover ?: metadata
+                    .banner
+                this.posterHeaders = config.globalHeaders.toMutableMap()
+                    .apply { put("Referer", config.mainUrl) }
                 this.plot = metadata.description
                 this.tags = metadata.tags.ifEmpty { null }
                 this.year = metadata.year
                 this.score = Score.from10(metadata.rating)
                 this.recommendations = recommendations
                 this.comingSoon = metadata.statusText?.let { st ->
-                    config.comingSoonKeywords.split(",").any { st.contains(it, true) }
+                    config.comingSoonKeywords.split(",").any { st
+                        .contains(it, true) }
                 } ?: false
                 addTrailer(metadata.trailer)
                 addActors(actors)
@@ -100,12 +121,17 @@ class DetailPageScrapper(
                 addTMDbId(metadata.tmdbId?.toString())
             }
         } else {
-            val episodes = mapper.extractEpisodes(document, currentUrl, seasonDataScript, epItems, metadata.poster)
-            return if (type == TvType.Anime || type == TvType.OVA || type == TvType.AnimeMovie) {
+            val episodes = mapper.extractEpisodes(document, currentUrl,
+                seasonDataScript, epItems, metadata.poster)
+            return if (type == TvType.Anime || type == TvType.OVA || type ==
+                TvType.AnimeMovie) {
                 api.newAnimeLoadResponse(metadata.title, url, type) {
                     this.posterUrl = tracker?.image ?: metadata.poster
-                    this.backgroundPosterUrl = tracker?.cover ?: metadata.banner
-                    this.posterHeaders = config.globalHeaders.toMutableMap().apply { put("Referer", config.mainUrl) }
+                    this.backgroundPosterUrl = tracker?.cover ?: metadata
+                        .banner
+                    this.posterHeaders = config.globalHeaders
+                        .toMutableMap().apply { put("Referer", config
+                            .mainUrl) }
                     this.plot = metadata.description
                     this.tags = metadata.tags.ifEmpty { null }
                     this.year = metadata.year
@@ -118,10 +144,14 @@ class DetailPageScrapper(
                     addAniListId(tracker?.aniId?.toIntOrNull())
                 }
             } else {
-                api.newTvSeriesLoadResponse(metadata.title, url, type, episodes) {
+                api.newTvSeriesLoadResponse(metadata.title, url, type,
+                    episodes) {
                     this.posterUrl = tracker?.image ?: metadata.poster
-                    this.backgroundPosterUrl = tracker?.cover ?: metadata.banner
-                    this.posterHeaders = config.globalHeaders.toMutableMap().apply { put("Referer", config.mainUrl) }
+                    this.backgroundPosterUrl = tracker?.cover ?: metadata
+                        .banner
+                    this.posterHeaders = config.globalHeaders
+                        .toMutableMap().apply { put("Referer", config
+                            .mainUrl) }
                     this.plot = metadata.description
                     this.tags = metadata.tags.ifEmpty { null }
                     this.year = metadata.year

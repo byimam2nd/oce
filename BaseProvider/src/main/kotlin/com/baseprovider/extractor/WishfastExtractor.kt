@@ -9,7 +9,9 @@ class Wishfast : ExtractorApi() {
     override var mainUrl = "https://wishfast.to";
     override val requiresReferer = true
 
-    override suspend fun getUrl(url: String, referer: String?, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit) {
+    override suspend fun getUrl(url: String, referer: String?,
+        subtitleCallback: (SubtitleFile) -> Unit,
+            callback: (ExtractorLink) -> Unit) {
         val response = app.get(url, referer = referer)
         val text = response.text
         val doc = response.document
@@ -19,16 +21,19 @@ class Wishfast : ExtractorApi() {
         } ?: doc.selectFirst("script:containsData(sources:)")?.data()
 
         if (script != null) {
-            val fileUrl = Regex("""file:\s*"(.*?m3u8.*?)"""").find(script)?.groupValues?.getOrNull(1)
+            val fileUrl = Regex("""file:\s*"(.*?m3u8.*?)"""").find(script)
+                ?.groupValues?.getOrNull(1)
             if (fileUrl != null) {
-                MasterLinkGenerator.createSmartLink(this.name, fileUrl, url, callback = callback)
+                MasterLinkGenerator.createSmartLink(this.name, fileUrl, url,
+                    callback = callback)
                 return
             }
         }
 
         val urls = CompiledRegexPatterns.extractAllVideoUrls(text)
         CompiledRegexPatterns.filterMasterM3u8(urls).forEach {
-            MasterLinkGenerator.createSmartLink(this.name, it, url, callback = callback)
+            MasterLinkGenerator.createSmartLink(this.name, it, url,
+                callback = callback)
         }
     }
 }

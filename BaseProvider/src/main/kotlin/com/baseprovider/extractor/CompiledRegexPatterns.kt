@@ -11,7 +11,8 @@ object CompiledRegexPatterns {
     val ARCHIVE_ORG_URL = Regex("""\"url\":\"(.*?)\"""")
     val UNIVERSAL_VIDEO_URL = Regex("""\"([^\"]*?\.(?:mp4|m3u8|mkv|mpd|webm|ts|mov)(?:\?[^\"]*?)?)\"""")
 
-    val MLG_QUALITY_1080 = Regex("(1080|p1080|fhd|fullhd)", RegexOption.IGNORE_CASE)
+    val MLG_QUALITY_1080 = Regex("(1080|p1080|fhd|fullhd)", RegexOption
+        .IGNORE_CASE)
     val MLG_QUALITY_720 = Regex("(720|p720|hd)", RegexOption.IGNORE_CASE)
     val MLG_QUALITY_480 = Regex("(480|p480|sd)", RegexOption.IGNORE_CASE)
     val MLG_QUALITY_360 = Regex("(360|p360)", RegexOption.IGNORE_CASE)
@@ -31,7 +32,9 @@ object CompiledRegexPatterns {
         if (urls.isEmpty()) return emptyList()
         val m3u8s = urls.filter { it.contains(".m3u8") || it.contains(".mpd") }
         if (m3u8s.isEmpty()) return urls.toList()
-        val masters = m3u8s.filter { it.contains("master", true) || it.contains("manifest", true) || it.contains("playlist", true) }
-        return if (masters.isNotEmpty()) masters.distinct() else listOf(m3u8s.first())
+        val masters = m3u8s.filter { it.contains("master", true) || it
+            .contains("manifest", true) || it.contains("playlist", true) }
+        return if (masters.isNotEmpty()) masters
+            .distinct() else listOf(m3u8s.first())
     }
 }

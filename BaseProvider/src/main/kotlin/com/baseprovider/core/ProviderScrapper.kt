@@ -29,8 +29,10 @@ class ProviderScrapper(
     private val linkCollector = LinkCollector(config)
     private val fallbackPipeline = FallbackPipeline(config)
 
-    suspend fun getMainPage(page: Int, request: MainPageRequest): HomePageResponse {
-        val baseUrl = if (request.name.contains(config.seriesKeyword, true)) {
+    suspend fun getMainPage(page: Int,
+        request: MainPageRequest): HomePageResponse {
+        val baseUrl = if (request.name.contains(config.seriesKeyword,
+            true)) {
             config.seriesUrl?.takeIf { it.isNotBlank() } ?: config.mainUrl
         } else {
             config.mainUrl
@@ -43,18 +45,24 @@ class ProviderScrapper(
                 else { val conn = if (d.contains("?")) "&" else "?"; "${d}${conn}page=$page" }
             } else d
         } else {
-            config.mainPagePathPattern.replace("{baseUrl}", baseUrl).replace("{data}", request.data).replace("{page}", page.toString())
+            config.mainPagePathPattern.replace("{baseUrl}", baseUrl)
+                .replace("{data}", request.data).replace("{page}", page
+                    .toString())
         }
 
         return runCatching {
-            val document = fetchDocument(url, config, htmlCache = htmlCache)
+            val document = fetchDocument(url, config, htmlCache =
+                htmlCache)
             val isHorizontal = config.isHorizontal
             val home = if (config.searchItems.isNotBlank()) {
                 document.select(config.searchItems)
-                    .mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() }
+                    .mapNotNull { runCatching { mapper.toSearchResult(it,
+                        url) }.getOrNull() }
                     .distinctBy { it.url }
             } else emptyList()
-            newHomePageResponse(list = HomePageList(name = request.name, list = home, isHorizontalImages = isHorizontal), hasNext = home.isNotEmpty())
+            newHomePageResponse(list = HomePageList(name = request.name,
+                list = home, isHorizontalImages = isHorizontal), hasNext =
+                    home.isNotEmpty())
         }.getOrElse { e ->
             logFail(
                 config.id,
@@ -70,19 +78,32 @@ class ProviderScrapper(
 
     suspend fun search(query: String): List<SearchResponse> {
         val encodedQuery = runCatching { java.net.URLEncoder.encode(query, "UTF-8") }.getOrDefault(query)
-        val baseUrl = config.searchUrl?.takeIf { it.isNotBlank() } ?: config.mainUrl
+        val baseUrl = config.searchUrl?.takeIf { it
+            .isNotBlank() } ?: config.mainUrl
         val refer = config.mainUrl
         if (config.isJsonSearch) {
-            val url = config.searchPathPattern.replace("{baseUrl}", baseUrl).replace("{query}", encodedQuery).replace("{page}", "1")
+            val url = config.searchPathPattern.replace("{baseUrl}",
+                baseUrl).replace("{query}", encodedQuery).replace("{page}", "1")
             return runCatching {
-                val response = app.get(url, referer = refer, headers = config.globalHeaders).text; val root = JSONObject(response)
-                val items = root.getJSONArray(config.searchJsonRoot.ifBlank { "data" })
+                val response = app.get(url, referer = refer, headers =
+                    config.globalHeaders).text; val root =
+                        JSONObject(response)
+                val items = root.getJSONArray(config.searchJsonRoot
+                    .ifBlank { "data" })
                 val results = mutableListOf<SearchResponse>()
-                for (i in 0 until items.length()) { val item = items.getJSONObject(i)
-                    val title = item.optString(config.searchJsonTitle).safeCleanBloat(item.optString(config.searchJsonTitle), config.bloatRegex)
-                    val slug = item.optString(config.searchJsonHref); var pUrl = item.optString(config.searchJsonPoster)
-                    if (!pUrl.startsWith("http") && config.searchJsonPosterPrefix.isNotBlank()) pUrl = config.searchJsonPosterPrefix + pUrl
-                    val isTv = item.optString(config.searchJsonType).contains("series", true)
+                for (i in 0 until items.length()) { val item = items
+                    .getJSONObject(i)
+                    val title = item.optString(config.searchJsonTitle)
+                        .safeCleanBloat(item.optString(config
+                            .searchJsonTitle), config.bloatRegex)
+                    val slug = item.optString(config
+                        .searchJsonHref); var pUrl = item.optString(config
+                            .searchJsonPoster)
+                    if (!pUrl.startsWith("http") && config
+                        .searchJsonPosterPrefix.isNotBlank()) pUrl = config
+                            .searchJsonPosterPrefix + pUrl
+                    val isTv = item.optString(config.searchJsonType)
+                        .contains("series", true)
                         || item.optString(config.searchJsonType).contains("tv", true)
                     var finalUrl = if (isTv) "${config.seriesUrl ?: baseUrl}/$slug" else "${config.mainUrl}/$slug"
                     results.add(
@@ -92,7 +113,8 @@ class ProviderScrapper(
                             if (isTv) TvType.TvSeries else TvType.Movie
                         ) {
                             this.posterUrl = pUrl
-                            this.posterHeaders = config.globalHeaders.toMutableMap()
+                            this.posterHeaders = config.globalHeaders
+                                .toMutableMap()
                                 .apply { put("Referer", config.mainUrl) }
                         }
                     )
@@ -114,11 +136,14 @@ class ProviderScrapper(
             val results = mutableListOf<SearchResponse>()
             for (page in 1..config.searchPageLimit) {
                 if (results.size >= MIN_SEARCH_RESULTS) break
-                val url = config.searchPathPattern.replace("{baseUrl}", baseUrl).replace("{page}", page.toString()).replace("{query}", encodedQuery)
-                val document = fetchDocument(url, config, refer, htmlCache = htmlCache)
+                val url = config.searchPathPattern.replace("{baseUrl}",
+                    baseUrl).replace("{page}", page.toString()).replace("{query}", encodedQuery)
+                val document = fetchDocument(url, config, refer, htmlCache =
+                    htmlCache)
                 val pageResults = if (config.searchItems.isNotBlank()) {
                     document.select(config.searchItems)
-                        .mapNotNull { runCatching { mapper.toSearchResult(it, url) }.getOrNull() }
+                        .mapNotNull { runCatching { mapper
+                            .toSearchResult(it, url) }.getOrNull() }
                 } else emptyList()
                 results.addAll(pageResults)
             }
@@ -136,15 +161,20 @@ class ProviderScrapper(
         }
     }
 
-    suspend fun loadLinks(data: String, isCasting: Boolean, subtitleCallback: (SubtitleFile) -> Unit, callback: (ExtractorLink) -> Unit): Boolean {
+    suspend fun loadLinks(data: String, isCasting: Boolean,
+        subtitleCallback: (SubtitleFile) -> Unit,
+            callback: (ExtractorLink) -> Unit): Boolean {
         return runCatching {
-            val document = fetchDocument(data, config, skipCache = true, htmlCache = htmlCache)
+            val document = fetchDocument(data, config, skipCache = true,
+                htmlCache = htmlCache)
             val currentUrl = data
             val allPossibleLinks = mutableSetOf<Pair<String, String?>>()
             val videoCount = AtomicInteger(0)
-            val wrappedCallback: (ExtractorLink) -> Unit = { link -> videoCount.incrementAndGet(); callback(link) }
+            val wrappedCallback: (ExtractorLink) -> Unit =
+                { link -> videoCount.incrementAndGet(); callback(link) }
 
-            linkCollector.collectAjaxPlayers(document, currentUrl, allPossibleLinks)
+            linkCollector.collectAjaxPlayers(document, currentUrl,
+                allPossibleLinks)
             linkCollector.collectLinkOptions(document, allPossibleLinks)
             linkCollector.collectDownloadItems(document, allPossibleLinks)
             linkCollector.collectIframes(document, allPossibleLinks)
@@ -161,15 +191,21 @@ class ProviderScrapper(
             }
 
             coroutineScope {
-                allPossibleLinks.filter { it.first.isNotBlank() && !it.first.startsWith("#") }.map { (raw, label) -> async {
-                    linkSemaphore.withPermit { fallbackPipeline.processLink(raw, label, currentUrl, subtitleCallback, wrappedCallback) }
+                allPossibleLinks.filter { it.first.isNotBlank() && !it
+                    .first.startsWith("#") }.map { (raw, label) -> async {
+                    linkSemaphore.withPermit { fallbackPipeline
+                        .processLink(raw, label, currentUrl,
+                            subtitleCallback, wrappedCallback) }
                 } }.awaitAll()
             }
 
-            fallbackPipeline.logLinkResults(videoCount.get(), allPossibleLinks.size, data)
+            fallbackPipeline.logLinkResults(videoCount.get(),
+                allPossibleLinks.size, data)
             true
         }.getOrElse { e ->
-            val ft = if (e.message?.contains("cancel", true) == true) FailureType.CANCELLED else FailureType.NETWORK_FAILURE
+            val ft = if (e.message?.contains("cancel", true) ==
+                true) FailureType.CANCELLED else FailureType
+                    .NETWORK_FAILURE
             logCritical(config.id, "LoadLinks Critical Failure on data: $data", e, url = data, method = "loadLinks", type = ft); false
         }
     }

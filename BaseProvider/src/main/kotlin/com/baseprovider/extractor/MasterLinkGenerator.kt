@@ -6,7 +6,8 @@ import com.lagradost.cloudstream3.utils.*
 
 object MasterLinkGenerator {
 
-    private val DEFAULT_QUALITY_STRIP = Regex("""\d{3,4}p|HD|SD|FHD""", RegexOption.IGNORE_CASE)
+    private val DEFAULT_QUALITY_STRIP = Regex("""\d{3,4}p|HD|SD|FHD""",
+        RegexOption.IGNORE_CASE)
 
     suspend fun createSmartLink(
         source: String,
@@ -29,7 +30,7 @@ object MasterLinkGenerator {
                 else if (isAdaptive) ExtractorLinkType.M3U8
                 else ExtractorLinkType.VIDEO
         ) {
-            this.quality = if (isAdaptive) 0 else (quality ?: detectQualityFromUrl(url))
+            if (!isAdaptive) this.quality = quality ?: detectQualityFromUrl(url)
             this.referer = referer ?: ""
             this.headers = safeHeaders
         })
@@ -42,7 +43,8 @@ object MasterLinkGenerator {
     ) {
         val seenM3u8Sources = mutableSetOf<String>()
         links.forEach { link ->
-            val isM3u8 = link.type == ExtractorLinkType.M3U8 || link.type == ExtractorLinkType.DASH
+            val isM3u8 = link.type == ExtractorLinkType.M3U8 || link.type ==
+                ExtractorLinkType.DASH
             if (isM3u8) {
                 if (seenM3u8Sources.add(link.source)) {
                     val refinedName = link.name.ifBlank {
@@ -84,10 +86,14 @@ object MasterLinkGenerator {
     private fun detectQualityFromUrl(url: String): Int {
         val urlLower = url.lowercase()
         return when {
-            CompiledRegexPatterns.MLG_QUALITY_1080.containsMatchIn(urlLower) -> 1080
-            CompiledRegexPatterns.MLG_QUALITY_720.containsMatchIn(urlLower) -> 720
-            CompiledRegexPatterns.MLG_QUALITY_480.containsMatchIn(urlLower) -> 480
-            CompiledRegexPatterns.MLG_QUALITY_360.containsMatchIn(urlLower) -> 360
+            CompiledRegexPatterns.MLG_QUALITY_1080
+                .containsMatchIn(urlLower) -> 1080
+            CompiledRegexPatterns.MLG_QUALITY_720
+                .containsMatchIn(urlLower) -> 720
+            CompiledRegexPatterns.MLG_QUALITY_480
+                .containsMatchIn(urlLower) -> 480
+            CompiledRegexPatterns.MLG_QUALITY_360
+                .containsMatchIn(urlLower) -> 360
             else -> 480
         }
     }

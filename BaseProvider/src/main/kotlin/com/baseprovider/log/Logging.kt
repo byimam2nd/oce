@@ -15,10 +15,12 @@ object ProviderLog {
     private const val SENT_MESSAGE_LIMIT = 1000
 
     private val TG_TOKEN: String get() = System.getenv("OCE_TG_TOKEN") ?: ""
-    private val TG_GROUP_ID: String get() = System.getenv("OCE_TG_GROUP_ID") ?: ""
+    private val TG_GROUP_ID: String get() = System
+        .getenv("OCE_TG_GROUP_ID") ?: ""
     private val TG_THREAD_ID: String get() = System.getenv("OCE_TG_THREAD_ID") ?: "2"
 
-    private val sentMessages = java.util.concurrent.ConcurrentHashMap<String, Pair<Int, Int>>()
+    private val sentMessages = java.util.concurrent
+        .ConcurrentHashMap<String, Pair<Int, Int>>()
     private val logScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val tgJob = Job()
 
@@ -38,12 +40,15 @@ object ProviderLog {
                 }
             }
         } ?: ""
-        val host = url?.let { runCatching { URI(it).host }.getOrElse { e -> Log.d("OCE", "URI parsing failed for $url: ${e.message}"); null } } ?: ""
-        val ft = type ?: if (host.contains("short.")) FailureType.SHORTLINK_FAILURE else FailureType.UNKNOWN
+        val host = url?.let { runCatching { URI(it).host }
+            .getOrElse { e -> Log.d("OCE", "URI parsing failed for $url: ${e.message}"); null } } ?: ""
+        val ft = type ?: if (host.contains("short.")) FailureType
+            .SHORTLINK_FAILURE else FailureType.UNKNOWN
         val hostInfo = if (host.isNotBlank()) " | host=$host" else ""
         val methodInfo = if (method != null) " | method=$method" else ""
         val typeInfo = " | type=${ft.label}"
-        val selInfo = if (selectors.isNotBlank()) " | selectors=$selectors" else ""
+        val selInfo = if (selectors
+            .isNotBlank()) " | selectors=$selectors" else ""
         val logcatMsg = "[$tag]${methodInfo}$typeInfo${selInfo}$hostInfo | $message"
         val fullMsg = message + errTrace
 
@@ -56,13 +61,15 @@ object ProviderLog {
         }
 
         if (level != LogLevel.DEBUG && level != LogLevel.SUCCESS) {
-            sendToTelegram(level.name, tag, fullMsg, url, host, method, ft, selectors)
+            sendToTelegram(level.name, tag, fullMsg, url, host, method, ft,
+                selectors)
         }
     }
 
     private fun trimSentMessages() {
         if (sentMessages.size > SENT_MESSAGE_LIMIT) {
-            val keysToEvict = sentMessages.keys.take(sentMessages.size - (SENT_MESSAGE_LIMIT / 2))
+            val keysToEvict = sentMessages.keys.take(sentMessages
+                .size - (SENT_MESSAGE_LIMIT / 2))
             keysToEvict.forEach { sentMessages.remove(it) }
         }
     }
@@ -80,7 +87,8 @@ object ProviderLog {
             "CRITICAL" -> "\uD83D\uDD25"
             else -> "\u2139\uFE0F"
         }
-        val urlInfo = url?.let { if (it.length > 80) it.take(77) + "..." else it } ?: ""
+        val urlInfo = url?.let { if (it.length > 80) it
+            .take(77) + "..." else it } ?: ""
         val methodInfo = method ?: ""
         val selInfo = selectors.ifBlank { "-" }
 
@@ -109,7 +117,8 @@ object ProviderLog {
                             if (TG_THREAD_ID.isNotBlank()) put("message_thread_id", TG_THREAD_ID.toIntOrNull() ?: 0)
                             put("message_id", msgId)
                             put("text", body)
-                        }.toString().toRequestBody("application/json".toMediaType())
+                        }.toString().toRequestBody("application/json"
+                            .toMediaType())
                     ).text
                 }.onSuccess {
                     sentMessages[key] = msgId to newCount
@@ -123,7 +132,8 @@ object ProviderLog {
                             if (TG_THREAD_ID.isNotBlank()) put("message_thread_id", TG_THREAD_ID.toIntOrNull() ?: 0)
                             put("text", rawBody)
                             put("disable_web_page_preview", true)
-                        }.toString().toRequestBody("application/json".toMediaType())
+                        }.toString().toRequestBody("application/json"
+                            .toMediaType())
                     ).text
                     val msgId = org.json.JSONObject(resp)
                         .getJSONObject("result").getInt("message_id")
@@ -139,13 +149,16 @@ fun log(
     error: Throwable? = null, url: String? = null,
     method: String? = null, type: FailureType? = null,
     selectors: String = ""
-) = ProviderLog.log(level, tag, message, error, url, method, type, selectors)
-fun logDebug(tag: String, message: String) = log(LogLevel.DEBUG, tag, message)
+) = ProviderLog.log(level, tag, message, error, url, method, type,
+    selectors)
+fun logDebug(tag: String, message: String) = log(LogLevel.DEBUG, tag,
+    message)
 fun logFail(
     tag: String, message: String, url: String? = null,
     method: String? = null, type: FailureType? = null,
     selectors: String = ""
-) = log(LogLevel.FAIL, tag, message, url = url, method = method, type = type, selectors = selectors)
+) = log(LogLevel.FAIL, tag, message, url = url, method = method, type =
+    type, selectors = selectors)
 fun logError(
     tag: String, message: String, error: Throwable? = null,
     url: String? = null, method: String? = null,
@@ -155,8 +168,10 @@ fun logCritical(
     tag: String, message: String, error: Throwable? = null,
     url: String? = null, method: String? = null,
     type: FailureType? = null, selectors: String = ""
-) = log(LogLevel.CRITICAL, tag, message, error, url, method, type, selectors)
+) = log(LogLevel.CRITICAL, tag, message, error, url, method, type,
+    selectors)
 fun logSuccess(
     tag: String, message: String, url: String? = null,
     method: String? = null, selectors: String = ""
-) = log(LogLevel.SUCCESS, tag, message, url = url, method = method, type = FailureType.SUCCESS, selectors = selectors)
+) = log(LogLevel.SUCCESS, tag, message, url = url, method = method, type =
+    FailureType.SUCCESS, selectors = selectors)

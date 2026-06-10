@@ -10,8 +10,10 @@ import org.jsoup.nodes.Element
 
 class LinkCollector(private val config: ProviderConfig) {
 
-    suspend fun collectAjaxPlayers(document: Document, currentUrl: String, links: MutableSet<Pair<String, String?>>) {
-        if (config.ajaxPlayerUrl.isBlank() || config.selectorJsonData.isBlank()) return
+    suspend fun collectAjaxPlayers(document: Document, currentUrl: String,
+        links: MutableSet<Pair<String, String?>>) {
+        if (config.ajaxPlayerUrl.isBlank() || config.selectorJsonData
+            .isBlank()) return
         val el = document.selectFirst(config.selectorJsonData) ?: return
         runCatching {
             val json = JSONObject(el.data())
@@ -19,17 +21,22 @@ class LinkCollector(private val config: ProviderConfig) {
             if (id.isNotBlank()) {
                 if (!config.ajaxPlayerUrl.startsWith("http")) return
                 logDebug(config.id, "Fetching AJAX players for ID: $id from ${config.ajaxPlayerUrl}")
-                val res = app.post(config.ajaxPlayerUrl, data = mapOf("id" to id), headers = config.globalHeaders, referer = currentUrl).document
+                val res = app.post(config.ajaxPlayerUrl, data =
+                    mapOf("id" to id), headers = config.globalHeaders,
+                        referer = currentUrl).document
                 res.select("li, a, option").forEach { item ->
                     val label = item.text().trim()
-                    val raw = item.selectAttr(config.attrValue) ?: item.attr("href") ?: ""
-                    if (raw.isNotBlank()) links.add(raw to label.ifBlank { null })
+                    val raw = item.selectAttr(config.attrValue) ?: item
+                        .attr("href") ?: ""
+                    if (raw.isNotBlank()) links.add(raw to label
+                        .ifBlank { null })
                 }
             }
         }.onFailure { e -> logDebug(config.id, "AJAX player collection failed: ${e.message}") }
     }
 
-    fun collectLinkOptions(document: Document, links: MutableSet<Pair<String, String?>>) {
+    fun collectLinkOptions(document: Document,
+        links: MutableSet<Pair<String, String?>>) {
         if (config.linkOptions.isBlank()) return
         logDebug(config.id, "LINK_OPTIONS selector: ${config.linkOptions}")
         val matches = document.select(config.linkOptions)
@@ -49,20 +56,26 @@ class LinkCollector(private val config: ProviderConfig) {
         }
     }
 
-    fun collectDownloadItems(document: Document, links: MutableSet<Pair<String, String?>>) {
+    fun collectDownloadItems(document: Document,
+        links: MutableSet<Pair<String, String?>>) {
         if (config.downloadItems.isBlank()) return
         val dlMatches = document.select(config.downloadItems)
         logDebug(config.id, "DOWNLOAD_ITEMS selector '${config.downloadItems}' => ${dlMatches.size} match(es)")
         dlMatches.forEach { container ->
-            container.select("a").forEach { a -> val href = a.attr("href"); if (href.isNotBlank()) links.add(href to a.text()) }
+            container.select("a").forEach { a -> val href = a
+                .attr("href"); if (href.isNotBlank()) links.add(href to a
+                    .text()) }
         }
     }
 
-    fun collectIframes(document: Document, links: MutableSet<Pair<String, String?>>) {
-        val iframeTagMatches = if (config.iframeTag.isNotBlank()) document.select(config.iframeTag) else org.jsoup.select.Elements()
+    fun collectIframes(document: Document, links: MutableSet<Pair<String,
+        String?>>) {
+        val iframeTagMatches = if (config.iframeTag.isNotBlank()) document
+            .select(config.iframeTag) else org.jsoup.select.Elements()
         logDebug(config.id, "iframeTag => ${iframeTagMatches.size} iframe(s)")
         iframeTagMatches.forEach { el ->
-            config.iframeSources.forEach { attr -> val s = el.attr(attr); if (s.isNotBlank() && s != "about:blank") links.add(s to null) }
+            config.iframeSources.forEach { attr -> val s = el
+                .attr(attr); if (s.isNotBlank() && s != "about:blank") links.add(s to null) }
         }
     }
 }
