@@ -36,7 +36,7 @@ object MasterLinkGenerator {
         })
     }
 
-    @Suppress("DEPRECATION")
+    @Suppress("DEPRECATION_ERROR")
     fun refineAndDeliver(
         links: List<ExtractorLink>,
         finalCallback: (ExtractorLink) -> Unit,
