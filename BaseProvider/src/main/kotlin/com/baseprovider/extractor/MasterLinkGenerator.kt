@@ -50,34 +50,32 @@ object MasterLinkGenerator {
                     val refinedName = link.name.ifBlank {
                         link.source.replace(qualityStripRegex, "").trim()
                     }
-                    finalCallback(
-                        ExtractorLink(
-                            source = link.source,
-                            name = refinedName,
-                            url = link.url,
-                            referer = link.referer,
-                            type = link.type,
-                            headers = link.headers,
-                            extractorData = link.extractorData
-                        )
-                    )
+                    finalCallback(newExtractorLink(
+                        source = link.source,
+                        name = refinedName,
+                        url = link.url,
+                        type = link.type,
+                    ) {
+                        this.referer = link.referer
+                        this.headers = link.headers
+                        this.extractorData = link.extractorData
+                    })
                 }
             } else {
                 val cleanSource = link.name.ifBlank {
                     link.source.replace(qualityStripRegex, "").trim()
                 }
-                finalCallback(
-                    ExtractorLink(
-                        source = link.source,
-                        name = cleanSource,
-                        url = link.url,
-                        referer = link.referer,
-                        quality = link.quality,
-                        type = link.type,
-                        headers = link.headers,
-                        extractorData = link.extractorData
-                    )
-                )
+                finalCallback(newExtractorLink(
+                    source = link.source,
+                    name = cleanSource,
+                    url = link.url,
+                    type = link.type,
+                ) {
+                    this.referer = link.referer
+                    this.quality = link.quality
+                    this.headers = link.headers
+                    this.extractorData = link.extractorData
+                })
             }
         }
     }
