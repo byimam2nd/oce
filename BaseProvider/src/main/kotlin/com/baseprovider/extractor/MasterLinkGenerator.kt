@@ -51,13 +51,30 @@ object MasterLinkGenerator {
                     val refinedName = link.name.ifBlank {
                         link.source.replace(qualityStripRegex, "").trim()
                     }
-                    finalCallback(link.copy(name = refinedName))
+                    finalCallback(ExtractorLink(
+                        source = link.source,
+                        name = refinedName,
+                        url = link.url,
+                        referer = link.referer,
+                        type = link.type,
+                        headers = link.headers,
+                        extractorData = link.extractorData
+                    ))
                 }
             } else {
                 val cleanSource = link.name.ifBlank {
                     link.source.replace(qualityStripRegex, "").trim()
                 }
-                finalCallback(link.copy(name = cleanSource))
+                finalCallback(ExtractorLink(
+                    source = link.source,
+                    name = cleanSource,
+                    url = link.url,
+                    referer = link.referer,
+                    quality = link.quality,
+                    type = link.type,
+                    headers = link.headers,
+                    extractorData = link.extractorData
+                ))
             }
         }
     }
