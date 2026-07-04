@@ -36,6 +36,7 @@ object MasterLinkGenerator {
         })
     }
 
+    @Suppress("DEPRECATION")
     fun refineAndDeliver(
         links: List<ExtractorLink>,
         finalCallback: (ExtractorLink) -> Unit,
@@ -50,32 +51,13 @@ object MasterLinkGenerator {
                     val refinedName = link.name.ifBlank {
                         link.source.replace(qualityStripRegex, "").trim()
                     }
-                    finalCallback(newExtractorLink(
-                        source = link.source,
-                        name = refinedName,
-                        url = link.url,
-                        type = link.type,
-                    ) {
-                        this.referer = link.referer
-                        this.headers = link.headers
-                        this.extractorData = link.extractorData
-                    })
+                    finalCallback(link.copy(name = refinedName))
                 }
             } else {
                 val cleanSource = link.name.ifBlank {
                     link.source.replace(qualityStripRegex, "").trim()
                 }
-                finalCallback(newExtractorLink(
-                    source = link.source,
-                    name = cleanSource,
-                    url = link.url,
-                    type = link.type,
-                ) {
-                    this.referer = link.referer
-                    this.quality = link.quality
-                    this.headers = link.headers
-                    this.extractorData = link.extractorData
-                })
+                finalCallback(link.copy(name = cleanSource))
             }
         }
     }
