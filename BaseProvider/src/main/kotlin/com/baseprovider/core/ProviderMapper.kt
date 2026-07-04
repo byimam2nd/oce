@@ -191,6 +191,7 @@ class ProviderMapper(
             }
         }
         if (episodes.isEmpty()) {
+            val seenEpNums = mutableSetOf<Int>()
             episodes.addAll(
                 epItems.mapNotNull { ep ->
                     runCatching {
@@ -218,6 +219,9 @@ class ProviderMapper(
                                         ?.safeExtractEpNum()
                                 else null
                             ) ?: ep.text().safeExtractEpNum()
+                        if (epNum != null && !seenEpNums.add(epNum)) {
+                            return@runCatching null
+                        }
                         val rawName = titleEl?.text()?.trim() ?: ""
                         val isJustNumber = rawName
                             .matches(JUST_NUMBER_REGEX)

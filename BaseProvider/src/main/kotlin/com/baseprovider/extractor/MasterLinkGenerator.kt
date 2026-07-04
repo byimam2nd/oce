@@ -56,7 +56,6 @@ object MasterLinkGenerator {
                             name = refinedName,
                             url = link.url,
                             referer = link.referer,
-                            quality = 0,
                             type = link.type,
                             headers = link.headers,
                             extractorData = link.extractorData
