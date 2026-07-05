@@ -212,13 +212,13 @@ class ProviderMapper(
                         ) ?: ep.selectFirst("a")
                             ?: if (ep.tagName() == "a") ep
                             else null
-                        val epNum = titleEl?.text()?.safeExtractEpNum()
-                            ?: (
+                        val epNum = (
                                 if (config.episodeNum.isNotBlank()) ep
                                     .selectFirst(config.episodeNum)?.text()
                                         ?.safeExtractEpNum()
                                 else null
-                            ) ?: ep.text().safeExtractEpNum()
+                            ) ?: titleEl?.text()?.safeExtractEpNum()
+                                ?: ep.text().safeExtractEpNum()
                         if (epNum != null && !seenEpNums.add(epNum)) {
                             return@runCatching null
                         }
