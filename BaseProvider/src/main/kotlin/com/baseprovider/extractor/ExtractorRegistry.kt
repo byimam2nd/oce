@@ -11,8 +11,8 @@ object ProviderExtractors {
         ByseSX(), Hownetwork(), Cloudhownetwork(),
         PlayStreamplay(), AnichinStream(), AbyssPlayer(), Filedon(),
             BloggerVideo(),
-        Ultrahd(), Vtbe(), Wishfast(),
-        Minochinos(), Vidhide(), ShortIcu(), PlayPutarIn(), StreamHG(),
+        Wishfast(),
+        Minochinos(), ShortIcu(), PlayPutarIn(), StreamHG(),
         MegaPlay(), AWSStream(), LuluStream(), Dhcplay(), Voe(), Xtwap(),
             Gdplayer(), Vidguardto2(), Movearnpre(),
         Lk21PlayerPage()
