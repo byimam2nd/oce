@@ -6,7 +6,7 @@ import com.lagradost.cloudstream3.utils.*
 
 object ProviderExtractors {
     val list = listOf(
-        Dailymotion(), Odnoklassniki(), Rumble(), StreamRuby(), Svanila(),
+        Odnoklassniki(), Rumble(), StreamRuby(), Svanila(),
             Svilla(),
         ByseSX(), Hownetwork(), Cloudhownetwork(),
         PlayStreamplay(), AnichinStream(), AbyssPlayer(), Filedon(),

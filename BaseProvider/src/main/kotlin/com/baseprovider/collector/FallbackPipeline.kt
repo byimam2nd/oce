@@ -20,7 +20,7 @@ class FallbackPipeline(private val config: ProviderConfig) {
         runCatching {
             val decodedRaw = decodeRawLink(raw)
             val fixedUrl = fixUrlSmart(decodedRaw, currentUrl)
-                .safeHttpsify().substringBefore("#")
+                .safeHttpsify().substringBefore("#").fixKnownDomainAliases()
             if (fixedUrl.isBlank()) return@runCatching
 
             logDebug(config.id, "Processing link: $fixedUrl (label: $label)")
