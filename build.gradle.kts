@@ -81,7 +81,7 @@ subprojects {
         }
 
         // Compile BaseProvider code directly into each HTML provider
-        if (project.name != "BaseProvider" && !project.name.startsWith("ProviderDrama") && !project.name.startsWith("ProviderIdlix") && !project.name.startsWith("ProviderMelolo")) {
+        if (project.name != "BaseProvider") {
             sourceSets.getByName("main") {
                 java.srcDir("${rootProject.projectDir}/BaseProvider/src/main/kotlin")
             }
