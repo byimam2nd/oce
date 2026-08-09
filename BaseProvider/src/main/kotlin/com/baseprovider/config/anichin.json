@@ -35,5 +35,6 @@
   "episodeHref": ".eplister li > a",
   "episodeTitle": ".epl-title",
   "episodeNum": ".epl-num",
-  "linkOptions": "option[data-index], option[value]"
+  "linkOptions": "option[data-index], option[value]",
+  "watchButtons": ".eplister li > a, .play-button, .watch-now, .btn-watch"
 }
