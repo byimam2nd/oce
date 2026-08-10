@@ -49,6 +49,7 @@
   "episodeHref": "a",
   "episodeTitle": "a, .epl-title",
   "episodeNum": ".epl-num",
+  "followLinkSelector": "span.year a[href*=\"/anime/\"]",
   "linkOptions": "option[value]",
   "downloadItems": "div#downloadb li"
 }
