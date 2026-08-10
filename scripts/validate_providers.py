@@ -13,7 +13,11 @@ import glob
 import json
 import os
 import re
+import socket
 import sys
+from urllib.parse import urlparse
+
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 
 VALID_TYPES = {
     "Movie", "TvSeries", "Anime", "AnimeMovie",
@@ -23,6 +27,39 @@ SERIES_TYPES = {"TvSeries", "Anime", "AnimeMovie", "AsianDrama", "Cartoon", "OVA
 MOVIE_TYPES = {"Movie", "AnimeMovie"}
 REGEX_FIELDS = ["bloatRegex", "yearExtractorRegex", "hrefCleanRegex", "qualityStripRegex"]
 REGISTRY_RE = re.compile(r"([A-Za-z0-9_]+)\(\)")
+LOOPBACK_PREFIXES = ("127.", "0.", "169.254")
+
+
+def resolve_host(host):
+    """Return list of IPv4 addresses for host, or raise socket.gaierror."""
+    return [ai[4][0] for ai in socket.getaddrinfo(host, 443, socket.AF_INET)]
+
+
+def check_host_health(url):
+    """Best-effort DNS check of a URL host.
+
+    Returns a warning string if the host is unresolvable or resolves to a
+    loopback/link-local address (sign of a dead or hijacked domain, e.g. the
+    samehadaku kotaksb.fun case). Returns None when healthy.
+    Raises FutureTimeout on hang; caller treats as healthy.
+    """
+    host = urlparse(url).hostname
+    if not host:
+        return f"cannot parse host from URL {url!r}"
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(resolve_host, host)
+        try:
+            ips = future.result(timeout=5)
+        except FutureTimeout:
+            return None
+        except socket.gaierror as e:
+            return f"host '{host}' does not resolve (DNS failure: {e})"
+        except Exception:
+            return None
+    bogus = [ip for ip in ips if ip.startswith(LOOPBACK_PREFIXES)]
+    if bogus:
+        return f"host '{host}' resolves to loopback/link-local address {bogus} — dead or hijacked domain"
+    return None
 
 
 def find_root(start=None):
@@ -71,6 +108,16 @@ def validate_config(path, extractors):
     main_url = data.get("mainUrl", "")
     if not isinstance(main_url, str) or not main_url.startswith("http"):
         errors.append(f"{name}: mainUrl must be a non-empty http(s) URL, got {main_url!r}")
+    else:
+        issue = check_host_health(main_url)
+        if issue:
+            warnings.append(f"{name}: mainUrl — {issue}")
+
+    for mirror in data.get("mirrorUrls", []) or []:
+        if isinstance(mirror, str) and mirror.startswith("http"):
+            issue = check_host_health(mirror)
+            if issue:
+                warnings.append(f"{name}: mirrorUrl — {issue}")
 
     types = data.get("supportedTypes", [])
     if not isinstance(types, list) or not types:
@@ -120,6 +167,14 @@ def validate_config(path, extractors):
             if not (isinstance(item, list) and len(item) == 2):
                 errors.append(f"{name}: mainPageLists entry must be [url, label]")
                 break
+
+    link_options = data.get("linkOptions") or ""
+    if link_options:
+        host = urlparse(link_options).hostname
+        if host:
+            issue = check_host_health(link_options)
+            if issue:
+                warnings.append(f"{name}: linkOptions — {issue}")
 
     return errors, warnings
 
