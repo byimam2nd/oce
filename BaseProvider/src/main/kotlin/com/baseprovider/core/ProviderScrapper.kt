@@ -177,6 +177,8 @@ class ProviderScrapper(
                 allPossibleLinks)
             linkCollector.collectLinkOptions(document, allPossibleLinks)
             linkCollector.collectDownloadItems(document, allPossibleLinks)
+            linkCollector.collectSwitchVideoButtons(document, currentUrl,
+                allPossibleLinks)
             linkCollector.collectIframes(document, allPossibleLinks)
 
             if (allPossibleLinks.isEmpty()) {

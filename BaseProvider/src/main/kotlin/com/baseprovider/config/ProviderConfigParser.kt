@@ -75,6 +75,7 @@ fun fromJson(id: String, json: JSONObject): ProviderConfig {
         tmdbExternal = json.optString("tmdbExternal", "a[href*='themoviedb.org/']"),
         iframeTag = json.optString("iframeTag", "iframe"),
         followLinkSelector = json.optString("followLinkSelector", ""),
+        switchVideoSelector = json.optString("switchVideoSelector", ""),
         ajaxPlayerUrl = json.optString("ajaxPlayerUrl", ""),
         selectorJsonData = json.optString("selectorJsonData", ""),
         attrImage = jsonArrayToList(

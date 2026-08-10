@@ -98,6 +98,7 @@ data class ProviderConfig(
     val tmdbExternal: String = "a[href*='themoviedb.org/']",
     val iframeTag: String = "iframe",
     val followLinkSelector: String = "",
+    val switchVideoSelector: String = "",
 
     // ── Selectors: AJAX Player ──
     val ajaxPlayerUrl: String = "",

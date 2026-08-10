@@ -2,6 +2,7 @@ package com.baseprovider.collector
 
 import com.baseprovider.config.ProviderConfig
 import com.baseprovider.log.*
+import com.baseprovider.model.*
 import com.baseprovider.network.*
 import com.lagradost.cloudstream3.*
 import org.json.JSONObject
@@ -9,6 +10,8 @@ import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 
 class LinkCollector(private val config: ProviderConfig) {
+
+    private val switchVideoRegex = Regex("""switchVideo\s*\(\s*['"]([^'"]+)['"]""", RegexOption.IGNORE_CASE)
 
     suspend fun collectAjaxPlayers(document: Document, currentUrl: String,
         links: MutableSet<Pair<String, String?>>) {
@@ -65,6 +68,22 @@ class LinkCollector(private val config: ProviderConfig) {
             container.select("a").forEach { a -> val href = a
                 .attr("href"); if (href.isNotBlank()) links.add(href to a
                     .text()) }
+        }
+    }
+
+    fun collectSwitchVideoButtons(document: Document, currentUrl: String,
+        links: MutableSet<Pair<String, String?>>) {
+        if (config.switchVideoSelector.isBlank()) return
+        logDebug(config.id, "SWITCH_VIDEO selector: ${config.switchVideoSelector}")
+        val matches = document.select(config.switchVideoSelector)
+        logDebug(config.id, "SWITCH_VIDEO => ${matches.size} match(es)")
+        matches.forEach { el ->
+            val onclick = el.attr("onclick")
+            if (onclick.isBlank()) return@forEach
+            switchVideoRegex.findAll(onclick).forEach { m ->
+                val url = fixUrlSmart(m.groupValues[1].trim(), currentUrl)
+                if (url.isNotBlank()) links.add(url to el.text().trim())
+            }
         }
     }
 
