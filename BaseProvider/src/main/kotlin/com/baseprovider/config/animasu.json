@@ -1,7 +1,7 @@
 {
   "id": "Animasu",
   "name": "Animasu",
-  "mainUrl": "https://animasu.ink",
+  "mainUrl": "https://v2.animasu.work",
   "mirrorUrls": ["https://v1.animasu.work"],
   "lang": "id",
   "supportedTypes": ["Anime", "AnimeMovie", "OVA"],
@@ -31,7 +31,7 @@
   "loadTags": "div.genxed a",
   "loadStatus": "span:contains(Status:)",
   "loadRecommend": ".listupd article, .listupd .bsx, .related-post article, .relat article",
-  "episodeItems": ".eplister ul > li",
+  "episodeItems": "ul#daftarepisode > li, .eplister ul > li",
   "episodeHref": "a",
   "episodeTitle": "a",
   "episodeNum": ".ep-num, .epl-num",
