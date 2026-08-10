@@ -38,7 +38,6 @@
 | **AbyssPlayer** | abyssplayer.com | Decrypt API (hydrax) |
 | **AWSStream** | awstream.net | POST hash → videoSource |
 | **BloggerVideo** | blogger.com | Video element extraction |
-| **Dailymotion** | dailymotion.com | Regex extraction |
 | **Dhcplay** | dhcplay.com | WebViewResolver + packed JS |
 | **Filedon** | filedon.co | Direct extraction |
 | **Gdplayer** | gdplayer.to | API kaken token |
@@ -54,7 +53,6 @@
 | **StreamHG** | hgcloud.to | WebViewResolver + packed JS |
 | **StreamRuby** | rubyvidhub.com | Direct pattern |
 | **Vidguardto** | listeamed.net | Rhino JS + sigDecode |
-| **VidHide** | vidhide.com | JW Player extraction |
 | **Voe** | voe.sx | Regex m3u8 extraction |
 | **Wishfast** | wishfast.to | Packed JS + file: pattern |
 | **Xtwap** | xtwap.top | JW Player → play.php → m3u8 |
@@ -66,18 +64,25 @@
 ## 🏗️ Architecture
 
 ```
-ProviderHTMLConstants.kt   ← Selector & config (Owner Tagging)
-ProviderScrapper.kt        ← HTTP, search, load, loadLinks
-ProviderMapper.kt          ← HTML → CloudStream objects
-ProviderExtractors.kt      ← Video host extractors
-ProviderCloudstream.kt     ← MainAPI adapter (thin)
-ProviderParser.kt          ← Utility functions
-BaseProviderHelpers.kt     ← Logging, config resolution
+BaseProvider/src/main/kotlin/com/baseprovider/
+│
+├── core/           ← ProviderCloudstream (MainAPI), DetailPageScrapper, Flow
+├── config/         ← ProviderConfig + per-provider JSON (selector & options)
+├── collector/      ← LinkCollector, FallbackPipeline
+├── cache/          ← ExpiringCache
+├── network/        ← HttpClient wrapper + CircuitBreaker
+├── extractor/      ← Video host extractors (JS Packer, API, WebView)
+├── log/            ← Telegram logging (owner tagged)
+├── model/          ← Utility: attribute extraction, text cleaning
+├── ExtractorRegistry.kt  ← Registered extractor list
 ```
 
-Each provider module (e.g. `ProviderAnichin/`) is a **thin wrapper** — only 2 files:
+Each provider is **config-driven** — a thin module (`ProviderAnichin/`) with only 2 files + a JSON config:
 - `ProviderName.kt` — extends `ProviderCloudstream()`
 - `ProviderNamePlugin.kt` — registers main API + extractors
+- `BaseProvider/.../config/<name>.json` — selectors & options (remote-first via ConfigRegistry)
+
+See [docs/LEARNING_GUIDE.md](docs/LEARNING_GUIDE.md) for the full architecture guide.
 
 ---
 

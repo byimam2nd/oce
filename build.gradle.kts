@@ -173,7 +173,6 @@ subprojects {
             allRules = false
             autoCorrect = true
             config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
-            baseline = file("$rootDir/config/detekt/baseline.yml")
 
             parallel = true
             debug = false

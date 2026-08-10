@@ -92,6 +92,11 @@ jobs:
           echo "OCE_VERSION=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
           echo "✅ Build environment set"
 
+      - name: Validate provider configs
+        run: |
+          cd $GITHUB_WORKSPACE/src
+          python3 scripts/validate_providers.py
+
       - name: Build Plugins
         run: |
           cd $GITHUB_WORKSPACE/src
@@ -120,9 +125,7 @@ jobs:
           if ls *.cs3 1> /dev/null 2>&1; then
             git config --local user.email "actions@github.com"
             git config --local user.name "GitHub Actions"
-            git add *.cs3 2>/dev/null || true
-            git add *.jar 2>/dev/null || true
-            git add plugins.json 2>/dev/null || true
+            git add -A . 2>/dev/null || true
 
             if ! git diff --cached --quiet; then
               git commit -m "Build artifacts from $(date +'%Y-%m-%d %H:%M:%S')"

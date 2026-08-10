@@ -5,83 +5,108 @@
 ```
 BaseProvider/src/main/kotlin/com/baseprovider/
 │
-├── ProviderHTMLConstants.kt    ← ALL selectors & configs (Owner Tagging)
+├── core/                    ← Provider engine & flow
+│   ├── BaseProviderEngine.kt    ← engine lifecycle, page/load link
+│   ├── DetailPageScrapper.kt    ← selector-driven page scrape, watchUrl resolution
+│   ├── ProviderCloudstream.kt   ← MainAPI adapter (thin bridge)
+│   ├── ProviderScrapper.kt      ← HTTP fetch, retry, throttle
+│   └── ProviderMapper.kt        ← HTML elements → CloudStream data objects
 │
-├── ProviderScrapper.kt         ← HTTP layer: search, load, loadLinks
-├── ProviderMapper.kt           ← HTML elements → CloudStream data objects
-├── ProviderExtractors.kt       ← Video host extractors (JS Packer, API, WebView)
+├── config/                  ← Config-driven provider (the "source of truth")
+│   ├── ProviderConfig.kt        ← data class: selectors, options, defaults
+│   ├── ProviderConfigParser.kt  ← JSON → ProviderConfig
+│   ├── ConfigRegistry.kt        ← remote-first config resolution (raw.githubusercontent)
+│   └── *.json                   ← per-provider config files (Anichin, Animasu, ...)
 │
-├── ProviderCloudstream.kt      ← MainAPI adapter (thin bridge)
-├── BaseProviderHelpers.kt      ← Logging (Telegram), config resolution
-├── ProviderParser.kt           ← Utility: attribute extraction, text cleaning
+├── collector/               ← generated link pipeline
+│   ├── LinkCollector.kt          ← collect/aggregate stream links
+│   └── FallbackPipeline.kt       ← chain fallback across extractors
 │
-├── ProviderHTMLConstants.kt    ← Selectors
-│
-ProviderNama/                   ← Thin provider (2 files, ~5 lines each)
-├── Nama.kt                     ← class Nama : ProviderCloudstream()
-├── NamaPlugin.kt               ← registerMainAPI + extractors
-├── build.gradle.kts
+├── cache/                   ← ExpiringCache (per-provider TTL)
+├── network/                 ← HttpClient.kt (fetch + retry), CircuitBreaker, SmartThrottle
+├── extractor/               ← Video host extractors (JS Packer, API, WebView) + ExtractorRegistry
+├── log/                     ← Logging.kt (Telegram), LogLevel, FailureType
+└── model/                   ← ProviderModels, ProviderParser (attribute & text utilities)
+
+ProviderAnichin/             ← Thin wrapper module (3-4 files, ~10 lines each)
+├── Anichin.kt               ← class Anichin : ProviderCloudstream()
+├── AnichinPlugin.kt         ← registerMainAPI()
+└── build.gradle.kts
 ```
 
-## Owner Tagging System
+## Config-Driven Provider (Owner Tagging replacement)
 
-Semua selector disimpan di `ProviderHTMLConstants.kt` dengan format:
+Semua selector & opsi disimpan sebagai **JSON config per provider** di
+`BaseProvider/src/main/kotlin/com/baseprovider/config/<name>.json` — bukan lagi konstanta
+ber-label "Owner Tagging".
 
+Resolve order (`ConfigRegistry.get(providerId)`):
+1. Remote: ambil `https://raw.githubusercontent.com/.../config/<name>.json` (fresh deploy tanpa rebuild)
+2. Bundled: muat resource `classpath:/<name>.json` (fallback offline)
+3. GLOBAL: `global.json` (fallback terakhir)
+4. Jika semua gagal → `ProviderConfig(id=..., mainUrl=default)` + log warning
+
+Contoh `anichin.json`:
+```json
+{
+  "id": "Anichin",
+  "mainUrl": "https://anichin.cafe",
+  "supportedTypes": ["Anime", "AnimeMovie", "TvSeries"],
+  "searchPathPattern": "{baseUrl}/page/{page}/?s={query}",
+  "searchItems": "div.listupd article.bs",
+  "episodeItems": ".eplister li",
+  "watchButtons": ".eplister li > a, .play-button, .watch-now, .btn-watch"
+}
 ```
-"ProviderID:::css-selector"
-"MultiProviderID:::css-selector"
-"GLOBAL:::css-selector"
-```
 
-Resolve order (`selectFirstSafe`):
-1. Provider-specific: cari yang match `providerId` di owner list
-2. Multi-provider: cari yang match di shared owner list
-3. GLOBAL: fallback terakhir
-4. Jika semua gagal → return empty, log debug
-
-Contoh:
-```kotlin
-val SEARCH_TITLE = listOf(
-    "Anichin,Donghuastream:::div.bsx h2, .tt, a[title]",
-    "Samehadaku:::h2, .entry-title a, .title",
-    "Pencurimovie:::a[oldtitle], a[title]",
-    "GLOBAL:::h3, h2, .title"
-)
-```
-
-## Data Pipeline
+## Core Data Pipeline
 
 ```
 User Input (search/load)
     ↓
-ProviderCloudstream.kt (MainAPI)
+ProviderCloudstream.kt (MainAPI) → BaseProviderEngine.kt
     ↓
-ProviderScrapper.kt (HTTP fetch)
+ProviderScrapper.kt (HTTP fetch + retry/throttle)
     ↓
 ProviderMapper.kt (HTML → SearchResponse/LoadResponse/Episode)
     ↓
-ProviderHTMLConstants.kt (selectors via Owner Tagging)
+*json config (selectors resolved via ProviderConfig)
     ↓
-ProviderExtractors.kt (video extraction via ExtractorApi)
+collector/LinkCollector.kt + extractor/ExtractorRegistry (video extraction)
     ↓
 CloudStream Player
 ```
 
+## Selector Semantics
+
+- Selector fields di config bersifat **optional** — parser menerapkan default
+  (`ProviderConfigParser.kt:11-97`). Field kosong = fallback ke default, **bukan error**.
+- Sangat dianjurkan mengisi selector yang dibutuhkan jenis konten:
+  - `Movie`/`AnimeMovie` → `watchButtons` wajib eksplisit (default `.play-button, .watch-now, .btn-watch`
+    tidak cocok untuk semua template).
+  - `TvSeries`/`Anime` → `episodeItems` + `episodeHref` wajib eksplisit.
+  - Non-JSON search → `searchItems`, `searchTitle`, `searchHref` wajib.
+
 ## Logging System
 
-- **FAIL/ERROR/CRITICAL** → Telegram group (topic OCE_logs)
-- **Dedup key**: `level|tag|method|host` — sequential errors merge with [N] counter
+- **FAIL/ERROR/CRITICAL** → Telegram group (topic OCE_logs) via `log/Logging.kt`
+- **Dedup key**: `level|tag|method|host` — errors berurutan melebur dengan counter [N]
 - **Format**: `[N]❌[FAIL]Provider/method/url/selectors/message`
+- **FailureType**: klasifikasi (misal `HTTP`, `PARSE`, `TIMEOUT`) di `log/FailureType.kt`
 
 ## Extractor Architecture
 
-Each extractor extends `ExtractorApi()`:
+Setiap extractor extends `ExtractorApi()`:
 - `name` — display name
 - `mainUrl` — domain untuk matching
 - `requiresReferer` — apakah perlu referer header
 - `getUrl()` — ekstraksi video dari URL
 
-Extractors use 3 approaches (in order):
+Extractors terdaftar di `extractor/ExtractorRegistry.kt` (`ProviderExtractors.list`).
+Matching: domain URL dinormalisasi vs `mainUrl` extractor (`getMatchingExtractors`).
+
+Extractors memakai beberapa pendekatan (berurutan):
 1. **JS Packer decode** — `findPackedJsInPage()` + `decodePackedJs()` + `extractAllVideoUrls()`
-2. **WebViewResolver** — for JS-heavy pages (CloudStream WebView)
-3. **Deep scan** — regex-based URL extraction from raw HTML
+2. **WebViewResolver** — untuk halaman JS-heavy (CloudStream WebView)
+3. **Deep scan** — regex-based URL extraction dari raw HTML
+4. **AJAX/API** — POST/DECRYPT untuk host tertentu (AWSStream, Dhcplay, dll)
