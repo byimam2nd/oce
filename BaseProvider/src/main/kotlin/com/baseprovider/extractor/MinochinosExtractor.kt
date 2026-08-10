@@ -6,7 +6,7 @@ import com.lagradost.api.Log
 import org.jsoup.Jsoup
 
 
-class Minochinos : ExtractorApi() {
+open class Minochinos : ExtractorApi() {
     override var name = "Minochinos";
     override var mainUrl = "https://minochinos.com";
     override val requiresReferer = true

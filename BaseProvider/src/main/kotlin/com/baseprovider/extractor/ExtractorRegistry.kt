@@ -13,9 +13,10 @@ object ProviderExtractors {
             BloggerVideo(),
         Wishfast(),
         Minochinos(), ShortIcu(), PlayPutarIn(), StreamHG(),
+        Morencius(),
         MegaPlay(), AWSStream(), LuluStream(), Dhcplay(), Voe(), Xtwap(),
             Gdplayer(), Vidguardto2(), Movearnpre(),
-        Lk21PlayerPage()
+        Lk21PlayerPage(), VideoNodePage()
     )
 
     private val normalizedList: List<Pair<String, ExtractorApi>> = list
