@@ -15,7 +15,6 @@ object ConfigRegistry {
         "Dutamovie21" to "dutamovie21",
         "IndoDrama21" to "indodrama21",
         "LayarKaca21" to "layarkaca21",
-        "Pencurimovie" to "pencurimovie",
         "Samehadaku" to "samehadaku",
     )
 
