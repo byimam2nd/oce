@@ -40,7 +40,22 @@ class DetailPageScrapper(
 
         val metadata = mapper.extractMetadata(document, currentUrl)
 
-        val (recommendations, actors) = coroutineScope {
+        val epItems = if (config.episodeItems.isNotBlank()) document
+            .select(config.episodeItems) else org.jsoup.select.Elements()
+        val seasonDataScript = if (config.seasonContainer
+            .isNotBlank()) document.selectFirst(config
+                .seasonContainer) else null
+        val hasTvPath = config.tvPathSegment.isNotBlank() && currentUrl
+            .contains(config.tvPathSegment)
+        val isMovie = (seasonDataScript == null) && !hasTvPath && (
+            (config.moviePathSegment.isNotBlank() && currentUrl
+                .contains(config.moviePathSegment))
+                || epItems.isEmpty()
+        )
+        val type = if (isMovie) TvType.Movie else if (config.supportedTypes
+            .contains(TvType.Anime)) TvType.Anime else TvType.TvSeries
+
+        val (recommendations, actors, episodes, tracker) = coroutineScope {
             val recs = async {
                 if (config.loadRecommend.isNotBlank()) {
                     document.select(config.loadRecommend)
@@ -60,31 +75,24 @@ class DetailPageScrapper(
                         p) else null
                 }
             }
-            recs.await() to acts.await()
-        }
-
-        val epItems = if (config.episodeItems.isNotBlank()) document
-            .select(config.episodeItems) else org.jsoup.select.Elements()
-        val seasonDataScript = if (config.seasonContainer
-            .isNotBlank()) document.selectFirst(config
-                .seasonContainer) else null
-        val hasTvPath = config.tvPathSegment.isNotBlank() && currentUrl
-            .contains(config.tvPathSegment)
-        val isMovie = (seasonDataScript == null) && !hasTvPath && (
-            (config.moviePathSegment.isNotBlank() && currentUrl
-                .contains(config.moviePathSegment))
-                || epItems.isEmpty()
-        )
-        val type = if (isMovie) TvType.Movie else if (config.supportedTypes
-            .contains(TvType.Anime)) TvType.Anime else TvType.TvSeries
-        val tracker = withTimeout(4000L) {
-            runCatching {
-                APIHolder.getTracker(listOf(metadata.title), TrackerType
-                    .getTypes(type), metadata.year, true)
-            }.getOrElse { e ->
-                logDebug(config.id, "Tracker Fetch Warning: ${e.message}")
-                null
+            val eps = async {
+                if (!isMovie) mapper.extractEpisodes(document,
+                    currentUrl, seasonDataScript, epItems,
+                    metadata.poster) else emptyList()
             }
+            val trk = async {
+                withTimeout(4000L) {
+                    runCatching {
+                        APIHolder.getTracker(listOf(metadata.title),
+                            TrackerType.getTypes(type), metadata.year,
+                            true)
+                    }.getOrElse { e ->
+                        logDebug(config.id, "Tracker Fetch Warning: ${e.message}")
+                        null
+                    }
+                }
+            }
+            recs.await() to Triple(acts.await(), eps.await(), trk.await())
         }
 
         logSuccess(
@@ -124,8 +132,6 @@ class DetailPageScrapper(
                 addTMDbId(metadata.tmdbId?.toString())
             }
         } else {
-            val episodes = mapper.extractEpisodes(document, currentUrl,
-                seasonDataScript, epItems, metadata.poster)
             return if (type == TvType.Anime || type == TvType.OVA || type ==
                 TvType.AnimeMovie) {
                 api.newAnimeLoadResponse(metadata.title, url, type) {
