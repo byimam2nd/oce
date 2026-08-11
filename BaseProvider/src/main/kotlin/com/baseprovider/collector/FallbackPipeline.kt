@@ -7,7 +7,6 @@ import com.baseprovider.model.*
 import com.baseprovider.network.*
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import kotlinx.coroutines.withTimeout
 import org.jsoup.Jsoup
 
 class FallbackPipeline(private val config: ProviderConfig) {
@@ -66,12 +65,10 @@ class FallbackPipeline(private val config: ProviderConfig) {
         val refererForPlayer = if (config.refererPlayerMode == "series_url") "${baseForReferer.trimEnd('/')}/" else currentUrl
         logDebug(config.id, "Direct extraction failed, trying manual iframe fetch for: $fixedUrl (Referer: $refererForPlayer)")
 
-        val playerDoc = withTimeout(15000L) {
-            app.get(
-                fixedUrl, referer = refererForPlayer,
-                headers = config.globalHeaders, timeout = 15000L
-            ).document
-        }
+        val playerDoc = fetchDocument(
+            fixedUrl, config, referer = refererForPlayer,
+            skipCache = true
+        )
         val iframeSelectors = config.iframeSelectors
         val iframeAttributes = config.iframeSources
 

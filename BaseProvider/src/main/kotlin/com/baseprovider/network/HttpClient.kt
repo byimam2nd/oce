@@ -45,11 +45,12 @@ suspend fun fetchDocument(
     for ((attemptUrl, host) in fallbackUrls) {
         if (!skipCache) { htmlCache?.get(attemptUrl)?.let { return it } }
         if (host.isNotBlank() && HostCircuitBreaker.isOpen(host)) continue
+        var hostFailed = false
         for (ua in uaVariants) {
             if (host.isNotBlank() && HostCircuitBreaker.isOpen(host)) break
             val headers = config.globalHeaders.withUa(ua)
-            return try {
-                executeWithRetry {
+            try {
+                val doc = executeWithRetry {
                     rateLimitDelay(attemptUrl)
                     val res = withTimeout(DEFAULT_TIMEOUT) {
                         app.get(
@@ -59,14 +60,14 @@ suspend fun fetchDocument(
                             referer = referer
                         )
                     }
-                    val doc = if (config.useDocumentLarge) res
-                        .documentLarge else res.document
-                    if (!skipCache) { htmlCache?.put(attemptUrl, doc) }
-                    doc
-                }.also { HostCircuitBreaker.reportSuccess(host) }
+                    if (config.useDocumentLarge) res.documentLarge else res.document
+                }
+                if (!skipCache) { htmlCache?.put(attemptUrl, doc) }
+                if (host.isNotBlank()) HostCircuitBreaker.reportSuccess(host)
+                return doc
             } catch (e: Exception) {
                 lastError = e
-                if (host.isNotBlank()) HostCircuitBreaker.reportFailure(host)
+                hostFailed = true
                 val msg = e.message ?: ""
                 if (NON_RETRYABLE_HTTP.containsMatchIn(msg)) throw e
                 if (CLOUDFLARE_HTTP.containsMatchIn(msg)) {
@@ -76,6 +77,7 @@ suspend fun fetchDocument(
                 break
             }
         }
+        if (hostFailed && host.isNotBlank()) HostCircuitBreaker.reportFailure(host)
     }
 
     throw lastError ?: Exception("All mirrors failed for $url")

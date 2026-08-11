@@ -165,7 +165,8 @@ class ProviderScrapper(
         subtitleCallback: (SubtitleFile) -> Unit,
             callback: (ExtractorLink) -> Unit): Boolean {
         return runCatching {
-            val document = fetchDocument(data, config, skipCache = true,
+            val document = fetchDocument(data, config,
+                referer = config.mainUrl, skipCache = true,
                 htmlCache = htmlCache)
             val currentUrl = data
             val allPossibleLinks = mutableSetOf<Pair<String, String?>>()

@@ -14,10 +14,10 @@
   },
   "mainPageLists": [
     ["page/", "Terbaru"],
-    ["series/?status=&type=&order=update&page=", "Series Update"],
-    ["series/?status=&type=&order=popular&page=", "Series Populer"],
+    ["anime-sedang-tayang-terbaru/page/", "Series Update"],
+    ["populer/page/", "Series Populer"],
     ["anime/page/", "Anime"],
-    ["donghua/page/", "Donghua"]
+    ["genre/donghua/page/", "Donghua"]
   ],
   "searchItems": "div.listupd .bsx, div.listupd .bs, div.listupd article.bs",
   "searchTitle": "div.tt",

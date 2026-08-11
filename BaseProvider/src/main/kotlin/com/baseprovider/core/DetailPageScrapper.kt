@@ -24,7 +24,7 @@ class DetailPageScrapper(
 
     private suspend fun loadRecursive(url: String,
         depth: Int): LoadResponse {
-        val document = fetchDocument(url, config)
+        val document = fetchDocument(url, config, referer = config.mainUrl)
         val currentUrl = url
         if (depth < 2 && config.followLinkSelector.isNotBlank()) {
             val nextAnchor = document.selectFirst(config
