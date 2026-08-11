@@ -27,6 +27,11 @@ object MasterLinkGenerator {
         }
     }
 
+    val minimalVideoHeaders = mapOf(
+        "Accept" to "*/*",
+        "User-Agent" to DEFAULT_UA
+    )
+
     private fun enrichHeaders(headers: Map<String, String>?): Map<String, String> {
         val provided = headers ?: emptyMap()
         if (provided.isEmpty()) return BROWSER_LIKE_HEADERS

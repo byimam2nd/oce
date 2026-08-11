@@ -21,13 +21,7 @@ open class Odnoklassniki : ExtractorApi() {
             "Origin" to mainUrl,
             "User-Agent" to DEFAULT_UA
         )
-        val videoHeaders = mapOf(
-            "Accept" to "*/*",
-            "Sec-Fetch-Dest" to "video",
-            "Sec-Fetch-Mode" to "no-cors",
-            "Sec-Fetch-Site" to "cross-site",
-            "User-Agent" to DEFAULT_UA
-        )
+        val videoHeaders = MasterLinkGenerator.minimalVideoHeaders
         val embedUrl = url.replace("/video/", "/videoembed/")
         val videoReq = app.get(embedUrl, headers = headers).text.replace("\\&quot;", "\"")
             .replace("\\\\", "\\")
