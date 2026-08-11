@@ -20,6 +20,13 @@ object MasterLinkGenerator {
         "User-Agent" to DEFAULT_UA
     )
 
+    fun decodeUnicodeEscapes(input: String): String {
+        if (!input.contains("\\u")) return input
+        return Regex("""\\u([0-9A-Fa-f]{4})""").replace(input) { m ->
+            m.groupValues[1].toInt(16).toChar().toString()
+        }
+    }
+
     private fun enrichHeaders(headers: Map<String, String>?): Map<String, String> {
         val provided = headers ?: emptyMap()
         if (provided.isEmpty()) return BROWSER_LIKE_HEADERS

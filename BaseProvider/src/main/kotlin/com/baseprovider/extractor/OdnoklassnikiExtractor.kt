@@ -3,6 +3,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.*
 import com.lagradost.cloudstream3.utils.*
 import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
+import com.lagradost.api.Log
 
 import com.fasterxml.jackson.annotation.JsonProperty
 
@@ -30,6 +31,19 @@ open class Odnoklassniki : ExtractorApi() {
         val embedUrl = url.replace("/video/", "/videoembed/")
         val videoReq = app.get(embedUrl, headers = headers).text.replace("\\&quot;", "\"")
             .replace("\\\\", "\\")
+
+        val hlsUrl = Regex(""""hlsManifestUrl":\s*"([^"]+)"""")
+            .find(videoReq)?.groupValues?.getOrNull(1)
+            ?.let { MasterLinkGenerator.decodeUnicodeEscapes(it) }
+        if (!hlsUrl.isNullOrBlank()) {
+            Log.d("OkRu", "Using adaptive HLS: ${hlsUrl.take(90)}...")
+            MasterLinkGenerator.createSmartLink(
+                this.name, hlsUrl, "$mainUrl/",
+                headers = videoHeaders, callback = callback
+            )
+            return
+        }
+
         val videosStr = Regex(""""videos":(\[[^]]*])""").find(videoReq)
             ?.groupValues?.get(1) ?: return
         tryParseJson<List<OkRuVideo>>(videosStr)?.forEach { video ->
