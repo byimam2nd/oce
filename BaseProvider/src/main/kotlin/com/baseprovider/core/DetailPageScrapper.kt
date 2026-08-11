@@ -16,6 +16,13 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeout
 
+private data class LoadedPageData(
+    val recommendations: List<SearchResponse>,
+    val actors: List<Actor>,
+    val episodes: List<Episode>,
+    val tracker: Tracker?
+)
+
 class DetailPageScrapper(
     private val api: MainAPI,
     private val config: ProviderConfig,
@@ -55,7 +62,7 @@ class DetailPageScrapper(
         val type = if (isMovie) TvType.Movie else if (config.supportedTypes
             .contains(TvType.Anime)) TvType.Anime else TvType.TvSeries
 
-        val (recommendations, actors, episodes, tracker) = coroutineScope {
+        val pageData = coroutineScope {
             val recs = async {
                 if (config.loadRecommend.isNotBlank()) {
                     document.select(config.loadRecommend)
@@ -92,8 +99,12 @@ class DetailPageScrapper(
                     }
                 }
             }
-            recs.await() to Triple(acts.await(), eps.await(), trk.await())
+            LoadedPageData(recs.await(), acts.await(), eps.await(), trk.await())
         }
+        val recommendations = pageData.recommendations
+        val actors = pageData.actors
+        val episodes = pageData.episodes
+        val tracker = pageData.tracker
 
         logSuccess(
             config.id,
