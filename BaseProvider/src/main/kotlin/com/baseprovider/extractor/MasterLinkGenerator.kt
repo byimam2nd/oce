@@ -3,11 +3,30 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.*
 import com.lagradost.cloudstream3.utils.*
 
+const val DEFAULT_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
 object MasterLinkGenerator {
 
     private val DEFAULT_QUALITY_STRIP = Regex("""\d{3,4}p|HD|SD|FHD""",
         RegexOption.IGNORE_CASE)
+
+    private val BROWSER_LIKE_HEADERS = mapOf(
+        "Accept" to "*/*",
+        "Connection" to "keep-alive",
+        "Sec-Fetch-Dest" to "empty",
+        "Sec-Fetch-Mode" to "cors",
+        "Sec-Fetch-Site" to "cross-site",
+        "Accept-Language" to "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+        "User-Agent" to DEFAULT_UA
+    )
+
+    private fun enrichHeaders(headers: Map<String, String>?): Map<String, String> {
+        val provided = headers ?: emptyMap()
+        if (provided.isEmpty()) return BROWSER_LIKE_HEADERS
+        val merged = HashMap(BROWSER_LIKE_HEADERS)
+        merged.putAll(provided)
+        return merged
+    }
 
     suspend fun createSmartLink(
         source: String,
@@ -19,7 +38,7 @@ object MasterLinkGenerator {
         callback: (ExtractorLink) -> Unit
     ) {
         val isAdaptive = url.contains(".m3u8") || url.contains(".mpd")
-        val safeHeaders = headers ?: emptyMap()
+        val safeHeaders = enrichHeaders(headers)
 
         val cleanName = source.replace(qualityStripRegex, "").trim()
         callback(newExtractorLink(

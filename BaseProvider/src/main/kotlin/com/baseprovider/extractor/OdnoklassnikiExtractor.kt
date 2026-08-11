@@ -11,8 +11,17 @@ open class Odnoklassniki : ExtractorApi() {
     override suspend fun getUrl(url: String, referer: String?,
         subtitleCallback: (SubtitleFile) -> Unit,
             callback: (ExtractorLink) -> Unit) {
+        val headers = mapOf(
+            "Accept" to "*/*",
+            "Connection" to "keep-alive",
+            "Sec-Fetch-Dest" to "empty",
+            "Sec-Fetch-Mode" to "cors",
+            "Sec-Fetch-Site" to "cross-site",
+            "Origin" to mainUrl,
+            "User-Agent" to DEFAULT_UA
+        )
         val embedUrl = url.replace("/video/", "/videoembed/")
-        val videoReq = app.get(embedUrl).text.replace("\\&quot;", "\"")
+        val videoReq = app.get(embedUrl, headers = headers).text.replace("\\&quot;", "\"")
             .replace("\\\\", "\\")
         val videosStr = Regex(""""videos":(\[[^]]*])""").find(videoReq)
             ?.groupValues?.get(1) ?: return
@@ -23,6 +32,7 @@ open class Odnoklassniki : ExtractorApi() {
                 videoUrl,
                 "$mainUrl/",
                 MasterLinkGenerator.getQualityFromName(video.name),
+                headers = headers,
                 callback = callback
             )
         }
