@@ -35,6 +35,7 @@ data class ProviderConfig(
     val cacheTtlMinutes: Long = 5L,
     val isHorizontal: Boolean = false,
     val mirrorUrls: List<String> = emptyList(),
+    val uaPool: List<String> = emptyList(),
     val refererPlayerMode: String = "current_url",
     val iframeSelectors: String = "iframe",
 

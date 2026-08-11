@@ -26,6 +26,7 @@
   "cacheTtlMinutes": 5,
   "isHorizontal": false,
   "mirrorUrls": [],
+  "uaPool": [],
   "refererPlayerMode": "current_url",
   "iframeSelectors": "iframe",
 

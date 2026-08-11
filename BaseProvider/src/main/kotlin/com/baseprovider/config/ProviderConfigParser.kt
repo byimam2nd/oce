@@ -31,6 +31,7 @@ fun fromJson(id: String, json: JSONObject): ProviderConfig {
         cacheTtlMinutes = json.optLong("cacheTtlMinutes", 5L),
         isHorizontal = json.optBoolean("isHorizontal", false),
         mirrorUrls = jsonArrayToList(json.optJSONArray("mirrorUrls")),
+        uaPool = jsonArrayToList(json.optJSONArray("uaPool")),
         refererPlayerMode = json.optString("refererPlayerMode", "current_url"),
         iframeSelectors = json.optString("iframeSelectors", "iframe"),
         qualityStripRegex = json.optString("qualityStripRegex", """\d{3,4}p|HD|SD|FHD"""),
