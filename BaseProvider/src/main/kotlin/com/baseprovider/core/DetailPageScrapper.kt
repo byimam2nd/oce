@@ -14,6 +14,7 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withTimeout
 
 class DetailPageScrapper(
     private val api: MainAPI,
@@ -76,12 +77,14 @@ class DetailPageScrapper(
         )
         val type = if (isMovie) TvType.Movie else if (config.supportedTypes
             .contains(TvType.Anime)) TvType.Anime else TvType.TvSeries
-        val tracker = runCatching {
-            APIHolder.getTracker(listOf(metadata.title), TrackerType
-                .getTypes(type), metadata.year, true)
-        }.getOrElse { e ->
-            logDebug(config.id, "Tracker Fetch Warning: ${e.message}")
-            null
+        val tracker = withTimeout(4000L) {
+            runCatching {
+                APIHolder.getTracker(listOf(metadata.title), TrackerType
+                    .getTypes(type), metadata.year, true)
+            }.getOrElse { e ->
+                logDebug(config.id, "Tracker Fetch Warning: ${e.message}")
+                null
+            }
         }
 
         logSuccess(
