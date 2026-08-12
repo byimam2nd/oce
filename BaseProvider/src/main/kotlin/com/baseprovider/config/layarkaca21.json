@@ -2,6 +2,13 @@
   "id": "LayarKaca21",
   "name": "LayarKaca",
   "mainUrl": "https://tv12.lk21official.cc",
+  "mirrorUrls": [
+    "https://tv3.lk21official.cc",
+    "https://tv5.lk21official.cc",
+    "https://tv8.lk21official.cc",
+    "https://tv11.lk21official.cc",
+    "https://tv14.lk21official.cc"
+  ],
   "seriesUrl": "https://dramamu.lk21.de",
   "searchUrl": "https://gudangvape.com",
   "lang": "id",
