@@ -40,7 +40,7 @@ object MasterLinkGenerator {
         if (bareHeaders) {
             return if (provided.isEmpty()) minimalVideoHeaders else provided
         }
-        if (provided.isEmpty()) return BROWSER_LIKE_HEADERS
+        if (provided.isEmpty()) return minimalVideoHeaders
         val merged = HashMap(BROWSER_LIKE_HEADERS)
         merged.putAll(provided)
         return merged
