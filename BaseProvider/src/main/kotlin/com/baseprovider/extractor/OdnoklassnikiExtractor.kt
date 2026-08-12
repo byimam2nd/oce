@@ -32,8 +32,9 @@ open class Odnoklassniki : ExtractorApi() {
         if (!hlsUrl.isNullOrBlank()) {
             Log.d("OkRu", "Using adaptive HLS: ${hlsUrl.take(90)}...")
             MasterLinkGenerator.createSmartLink(
-                this.name, hlsUrl, "$mainUrl/",
-                headers = videoHeaders, callback = callback
+                this.name, hlsUrl, null,
+                headers = videoHeaders, bareHeaders = true,
+                callback = callback
             )
             return
         }
@@ -45,9 +46,10 @@ open class Odnoklassniki : ExtractorApi() {
             MasterLinkGenerator.createSmartLink(
                 this.name,
                 videoUrl,
-                "$mainUrl/",
+                null,
                 MasterLinkGenerator.getQualityFromName(video.name),
                 headers = videoHeaders,
+                bareHeaders = true,
                 callback = callback
             )
         }

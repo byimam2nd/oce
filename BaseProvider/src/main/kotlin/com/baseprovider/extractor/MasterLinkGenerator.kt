@@ -32,8 +32,14 @@ object MasterLinkGenerator {
         "User-Agent" to DEFAULT_UA
     )
 
-    private fun enrichHeaders(headers: Map<String, String>?): Map<String, String> {
+    private fun enrichHeaders(
+        headers: Map<String, String>?,
+        bareHeaders: Boolean
+    ): Map<String, String> {
         val provided = headers ?: emptyMap()
+        if (bareHeaders) {
+            return if (provided.isEmpty()) minimalVideoHeaders else provided
+        }
         if (provided.isEmpty()) return BROWSER_LIKE_HEADERS
         val merged = HashMap(BROWSER_LIKE_HEADERS)
         merged.putAll(provided)
@@ -47,10 +53,11 @@ object MasterLinkGenerator {
         quality: Int? = null,
         headers: Map<String, String>? = null,
         qualityStripRegex: Regex = DEFAULT_QUALITY_STRIP,
+        bareHeaders: Boolean = false,
         callback: (ExtractorLink) -> Unit
     ) {
         val isAdaptive = url.contains(".m3u8") || url.contains(".mpd")
-        val safeHeaders = enrichHeaders(headers)
+        val safeHeaders = enrichHeaders(headers, bareHeaders)
 
         val cleanName = source.replace(qualityStripRegex, "").trim()
         callback(newExtractorLink(
