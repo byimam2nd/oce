@@ -1,5 +1,7 @@
 package com.baseprovider
 
+import com.baseprovider.config.KNOWN_CONFIG_KEYS
+import com.baseprovider.config.fromJson
 import com.lagradost.cloudstream3.TvType
 import org.json.JSONObject
 import org.junit.Assert.*
@@ -81,5 +83,40 @@ class ProviderConfigParserTest {
         val json = JSONObject("""{"mainUrl": "https://invalid-regex.com", "supportedTypes": ["Movie"], "yearExtractorRegex": "[invalid"}""")
         val config = fromJson("invalid-regex", json)
         assertEquals("", config.yearExtractorRegex)
+    }
+
+    @Test
+    fun `all bundled configs parse without unknown keys`() {
+        val bundledFiles = listOf(
+            "anichin", "animasu", "donghuastream", "dutamovie21",
+            "global", "indodrama21", "layarkaca21", "samehadaku"
+        )
+        for (fileName in bundledFiles) {
+            val stream = this::class.java.classLoader?.getResourceAsStream("$fileName.json")
+                ?: throw AssertionError("Bundled resource missing: $fileName.json")
+            val jsonStr = stream.bufferedReader().readText()
+            val json = JSONObject(jsonStr)
+
+            val unknown = json.keys().asSequence()
+                .filterNot { it in KNOWN_CONFIG_KEYS }
+                .toList()
+            assertTrue(
+                "Config[$fileName] has unknown/unused keys (kemungkinan typo): $unknown",
+                unknown.isEmpty()
+            )
+
+            val id = json.optString("id", fileName)
+            fromJson(id, json)
+        }
+    }
+
+    @Test
+    fun `warnUnknownKeys accepts typo detection input`() {
+        val json = JSONObject("""{"mainUrl": "https://t.com", "supportedTypes": ["Movie"], "searchTitel": ".x"}""")
+        val unknown = json.keys().asSequence()
+            .filterNot { it in KNOWN_CONFIG_KEYS }
+            .toList()
+        assertTrue(unknown.contains("searchTitel"))
+        assertFalse(unknown.contains("searchTitle"))
     }
 }

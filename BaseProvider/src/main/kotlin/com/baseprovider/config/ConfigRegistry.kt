@@ -7,6 +7,7 @@ import java.net.URL
 object ConfigRegistry {
     private const val TAG = "ConfigRegistry"
     private const val REMOTE_BASE = "https://raw.githubusercontent.com/byimam2nd/oce/master/BaseProvider/src/main/kotlin/com/baseprovider/config"
+    private const val REMOTE_TTL_MS = 10 * 60 * 1000L
 
     private val providers = mapOf(
         "Anichin" to "anichin",
@@ -20,6 +21,10 @@ object ConfigRegistry {
 
     private val globalConfig: ProviderConfig by lazy { loadBundled("global") ?: ProviderConfig(id = "GLOBAL") }
 
+    private class CachedConfig(val config: ProviderConfig, val fetchedAt: Long)
+
+    private val remoteCache = mutableMapOf<String, CachedConfig>()
+
     fun get(id: String): ProviderConfig {
         val fileName = providers[id]
         if (fileName == null) {
@@ -27,8 +32,17 @@ object ConfigRegistry {
             return globalConfig
         }
 
+        val cached = remoteCache[fileName]
+        if (cached != null && System.currentTimeMillis() - cached.fetchedAt < REMOTE_TTL_MS) {
+            return cached.config
+        }
+
         val remote = fetchRemote(fileName)
-        if (remote != null) return remote
+        if (remote != null) {
+            remoteCache[fileName] = CachedConfig(remote, System.currentTimeMillis())
+            return remote
+        }
+        remoteCache.remove(fileName)
 
         val bundled = loadBundled(fileName)
         if (bundled != null) return bundled

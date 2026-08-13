@@ -1,10 +1,54 @@
 package com.baseprovider.config
 
+import com.lagradost.api.Log
 import com.lagradost.cloudstream3.TvType
 import org.json.JSONArray
 import org.json.JSONObject
 
+private const val PARSER_TAG = "ProviderConfigParser"
+
+/**
+ * Daftar key JSON yang dikenali parser. Digunakan utk mendeteksi typo / key
+ * yang tidak dikenal di config provider (lihat `warnUnknownKeys`).
+ * Update saat ada field baru di [ProviderConfig].
+ */
+val KNOWN_CONFIG_KEYS: Set<String> = setOf(
+    "id", "name", "mainUrl", "seriesUrl", "searchUrl", "lang", "supportedTypes",
+    "searchPathPattern", "mainPagePathPattern", "moviePathSegment", "tvPathSegment",
+    "episodeDataUrlPattern", "searchPageLimit", "reverseEpisodes", "isJsonSearch",
+    "searchJsonRoot", "searchJsonTitle", "searchJsonHref", "searchJsonPoster",
+    "searchJsonPosterPrefix", "searchJsonType", "useDocumentLarge", "cacheTtlMinutes",
+    "isHorizontal", "mirrorUrls", "uaPool", "refererPlayerMode", "iframeSelectors",
+    "qualityStripRegex", "globalHeaders", "googleReferer", "mainPageLists",
+    "allowedExtractors", "dubKeyword", "ongoingKeyword", "episodeKeyword",
+    "seriesKeyword", "comingSoonKeywords",
+    "searchItems", "searchTitle", "searchHref", "searchPoster", "searchRating",
+    "searchEpText",
+    "loadTitle", "loadPoster", "loadBanner", "loadDesc", "loadInfoBox", "loadTags",
+    "loadRating", "loadStatus", "loadTrailer", "loadRecommend",
+    "episodeItems", "episodeHref", "episodeTitle", "episodeNum", "episodeDesc",
+    "episodeTime",
+    "linkOptions", "downloadItems", "actorItems", "actorName",
+    "watchButtons", "seasonContainer", "imdbExternal", "tmdbExternal", "iframeTag",
+    "followLinkSelector", "switchVideoSelector",
+    "ajaxPlayerUrl", "selectorJsonData",
+    "attrImage", "attrHref", "attrValue", "iframeSources",
+    "hrefCleanRegex", "hrefCleanReplace",
+    "yearSelector", "yearExtractorRegex",
+    "bloatRegex"
+)
+
+private fun warnUnknownKeys(id: String, json: JSONObject) {
+    val unknown = json.keys().asSequence()
+        .filterNot { it in KNOWN_CONFIG_KEYS }
+        .toList()
+    if (unknown.isNotEmpty()) {
+        Log.w(PARSER_TAG, "Config[$id] unknown/unused keys (mungkin typo): ${unknown.joinToString()}")
+    }
+}
+
 fun fromJson(id: String, json: JSONObject): ProviderConfig {
+    warnUnknownKeys(id, json)
     return ProviderConfig(
         id = id,
         name = json.optString("name", id),
