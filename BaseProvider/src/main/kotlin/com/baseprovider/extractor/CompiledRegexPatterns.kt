@@ -37,4 +37,14 @@ object CompiledRegexPatterns {
         return if (masters.isNotEmpty()) masters
             .distinct() else listOf(m3u8s.first())
     }
+
+    /** Prioritaskan HLS (m3u8), lalu DASH (mpd), baru fallback lainnya. */
+    fun prioritizeAdaptiveUrls(urls: Collection<String>): List<String> {
+        if (urls.isEmpty()) return emptyList()
+        val m3u8s = urls.filter { it.contains(".m3u8", ignoreCase = true) }
+        if (m3u8s.isNotEmpty()) return filterMasterM3u8(urls)
+        val mpds = urls.filter { it.contains(".mpd", ignoreCase = true) }
+        if (mpds.isNotEmpty()) return mpds.distinct()
+        return urls.distinct()
+    }
 }

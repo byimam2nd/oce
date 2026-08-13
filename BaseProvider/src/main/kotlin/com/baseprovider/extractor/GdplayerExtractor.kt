@@ -22,10 +22,13 @@ open class Gdplayer : ExtractorApi() {
             app.get(apiUrl, headers = mapOf("X-Requested-With" to "XMLHttpRequest")).text
         )
         val sources = json.optJSONArray("sources") ?: return
+        val fileUrls = mutableListOf<String>()
         for (i in 0 until sources.length()) {
             val file = sources.optJSONObject(i)?.optString("file") ?: ""
-            if (file.isNotBlank()) MasterLinkGenerator.createSmartLink(this
-                .name, file, mainUrl, callback = callback)
+            if (file.isNotBlank()) fileUrls.add(file)
+        }
+        CompiledRegexPatterns.prioritizeAdaptiveUrls(fileUrls).forEach {
+            MasterLinkGenerator.createSmartLink(this.name, it, mainUrl, callback = callback)
         }
     }
 }

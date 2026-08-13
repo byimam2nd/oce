@@ -24,9 +24,10 @@ open class LuluStream : ExtractorApi() {
         ).document
         val script = doc.selectFirst("script:containsData(vplayer)")
             ?.data() ?: return
-        val m3u8 = Regex("""file:"(.*)"""").find(script)?.groupValues
-            ?.getOrNull(1) ?: return
-        MasterLinkGenerator.createSmartLink(this.name, m3u8, mainUrl,
-            callback = callback)
+        val urls = CompiledRegexPatterns.extractAllVideoUrls(script)
+        CompiledRegexPatterns.prioritizeAdaptiveUrls(urls).forEach {
+            MasterLinkGenerator.createSmartLink(this.name, it, mainUrl,
+                callback = callback)
+        }
     }
 }

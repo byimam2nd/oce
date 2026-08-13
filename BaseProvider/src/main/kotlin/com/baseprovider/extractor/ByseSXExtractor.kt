@@ -67,9 +67,12 @@ open class ByseSX : ExtractorApi() {
                 .let { if (it.startsWith("\uFEFF")) it
                     .substring(1) else it }
 
-            tryParseJson<BysePlaybackDecrypt>(jsonStr)?.sources?.forEach {
+            val sourceUrls = tryParseJson<BysePlaybackDecrypt>(jsonStr)
+                ?.sources?.map { it.url } ?: emptyList()
+            CompiledRegexPatterns.prioritizeAdaptiveUrls(sourceUrls)
+                .forEach {
                 MasterLinkGenerator.createSmartLink(
-                    name, it.url, mainUrl,
+                    name, it, mainUrl,
                     headers = mapOf("Referer" to base),
                     callback = callback
                 )

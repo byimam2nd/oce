@@ -32,14 +32,16 @@ class AbyssPlayer : ExtractorApi() {
         ).text
         val json = JSONObject(response).optJSONObject("result") ?: return
         val sources = json.optJSONArray("sources") ?: return
+        val sourceUrls = mutableListOf<String>()
         for (i in 0 until sources.length()) {
             val src = sources.optJSONObject(i) ?: continue
             if (src.optBoolean("status", false)) {
                 val srcUrl = src.optString("url")
-                if (srcUrl.isNotBlank()) {
-                    MasterLinkGenerator.createSmartLink(this.name, srcUrl, "https://playhydrax.com", callback = callback)
-                }
+                if (srcUrl.isNotBlank()) sourceUrls.add(srcUrl)
             }
+        }
+        CompiledRegexPatterns.prioritizeAdaptiveUrls(sourceUrls).forEach {
+            MasterLinkGenerator.createSmartLink(this.name, it, "https://playhydrax.com", callback = callback)
         }
     }
 }
