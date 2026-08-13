@@ -13,9 +13,10 @@ import com.lagradost.cloudstream3.LoadResponse.Companion.addMalId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTMDbId
 import com.lagradost.cloudstream3.LoadResponse.Companion.addTrailer
 import com.lagradost.cloudstream3.utils.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import org.jsoup.nodes.Document
 
 private data class LoadedPageData(
@@ -97,12 +98,19 @@ class DetailPageScrapper(
                     metadata.poster) else emptyList()
             }
             val trk = async {
-                withTimeout(2000L) {
-                    runCatching {
+                // Non-blocking: ambil hasil tracker HANYA jika sudah siap dalam
+                // 300ms (mis. sudah ada di trackerCache APIHolder). Jika query
+                // AniList/MAL/TMDb masih berjalan, langsung lanjut tanpa tracker
+                // — metadata halaman (poster/plot/episode dari HTML) tetap tampil
+                // tanpa menunggu. Tidak ada yang memblokir render.
+                withTimeoutOrNull(300L) {
+                    try {
                         APIHolder.getTracker(listOf(metadata.title),
                             TrackerType.getTypes(type), metadata.year,
                             true)
-                    }.getOrElse { e ->
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
                         logDebug(config.id, "Tracker Fetch Warning: ${e.message}")
                         null
                     }
