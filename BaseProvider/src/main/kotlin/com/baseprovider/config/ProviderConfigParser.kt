@@ -38,7 +38,6 @@ fun fromJson(id: String, json: JSONObject): ProviderConfig {
         globalHeaders = jsonObjectToMap(json
             .optJSONObject("globalHeaders")),
         googleReferer = json.optBoolean("googleReferer", false),
-        useWebViewFallback = json.optBoolean("useWebViewFallback", false),
         mainPageLists = parsePairsList(json.optJSONArray("mainPageLists")),
         allowedExtractors = jsonArrayToSet(json.optJSONArray("allowedExtractors")),
         dubKeyword = json.optString("dubKeyword", "dub"),

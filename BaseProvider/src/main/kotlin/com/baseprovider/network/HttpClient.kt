@@ -100,10 +100,10 @@ suspend fun fetchDocument(
                             SmartThrottle.reportFailure(host)
                             when {
                                 CLOUDFLARE_HTTP.containsMatchIn(msg) -> {
-                                    // 403 CF: coba solve challenge via WebView sekali utk host ini.
-                                    // Kalau sukses, cf_clearance + UA WebView tersimpan - restart
-                                    // sub-loop supaya request ulang diprioritaskan pakai UA WebView.
-                                    if (config.useWebViewFallback && !WebViewCloudflareSolver.isSolved(host)) {
+                                    // 403 CF: coba solve challenge via WebView (otomatis, tanpa
+                                    // config). Kalau sukses, cf_clearance + UA WebView tersimpan -
+                                    // restart sub-loop supaya request ulang diprioritaskan pakai UA WebView.
+                                    if (WebViewCloudflareSolver.shouldAttempt(host)) {
                                         Log.d("OCE", "fetchDocument CF/403 on $attemptUrl, trying WebView CF solver")
                                         val solved = WebViewCloudflareSolver.trySolve(attemptUrl, referer ?: config.mainUrl)
                                         Log.d("OCE", "WebView CF solver for $attemptUrl: ${if (solved) "solved" else "failed"}")
@@ -153,18 +153,31 @@ private fun googleReferer(config: ProviderConfig): String? =
 
 /**
  * Solver Cloudflare via WebView (pola resmi Cloudstream3 `CloudflareKiller`).
- * Saat halaman kena Managed Challenge / Turnstile (403 CF), WebView dimuat
- * untuk menjalankan JS challenge hingga Cloudflare me-set `cf_clearance`.
- * Cookie hasil disimpan ke [HostCookieJar] dan UA WebView dicatat per-host
- * agar request berikutnya memakai UA yang sama dengan sesi solve (cf_clearance
- * terikat ke UA).
+ * Otomatis aktif saat halaman kena Managed Challenge / Turnstile (403 CF) —
+ * tanpa config flag. WebView dimuat untuk menjalankan JS challenge hingga
+ * Cloudflare me-set `cf_clearance`. Cookie hasil disimpan ke [HostCookieJar]
+ * dan UA WebView dicatat per-host agar request berikutnya memakai UA yang
+ * sama dengan sesi solve (cf_clearance terikat ke UA).
  */
 object WebViewCloudflareSolver {
     private val solvedUserAgents = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private val failedUntil = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private const val FAIL_COOLDOWN_MS = 30 * 60_000L
 
     fun userAgentFor(host: String): String? = solvedUserAgents[host]
 
     fun isSolved(host: String): Boolean = solvedUserAgents.containsKey(host)
+
+    /**
+     * Otomatis dicoba saat 403 CF terdeteksi, tanpa config flag. Namun kalau
+     * solve pernah gagal (mis. Turnstile interactive), jangan ulangi membuka
+     * WebView selama cooldown - menghindari delay 30s berulang per request.
+     */
+    fun shouldAttempt(host: String): Boolean {
+        if (isSolved(host)) return false
+        val failCooldown = failedUntil[host] ?: 0L
+        return System.currentTimeMillis() >= failCooldown
+    }
 
     /**
      * Buka URL di WebView, jalankan challenge CF, lalu baca cookie dari
@@ -196,6 +209,7 @@ object WebViewCloudflareSolver {
                     true // true = destroy WebView segera
                 } else false
             }
+            if (!solved) failedUntil[host] = System.currentTimeMillis() + FAIL_COOLDOWN_MS
             solved
         }.getOrDefault(false)
     }
@@ -208,7 +222,10 @@ object WebViewCloudflareSolver {
         }.toMap().filter { it.key.isNotBlank() && it.value.isNotBlank() }
     }
 
-    fun reset() = solvedUserAgents.clear()
+    fun reset() {
+        solvedUserAgents.clear()
+        failedUntil.clear()
+    }
 }
 
 /**
