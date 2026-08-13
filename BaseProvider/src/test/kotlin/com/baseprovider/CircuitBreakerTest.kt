@@ -1,5 +1,6 @@
 package com.baseprovider
 
+import com.baseprovider.network.HostCircuitBreaker
 import org.junit.Assert.*
 import org.junit.Test
 

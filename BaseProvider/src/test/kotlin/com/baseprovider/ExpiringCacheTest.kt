@@ -1,5 +1,6 @@
 package com.baseprovider
 
+import com.baseprovider.cache.ExpiringCache
 import org.junit.Assert.*
 import org.junit.Test
 
