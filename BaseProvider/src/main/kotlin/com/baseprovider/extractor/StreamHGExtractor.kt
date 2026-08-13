@@ -32,8 +32,9 @@ class StreamHG : ExtractorApi() {
             CompiledRegexPatterns.extractAllVideoUrls(unpacked)
                 .let { urls ->
                 CompiledRegexPatterns.filterMasterM3u8(urls).forEach {
-                    MasterLinkGenerator.createSmartLink(this.name, it, url,
-                        callback = callback)
+                    MasterLinkGenerator.createSmartLink(this.name, it, null,
+                        headers = MasterLinkGenerator.minimalVideoHeaders,
+                        bareHeaders = true, callback = callback)
                 }
             }
         } else {
@@ -42,7 +43,9 @@ class StreamHG : ExtractorApi() {
                     interceptor = resolver).url
                 if (interceptedUrl.isNotBlank()) {
                     MasterLinkGenerator.createSmartLink(this.name,
-                        interceptedUrl, url, callback = callback)
+                        interceptedUrl, null,
+                        headers = MasterLinkGenerator.minimalVideoHeaders,
+                        bareHeaders = true, callback = callback)
                 }
             } catch (e: Exception) { Log.d("StreamHG", "WebViewResolver failed: ${e.message}") }
         }
