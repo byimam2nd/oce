@@ -44,6 +44,7 @@ data class ProviderConfig(
 
     // ── Headers ──
     val globalHeaders: Map<String, String> = emptyMap(),
+    val googleReferer: Boolean = false,
 
     // ── Navigation ──
     val mainPageLists: List<Pair<String, String>> = emptyList(),

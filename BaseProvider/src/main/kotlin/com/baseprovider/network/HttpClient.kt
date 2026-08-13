@@ -14,7 +14,8 @@ private const val DEFAULT_TIMEOUT = 15000L
 private val FALLBACK_UA_POOL = listOf(
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0"
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0",
+    "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36"
 )
 
 private fun resolveUaVariants(config: ProviderConfig): List<String> {
@@ -24,7 +25,7 @@ private fun resolveUaVariants(config: ProviderConfig): List<String> {
     return buildList {
         if (configured != null) add(configured)
         addAll(FALLBACK_UA_POOL)
-    }.distinct().take(3)
+    }.distinct().take(4)
 }
 
 private fun Map<String, String>.withUa(ua: String): Map<String, String> =
@@ -50,37 +51,106 @@ suspend fun fetchDocument(
             if (host.isNotBlank() && HostCircuitBreaker.isOpen(host)) break
             val headers = config.globalHeaders.withUa(ua)
             try {
-                val doc = executeWithRetry {
+                val res = executeWithRetry {
                     rateLimitDelay(attemptUrl)
-                    val res = withTimeout(DEFAULT_TIMEOUT) {
+                    val r = withTimeout(DEFAULT_TIMEOUT) {
                         app.get(
                             attemptUrl,
                             timeout = DEFAULT_TIMEOUT,
                             headers = headers,
-                            referer = referer
+                            referer = referer ?: googleReferer(config),
+                            cookies = HostCookieJar.getFor(attemptUrl)
                         )
                     }
-                    if (config.useDocumentLarge) res.documentLarge else res.document
+                    // app.get (NiceHttp) tidak throw pada status error — cek secara eksplisit.
+                    // Ditaruh di dalam executeWithRetry agar 429 di-retry dengan delay Retry-After.
+                    if (r.code >= 400) {
+                        val retryAfter = parseRetryAfter(r.headers["Retry-After"])
+                        throw HttpStatusException(
+                            r.code,
+                            retryAfter,
+                            "HTTP ${r.code} on $attemptUrl"
+                        )
+                    }
+                    r
                 }
+                HostCookieJar.update(attemptUrl, res.cookies)
+                val doc = if (config.useDocumentLarge) res.documentLarge else res.document
                 if (!skipCache) { htmlCache?.put(attemptUrl, doc) }
-                if (host.isNotBlank()) HostCircuitBreaker.reportSuccess(host)
+                if (host.isNotBlank()) {
+                    HostCircuitBreaker.reportSuccess(host)
+                    SmartThrottle.reportSuccess(host)
+                }
                 return doc
             } catch (e: Exception) {
                 lastError = e
                 hostFailed = true
-                val msg = e.message ?: ""
-                if (NON_RETRYABLE_HTTP.containsMatchIn(msg)) throw e
-                if (CLOUDFLARE_HTTP.containsMatchIn(msg)) {
-                    Log.d("OCE", "fetchDocument CF/403 on $attemptUrl (UA=$ua), trying next variant/host")
-                    continue
+                when {
+                    e is HttpStatusException -> {
+                        val msg = e.message.orEmpty()
+                        SmartThrottle.reportFailure(host)
+                        when {
+                            CLOUDFLARE_HTTP.containsMatchIn(msg) -> {
+                                // 403 CF: coba UA berikutnya (rotasi), lalu mirror berikutnya
+                                Log.d("OCE", "fetchDocument CF/403 on $attemptUrl (UA=$ua), trying next variant/host")
+                                continue
+                            }
+                            e.code == 429 -> {
+                                // Rate limit: hormati Retry-After via SmartThrottle
+                                SmartThrottle.reportRetryAfter(host, e.retryAfterSeconds ?: 0L)
+                                Log.d("OCE", "fetchDocument 429 on $attemptUrl, trying next variant/host")
+                                continue
+                            }
+                            e.code == 404 || e.code in 500..599 -> {
+                                // Geo-block 404 / server error: mirror mungkin berbeda
+                                Log.d("OCE", "fetchDocument HTTP ${e.code} on $attemptUrl, trying next host")
+                                break
+                            }
+                            else -> throw e
+                        }
+                    }
+                    else -> {
+                        val msg = e.message ?: ""
+                        if (NON_RETRYABLE_HTTP.containsMatchIn(msg)) throw e
+                        if (CLOUDFLARE_HTTP.containsMatchIn(msg)) {
+                            SmartThrottle.reportFailure(host)
+                            Log.d("OCE", "fetchDocument CF/403 on $attemptUrl (UA=$ua), trying next variant/host")
+                            continue
+                        }
+                        break
+                    }
                 }
-                break
             }
         }
         if (hostFailed && host.isNotBlank()) HostCircuitBreaker.reportFailure(host)
     }
 
     throw lastError ?: Exception("All mirrors failed for $url")
+}
+
+private fun googleReferer(config: ProviderConfig): String? =
+    if (config.googleReferer) "https://www.google.com/" else null
+
+/**
+ * Cookie jar per-host in-memory (ringan). Mengumpulkan `Set-Cookie` dari
+ * respon dan mengirimnya kembali pada request berikutnya ke host yang sama.
+ * Inspirasi: `user_data_dir` / session Scrapling, tapi tanpa persistensi disk.
+ */
+object HostCookieJar {
+    private val jars = java.util.concurrent.ConcurrentHashMap<String, Map<String, String>>()
+
+    fun getFor(url: String): Map<String, String> {
+        val host = runCatching { URI(url).host }.getOrNull() ?: return emptyMap()
+        return jars[host] ?: emptyMap()
+    }
+
+    fun update(url: String, setCookies: Map<String, String>) {
+        if (setCookies.isEmpty()) return
+        val host = runCatching { URI(url).host }.getOrNull() ?: return
+        jars.compute(host) { _, prev -> (prev ?: emptyMap()) + setCookies }
+    }
+
+    fun clear() = jars.clear()
 }
 
 private suspend fun resolveFallbackUrls(url: String,

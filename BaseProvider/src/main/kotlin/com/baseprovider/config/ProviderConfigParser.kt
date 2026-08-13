@@ -37,6 +37,7 @@ fun fromJson(id: String, json: JSONObject): ProviderConfig {
         qualityStripRegex = json.optString("qualityStripRegex", """\d{3,4}p|HD|SD|FHD"""),
         globalHeaders = jsonObjectToMap(json
             .optJSONObject("globalHeaders")),
+        googleReferer = json.optBoolean("googleReferer", false),
         mainPageLists = parsePairsList(json.optJSONArray("mainPageLists")),
         allowedExtractors = jsonArrayToSet(json.optJSONArray("allowedExtractors")),
         dubKeyword = json.optString("dubKeyword", "dub"),
