@@ -80,8 +80,9 @@ suspend fun loadExtractorWithFallbackCustom(
 
     if (collectedLinks.isEmpty() && url.isDirectMediaUrl()) {
         MasterLinkGenerator.createSmartLink(
-            "Direct", url, referer,
+            "Direct", url, null,
             headers = headers,
+            bareHeaders = true,
             qualityStripRegex = qualityStripRegex,
             callback = internalCallback
         )
@@ -97,8 +98,9 @@ suspend fun loadExtractorWithFallbackCustom(
             if (filtered.isNotEmpty()) {
                 filtered.forEach { videoUrl ->
                     MasterLinkGenerator.createSmartLink(
-                        "DeepScan", videoUrl, url,
+                        "DeepScan", videoUrl, null,
                         headers = headers,
+                        bareHeaders = true,
                         qualityStripRegex = qualityStripRegex,
                         callback = internalCallback
                     )

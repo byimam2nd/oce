@@ -33,8 +33,9 @@ class Dhcplay : ExtractorApi() {
                 .let { urls ->
                 CompiledRegexPatterns.filterMasterM3u8(urls).forEach {
                     found = true
-                    MasterLinkGenerator.createSmartLink(this.name, it, url,
-                        callback = callback)
+                    MasterLinkGenerator.createSmartLink(this.name, it, null,
+                        headers = MasterLinkGenerator.minimalVideoHeaders,
+                        bareHeaders = true, callback = callback)
                 }
             }
             if (found) return
@@ -42,13 +43,16 @@ class Dhcplay : ExtractorApi() {
         val urls = CompiledRegexPatterns.extractAllVideoUrls(text)
         CompiledRegexPatterns.filterMasterM3u8(urls)
             .forEach { MasterLinkGenerator.createSmartLink(this.name, it,
-                url, callback = callback) }
+                null, headers = MasterLinkGenerator.minimalVideoHeaders,
+                bareHeaders = true, callback = callback) }
         try {
             val interceptedUrl = app.get(url, referer = referer,
                 interceptor = resolver).url
             if (interceptedUrl.isNotBlank()) {
                 MasterLinkGenerator.createSmartLink(this.name,
-                    interceptedUrl, url, callback = callback)
+                    interceptedUrl, null,
+                    headers = MasterLinkGenerator.minimalVideoHeaders,
+                    bareHeaders = true, callback = callback)
             }
         } catch (e: Exception) { Log.d("Dhcplay", "WebViewResolver failed: ${e.message}") }
     }

@@ -19,7 +19,9 @@ class Rumble : ExtractorApi() {
             val cleanedUrl = match.groupValues[1].replace("\\/", "/")
             if (cleanedUrl.contains("rumble.com") && cleanedUrl.endsWith(".m3u8")) {
                 MasterLinkGenerator.createSmartLink(this.name, cleanedUrl,
-                    referer, callback = callback)
+                    null, headers = MasterLinkGenerator
+                    .minimalVideoHeaders, bareHeaders = true,
+                    callback = callback)
             }
         }
     }

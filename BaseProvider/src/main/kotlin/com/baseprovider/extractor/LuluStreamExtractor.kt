@@ -26,8 +26,9 @@ open class LuluStream : ExtractorApi() {
             ?.data() ?: return
         val urls = CompiledRegexPatterns.extractAllVideoUrls(script)
         CompiledRegexPatterns.prioritizeAdaptiveUrls(urls).forEach {
-            MasterLinkGenerator.createSmartLink(this.name, it, mainUrl,
-                callback = callback)
+            MasterLinkGenerator.createSmartLink(this.name, it, null,
+                headers = MasterLinkGenerator.minimalVideoHeaders,
+                bareHeaders = true, callback = callback)
         }
     }
 }

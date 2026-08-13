@@ -21,7 +21,9 @@ class Voe : ExtractorApi() {
             VOE_FILE_REGEX.find(text)?.groupValues?.getOrNull(1),
         )) {
             if (src != null) { MasterLinkGenerator.createSmartLink(this
-                .name, src, url, callback = callback); return }
+                .name, src, null,
+                headers = MasterLinkGenerator.minimalVideoHeaders,
+                bareHeaders = true, callback = callback); return }
         }
     }
 }

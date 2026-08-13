@@ -16,6 +16,7 @@ class AnichinStream : ExtractorApi() {
             ?.get(1) ?: return
         val videoUrl = "$mainUrl/hls/$id.m3u8"
         MasterLinkGenerator.createSmartLink(this.name, videoUrl,
-            referer ?: mainUrl, callback = callback)
+            null, headers = MasterLinkGenerator.minimalVideoHeaders,
+            bareHeaders = true, callback = callback)
     }
 }

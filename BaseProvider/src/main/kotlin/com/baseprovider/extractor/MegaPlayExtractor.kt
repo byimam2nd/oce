@@ -20,7 +20,8 @@ open class MegaPlay : ExtractorApi() {
         val json = JSONObject(app.get(apiUrl).text)
         val m3u8 = json.optJSONObject("sources")
             ?.optString("file") ?: return
-        MasterLinkGenerator.createSmartLink(this.name, m3u8, mainUrl,
-            callback = callback)
+        MasterLinkGenerator.createSmartLink(this.name, m3u8, null,
+            headers = MasterLinkGenerator.minimalVideoHeaders,
+            bareHeaders = true, callback = callback)
     }
 }

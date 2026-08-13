@@ -72,8 +72,9 @@ open class ByseSX : ExtractorApi() {
             CompiledRegexPatterns.prioritizeAdaptiveUrls(sourceUrls)
                 .forEach {
                 MasterLinkGenerator.createSmartLink(
-                    name, it, mainUrl,
-                    headers = mapOf("Referer" to base),
+                    name, it, null,
+                    headers = MasterLinkGenerator.minimalVideoHeaders,
+                    bareHeaders = true,
                     callback = callback
                 )
             }

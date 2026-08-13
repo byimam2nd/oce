@@ -23,6 +23,8 @@ open class AWSStream : ExtractorApi() {
         val json = JSONObject(response)
         val m3u8 = json.optString("videoSource")
         if (m3u8.isNotBlank()) MasterLinkGenerator.createSmartLink(this
-            .name, m3u8, "", callback = callback)
+            .name, m3u8, null,
+            headers = MasterLinkGenerator.minimalVideoHeaders,
+            bareHeaders = true, callback = callback)
     }
 }

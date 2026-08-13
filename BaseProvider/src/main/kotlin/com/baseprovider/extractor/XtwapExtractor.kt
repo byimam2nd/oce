@@ -17,7 +17,8 @@ class Xtwap : ExtractorApi() {
         val scripts = doc.select("script").joinToString("\n") { it.data() }
         val filePath = Regex(""""file":"([^"]+)"""").find(scripts)?.groupValues?.getOrNull(1) ?: return
         val m3u8 = fixUrlSmart(filePath, url)
-        MasterLinkGenerator.createSmartLink(this.name, m3u8, url, callback =
-            callback)
+        MasterLinkGenerator.createSmartLink(this.name, m3u8, null,
+            headers = MasterLinkGenerator.minimalVideoHeaders,
+            bareHeaders = true, callback = callback)
     }
 }

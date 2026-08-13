@@ -22,16 +22,18 @@ class Movearnpre : ExtractorApi() {
                 .let { urls ->
                 CompiledRegexPatterns.filterMasterM3u8(urls).forEach {
                     found = true
-                    MasterLinkGenerator.createSmartLink(this.name, it, url,
-                        callback = callback)
+                    MasterLinkGenerator.createSmartLink(this.name, it, null,
+                        headers = MasterLinkGenerator.minimalVideoHeaders,
+                        bareHeaders = true, callback = callback)
                 }
             }
             if (found) return
         }
         CompiledRegexPatterns.extractAllVideoUrls(text).let { urls ->
             CompiledRegexPatterns.filterMasterM3u8(urls).forEach {
-                MasterLinkGenerator.createSmartLink(this.name, it, url,
-                    callback = callback)
+                MasterLinkGenerator.createSmartLink(this.name, it, null,
+                    headers = MasterLinkGenerator.minimalVideoHeaders,
+                    bareHeaders = true, callback = callback)
             }
         }
     }

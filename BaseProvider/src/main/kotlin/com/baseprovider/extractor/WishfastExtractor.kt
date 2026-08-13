@@ -24,16 +24,18 @@ class Wishfast : ExtractorApi() {
             val fileUrl = Regex("""file:\s*"(.*?m3u8.*?)"""").find(script)
                 ?.groupValues?.getOrNull(1)
             if (fileUrl != null) {
-                MasterLinkGenerator.createSmartLink(this.name, fileUrl, url,
-                    callback = callback)
+                MasterLinkGenerator.createSmartLink(this.name, fileUrl, null,
+                    headers = MasterLinkGenerator.minimalVideoHeaders,
+                    bareHeaders = true, callback = callback)
                 return
             }
         }
 
         val urls = CompiledRegexPatterns.extractAllVideoUrls(text)
         CompiledRegexPatterns.filterMasterM3u8(urls).forEach {
-            MasterLinkGenerator.createSmartLink(this.name, it, url,
-                callback = callback)
+            MasterLinkGenerator.createSmartLink(this.name, it, null,
+                headers = MasterLinkGenerator.minimalVideoHeaders,
+                bareHeaders = true, callback = callback)
         }
     }
 }

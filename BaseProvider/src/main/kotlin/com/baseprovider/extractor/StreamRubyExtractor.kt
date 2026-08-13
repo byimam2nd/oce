@@ -24,15 +24,18 @@ open class StreamRuby : ExtractorApi() {
                 val fileUrl = fileMatch.groupValues[1]
                 if (fileUrl.startsWith("http")) {
                     MasterLinkGenerator.createSmartLink(this.name, fileUrl,
-                        mainUrl, callback = callback)
+                        null, headers = MasterLinkGenerator
+                        .minimalVideoHeaders, bareHeaders = true,
+                        callback = callback)
                     return
                 }
             }
             urls = CompiledRegexPatterns.extractAllVideoUrls(decoded)
         }
         CompiledRegexPatterns.filterMasterM3u8(urls).forEach {
-            MasterLinkGenerator.createSmartLink(this.name, it, mainUrl,
-                callback = callback)
+            MasterLinkGenerator.createSmartLink(this.name, it, null,
+                headers = MasterLinkGenerator.minimalVideoHeaders,
+                bareHeaders = true, callback = callback)
         }
     }
 }

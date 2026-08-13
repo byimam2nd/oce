@@ -27,11 +27,11 @@ open class Hownetwork : ExtractorApi() {
                     "X-Requested-With" to "XMLHttpRequest"
                 )
             ).text
-            val ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
             JSONObject(response).optString("file").let {
                 MasterLinkGenerator.createSmartLink(
-                    this.name, it, it,
-                    headers = mapOf("User-Agent" to ua),
+                    this.name, it, null,
+                    headers = MasterLinkGenerator.minimalVideoHeaders,
+                    bareHeaders = true,
                     callback = callback
                 )
             }

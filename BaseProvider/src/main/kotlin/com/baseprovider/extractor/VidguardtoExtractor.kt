@@ -30,8 +30,9 @@ open class Vidguardto : ExtractorApi() {
         val result = runJS(script)
         val json = JSONObject(result)
         val watchlink = sigDecode(json.optString("stream"))
-        MasterLinkGenerator.createSmartLink(this.name, watchlink, mainUrl,
-            callback = callback)
+        MasterLinkGenerator.createSmartLink(this.name, watchlink, null,
+            headers = MasterLinkGenerator.minimalVideoHeaders,
+            bareHeaders = true, callback = callback)
     }
 
     private fun sigDecode(url: String): String {

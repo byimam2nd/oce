@@ -21,7 +21,8 @@ class ShortIcu : ExtractorApi() {
         val urls = CompiledRegexPatterns.extractAllVideoUrls(response.text)
         CompiledRegexPatterns.filterMasterM3u8(urls).forEach { videoUrl ->
             MasterLinkGenerator.createSmartLink(this.name, videoUrl,
-                finalUrl, callback = callback)
+                null, headers = MasterLinkGenerator.minimalVideoHeaders,
+                bareHeaders = true, callback = callback)
         }
     }
 }

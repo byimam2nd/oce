@@ -35,8 +35,9 @@ class Dailymotion : ExtractorApi() {
                 val videoUrl = auto.optJSONObject(i)?.optString("url")
                 if (!videoUrl.isNullOrBlank() && videoUrl.contains(".m3u8")) {
                     MasterLinkGenerator.createSmartLink(
-                        this.name, videoUrl, embedUrl,
-                        callback = callback
+                        this.name, videoUrl, null,
+                        headers = MasterLinkGenerator.minimalVideoHeaders,
+                        bareHeaders = true, callback = callback
                     )
                 }
             }

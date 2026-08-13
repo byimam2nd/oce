@@ -28,7 +28,9 @@ open class Gdplayer : ExtractorApi() {
             if (file.isNotBlank()) fileUrls.add(file)
         }
         CompiledRegexPatterns.prioritizeAdaptiveUrls(fileUrls).forEach {
-            MasterLinkGenerator.createSmartLink(this.name, it, mainUrl, callback = callback)
+            MasterLinkGenerator.createSmartLink(this.name, it, null,
+                headers = MasterLinkGenerator.minimalVideoHeaders,
+                bareHeaders = true, callback = callback)
         }
     }
 }

@@ -41,7 +41,9 @@ class AbyssPlayer : ExtractorApi() {
             }
         }
         CompiledRegexPatterns.prioritizeAdaptiveUrls(sourceUrls).forEach {
-            MasterLinkGenerator.createSmartLink(this.name, it, "https://playhydrax.com", callback = callback)
+            MasterLinkGenerator.createSmartLink(this.name, it, null,
+                headers = MasterLinkGenerator.minimalVideoHeaders,
+                bareHeaders = true, callback = callback)
         }
     }
 }
