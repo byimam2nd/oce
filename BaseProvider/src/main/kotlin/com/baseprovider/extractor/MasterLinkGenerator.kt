@@ -59,6 +59,22 @@ object MasterLinkGenerator {
         val isAdaptive = url.contains(".m3u8") || url.contains(".mpd")
         val safeHeaders = enrichHeaders(headers, bareHeaders)
 
+        // Adaptive headers: untuk link bare, probe otomatis (valid + tercepat)
+        // per-host, hasil di-cache. Menghindari test manual per extractor
+        // (kasus OkRu dulu): CDN yang mau referer dipakai referer, CDN yang
+        // throttle kalau referer salah jatuh ke bare.
+        var effectiveReferer = referer
+        var effectiveHeaders = safeHeaders
+        if (bareHeaders) {
+            val decision = AdaptiveHeaderProbe.resolve(url, referer)
+            if (decision.mode == AdaptiveHeaderProbe.Mode.REFERER) {
+                effectiveReferer = decision.referer
+            } else {
+                effectiveReferer = null
+            }
+            effectiveHeaders = minimalVideoHeaders
+        }
+
         val cleanName = source.replace(qualityStripRegex, "").trim()
         callback(newExtractorLink(
             source = source,
@@ -69,8 +85,8 @@ object MasterLinkGenerator {
                 else ExtractorLinkType.VIDEO
         ) {
             if (!isAdaptive) this.quality = quality ?: detectQualityFromUrl(url)
-            this.referer = referer ?: ""
-            this.headers = safeHeaders
+            this.referer = effectiveReferer ?: ""
+            this.headers = effectiveHeaders
         })
     }
 
