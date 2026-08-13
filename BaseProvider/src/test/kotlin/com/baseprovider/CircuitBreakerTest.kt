@@ -13,16 +13,16 @@ class CircuitBreakerTest {
 
     @Test
     fun `single failure does not open circuit before threshold`() {
-        HostCircuitBreaker.reportFailure("test.example.com")
-        assertFalse(HostCircuitBreaker.isOpen("test.example.com"))
+        HostCircuitBreaker.reportFailure("single.example.com")
+        assertFalse(HostCircuitBreaker.isOpen("single.example.com"))
     }
 
     @Test
     fun `three failures then isOpen returns true`() {
-        HostCircuitBreaker.reportFailure("test.example.com")
-        HostCircuitBreaker.reportFailure("test.example.com")
-        HostCircuitBreaker.reportFailure("test.example.com")
-        assertTrue(HostCircuitBreaker.isOpen("test.example.com"))
+        HostCircuitBreaker.reportFailure("three.example.com")
+        HostCircuitBreaker.reportFailure("three.example.com")
+        HostCircuitBreaker.reportFailure("three.example.com")
+        assertTrue(HostCircuitBreaker.isOpen("three.example.com"))
     }
 
     @Test
