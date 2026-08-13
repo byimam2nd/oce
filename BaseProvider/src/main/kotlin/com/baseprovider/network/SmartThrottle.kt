@@ -45,6 +45,12 @@ object SmartThrottle {
         if (seconds <= 0) return
         retryAfterUntil[domain] = System.currentTimeMillis() + seconds * 1000L
     }
+
+    /** Apakah domain masih dalam masa tunggu Retry-After. */
+    fun isRetryAfterActive(domain: String): Boolean {
+        val until = retryAfterUntil[domain] ?: return false
+        return until > System.currentTimeMillis()
+    }
 }
 
 suspend fun rateLimitDelay(url: String = "") {
