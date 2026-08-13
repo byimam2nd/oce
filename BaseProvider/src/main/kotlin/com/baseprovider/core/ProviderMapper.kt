@@ -19,9 +19,10 @@ class ProviderMapper(
         null): SearchResponse? {
         return runCatching {
             val base = baseUrl ?: config.mainUrl
+            val key = config.id
             val titleEl = if (config.searchTitle.isNotBlank()) {
-                element.selectFirst(config.searchTitle)
-                    ?: element.parent()?.selectFirst(config.searchTitle)
+                SelectorResolver.selectFirst(element, config.searchTitle, "$key:searchTitle")
+                    ?: element.parent()?.let { SelectorResolver.selectFirst(it, config.searchTitle, "$key:searchTitle") }
             } else {
                 element.selectFirst("h2, h3")
             }
@@ -31,9 +32,9 @@ class ProviderMapper(
             val title = rawTitle.safeCleanBloat(rawTitle, config
                 .bloatRegex).safeDeduplicate()
             val hrefEl = if (config.searchHref.isNotBlank()) {
-                element.selectFirst(config.searchHref)
+                SelectorResolver.selectFirst(element, config.searchHref, "$key:searchHref")
                     ?: element.selectFirst("a")
-                    ?: element.parent()?.selectFirst("a")
+                    ?: element.parent()?.let { SelectorResolver.selectFirst(it, config.searchHref, "$key:searchHref") }
             } else {
                 element.selectFirst("a")
                     ?: element.parent()?.selectFirst("a")
@@ -47,17 +48,18 @@ class ProviderMapper(
                 } catch (_: Exception) { href }
             }
             val poster = if (config.searchPoster.isNotBlank()) {
-                element.selectFirst(config.searchPoster)
+                SelectorResolver.selectFirst(element, config.searchPoster, "$key:searchPoster")
                     ?.safeExtractImage(config.attrImage)
             } else {
                 element.selectFirst("img")?.safeExtractImage(config
                     .attrImage)
             }
-            val rating = if (config.searchRating.isNotBlank()) element
-                .selectFirst(config.searchRating)?.text() else null
-            val eps = if (config.searchEpText.isNotBlank()) element
-                .selectFirst(config.searchEpText)?.text()
-                    ?.safeExtractEpNum() else null
+            val rating = if (config.searchRating.isNotBlank()) SelectorResolver
+                .selectFirst(element, config.searchRating, "$key:searchRating")
+                ?.text() else null
+            val eps = if (config.searchEpText.isNotBlank()) SelectorResolver
+                .selectFirst(element, config.searchEpText, "$key:searchEpText")
+                ?.text()?.safeExtractEpNum() else null
             val hasTvPath = config.tvPathSegment.isNotBlank() && href
                 .contains(config.tvPathSegment)
             val isMovie = !hasTvPath && (
@@ -84,13 +86,15 @@ class ProviderMapper(
 
     fun extractMetadata(document: Document,
         currentUrl: String): MetadataPackage {
-        val rawTitle = if (config.loadTitle.isNotBlank()) document
-            .selectFirst(config.loadTitle)?.text() ?: "Unknown Title" else "Unknown Title"
+        val key = config.id
+        val rawTitle = if (config.loadTitle.isNotBlank()) SelectorResolver
+            .selectFirst(document, config.loadTitle, "$key:loadTitle")?.text()
+            ?: "Unknown Title" else "Unknown Title"
         val title = rawTitle.safeCleanBloat(rawTitle, config.bloatRegex)
             .safeDeduplicate()
-        val poster = if (config.loadPoster.isNotBlank()) document
-            .selectFirst(config.loadPoster)?.safeExtractImage(config
-                .attrImage) ?: "" else ""
+        val poster = if (config.loadPoster.isNotBlank()) SelectorResolver
+            .selectFirst(document, config.loadPoster, "$key:loadPoster")
+            ?.safeExtractImage(config.attrImage) ?: "" else ""
 
         if (title == "Unknown Title" || poster.isBlank()) {
             val missing = mutableListOf<String>()
@@ -106,50 +110,55 @@ class ProviderMapper(
             )
         }
 
-        val banner = if (config.loadBanner.isNotBlank()) document
-            .selectFirst(config.loadBanner)?.safeExtractImage(config
-                .attrImage) else null
-        val description = if (config.loadDesc.isNotBlank()) document
-            .selectFirst(config.loadDesc)?.text()?.trim() ?: "" else ""
-        val infoText = if (config.loadInfoBox.isNotBlank()) document
-            .selectFirst(config.loadInfoBox)?.text() ?: "" else ""
+        val banner = if (config.loadBanner.isNotBlank()) SelectorResolver
+            .selectFirst(document, config.loadBanner, "$key:loadBanner")
+            ?.safeExtractImage(config.attrImage) else null
+        val description = if (config.loadDesc.isNotBlank()) SelectorResolver
+            .text(document, config.loadDesc, "$key:loadDesc") ?: "" else ""
+        val infoText = if (config.loadInfoBox.isNotBlank()) SelectorResolver
+            .text(document, config.loadInfoBox, "$key:loadInfoBox") ?: "" else ""
         val year = infoText.safeExtractYear() ?: run {
             if (config.yearSelector.isNotBlank() && config
                 .yearExtractorRegex.isNotBlank()) {
-                val yearEl = document.selectFirst(config.yearSelector)
+                val yearEl = SelectorResolver.selectFirst(document,
+                    config.yearSelector, "$key:yearSelector")
                 try { Regex(config.yearExtractorRegex).find(yearEl
                     ?.text() ?: "")?.groupValues?.get(1)
                         ?.toIntOrNull() } catch (_: Exception) { null }
             } else null
         }
-        val statusText = if (config.loadStatus.isNotBlank()) document
-            .selectFirst(config.loadStatus)?.text() else null
+        val statusText = if (config.loadStatus.isNotBlank())
+            SelectorResolver.text(document, config.loadStatus,
+                "$key:loadStatus") else null
         return MetadataPackage(
             title = title, poster = poster, banner = banner, description =
                 description,
             year = year, statusText = statusText,
-            tags = if (config.loadTags.isNotBlank()) document.select(config
-                .loadTags).map { it.text() } else emptyList(),
-            rating = if (config.loadRating.isNotBlank()) document
-                .selectFirst(config.loadRating)?.text() else null,
+            tags = if (config.loadTags.isNotBlank()) SelectorResolver.select(
+                document, config.loadTags, "$key:loadTags").map { it.text() } else emptyList(),
+            rating = if (config.loadRating.isNotBlank()) SelectorResolver
+                .text(document, config.loadRating, "$key:loadRating") else null,
             status = if (statusText?.contains(config.ongoingKeyword,
                 true) == true) ShowStatus.Ongoing else ShowStatus.Completed,
             imdbId = if (config.imdbExternal.isNotBlank()) {
-                document.selectFirst(config.imdbExternal)
+                SelectorResolver.selectFirst(document, config.imdbExternal,
+                    "$key:imdbExternal")
                     ?.selectAttr(config.attrHref)
                     ?.split("/")
                     ?.filter { it.startsWith("tt") }
                     ?.firstOrNull()
             } else null,
             tmdbId = if (config.tmdbExternal.isNotBlank()) {
-                document.selectFirst(config.tmdbExternal)
+                SelectorResolver.selectFirst(document, config.tmdbExternal,
+                    "$key:tmdbExternal")
                     ?.selectAttr(config.attrHref)
                     ?.split("/")
                     ?.lastOrNull()
                     ?.toIntOrNull()
             } else null,
             trailer = if (config.loadTrailer.isNotBlank()) {
-                document.selectFirst(config.loadTrailer)?.let {
+                SelectorResolver.selectFirst(document, config.loadTrailer,
+                    "$key:loadTrailer")?.let {
                     if (it.tagName() == "iframe") it
                         .safeExtractImage(config.attrImage)
                     else it.selectAttr(config.attrHref)
@@ -192,12 +201,13 @@ class ProviderMapper(
         }
         if (episodes.isEmpty()) {
             val seenEpNums = mutableSetOf<Int>()
+            val key = config.id
             episodes.addAll(
                 epItems.mapNotNull { ep ->
                     runCatching {
                         val anchor = (
-                            if (config.episodeHref.isNotBlank()) ep
-                                .selectFirst(config.episodeHref)
+                            if (config.episodeHref.isNotBlank()) SelectorResolver
+                                .selectFirst(ep, config.episodeHref, "$key:episodeHref")
                             else null
                         ) ?: ep.selectFirst("a")
                             ?: if (ep.tagName() == "a") ep
@@ -206,16 +216,16 @@ class ProviderMapper(
                             .replace("{url}", fixUrlSmart(anchor.attr("href"), currentUrl))
                         if (href.isBlank()) return@runCatching null
                         val titleEl = (
-                            if (config.episodeTitle.isNotBlank()) ep
-                                .selectFirst(config.episodeTitle)
+                            if (config.episodeTitle.isNotBlank()) SelectorResolver
+                                .selectFirst(ep, config.episodeTitle, "$key:episodeTitle")
                             else null
                         ) ?: ep.selectFirst("a")
                             ?: if (ep.tagName() == "a") ep
                             else null
                         val epNum = (
-                                if (config.episodeNum.isNotBlank()) ep
-                                    .selectFirst(config.episodeNum)?.text()
-                                        ?.safeExtractEpNum()
+                                if (config.episodeNum.isNotBlank()) SelectorResolver
+                                    .selectFirst(ep, config.episodeNum, "$key:episodeNum")
+                                    ?.text()?.safeExtractEpNum()
                                 else null
                             ) ?: titleEl?.text()?.safeExtractEpNum()
                                 ?: ep.text().safeExtractEpNum()
@@ -231,12 +241,13 @@ class ProviderMapper(
                             this.episode = epNum
                             this.description = if (config.episodeDesc
                                 .isNotBlank()) {
-                                ep.selectFirst(config.episodeDesc)?.text()
-                                    ?.trim()
+                                SelectorResolver.text(ep, config
+                                    .episodeDesc, "$key:episodeDesc")
                             } else null
                             this.runTime = if (config.episodeTime
                                 .isNotBlank()) {
-                                ep.selectFirst(config.episodeTime)?.text()
+                                SelectorResolver.text(ep, config
+                                    .episodeTime, "$key:episodeTime")
                                     ?.filter { it.isDigit() }
                                         ?.toIntOrNull()
                             } else null

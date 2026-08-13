@@ -35,8 +35,8 @@ class DetailPageScrapper(
         val document = fetchDocument(url, config, referer = config.mainUrl)
         val currentUrl = url
         if (depth < 2 && config.followLinkSelector.isNotBlank()) {
-            val nextAnchor = document.selectFirst(config
-                .followLinkSelector)
+            val nextAnchor = SelectorResolver.selectFirst(document,
+                config.followLinkSelector, "${config.id}:followLinkSelector")
             val nextHref = nextAnchor?.attr("href")
             if (!nextHref.isNullOrBlank() && !nextHref.startsWith("javascript:", true)) {
                 val nextUrl = fixUrlSmart(nextHref, currentUrl)
@@ -47,11 +47,12 @@ class DetailPageScrapper(
 
         val metadata = mapper.extractMetadata(document, currentUrl)
 
-        val epItems = if (config.episodeItems.isNotBlank()) document
-            .select(config.episodeItems) else org.jsoup.select.Elements()
+        val epItems = if (config.episodeItems.isNotBlank()) SelectorResolver
+            .select(document, config.episodeItems, "${config.id}:episodeItems")
+            else org.jsoup.select.Elements()
         val seasonDataScript = if (config.seasonContainer
-            .isNotBlank()) document.selectFirst(config
-                .seasonContainer) else null
+            .isNotBlank()) SelectorResolver.selectFirst(document,
+                config.seasonContainer, "${config.id}:seasonContainer") else null
         val hasTvPath = config.tvPathSegment.isNotBlank() && currentUrl
             .contains(config.tvPathSegment)
         val isMovie = (seasonDataScript == null) && !hasTvPath && (
@@ -65,7 +66,8 @@ class DetailPageScrapper(
         val pageData = coroutineScope {
             val recs = async {
                 if (config.loadRecommend.isNotBlank()) {
-                    document.select(config.loadRecommend)
+                    SelectorResolver.select(document, config.loadRecommend,
+                        "${config.id}:loadRecommend")
                         .mapNotNull { mapper.toSearchResult(it,
                             currentUrl) }
                 } else emptyList()
@@ -73,8 +75,10 @@ class DetailPageScrapper(
             val acts = async {
                 if (config.actorItems.isBlank() || config.actorName
                     .isBlank()) emptyList()
-                else document.select(config.actorItems).mapNotNull {
-                    val n = it.selectFirst(config.actorName)?.text()
+                else SelectorResolver.select(document, config.actorItems,
+                    "${config.id}:actorItems").mapNotNull {
+                    val n = SelectorResolver.selectFirst(it, config
+                        .actorName, "${config.id}:actorName")?.text()
                         ?.trim() ?: ""
                     val p = it.selectFirst("img")?.safeExtractImage(config
                         .attrImage) ?: ""
@@ -115,7 +119,8 @@ class DetailPageScrapper(
 
         if (isMovie) {
             val watchUrl = if (config.watchButtons.isNotBlank()) {
-                fixUrlSmart(document.selectFirst(config.watchButtons)
+                fixUrlSmart(SelectorResolver.selectFirst(document,
+                    config.watchButtons, "${config.id}:watchButtons")
                     ?.attr("href"), currentUrl)
                     .ifBlank { currentUrl }
             } else currentUrl

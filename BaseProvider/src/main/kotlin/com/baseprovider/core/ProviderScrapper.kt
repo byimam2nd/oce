@@ -55,7 +55,8 @@ class ProviderScrapper(
                 htmlCache)
             val isHorizontal = config.isHorizontal
             val home = if (config.searchItems.isNotBlank()) {
-                document.select(config.searchItems)
+                SelectorResolver.select(document, config.searchItems,
+                    "${config.id}:searchItems")
                     .mapNotNull { runCatching { mapper.toSearchResult(it,
                         url) }.getOrNull() }
                     .distinctBy { it.url }
@@ -141,7 +142,8 @@ class ProviderScrapper(
                 val document = fetchDocument(url, config, refer, htmlCache =
                     htmlCache)
                 val pageResults = if (config.searchItems.isNotBlank()) {
-                    document.select(config.searchItems)
+                    SelectorResolver.select(document, config.searchItems,
+                        "${config.id}:searchItems")
                         .mapNotNull { runCatching { mapper
                             .toSearchResult(it, url) }.getOrNull() }
                 } else emptyList()

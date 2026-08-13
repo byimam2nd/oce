@@ -18,7 +18,8 @@ class LinkCollector(private val config: ProviderConfig) {
         if (config.ajaxPlayerUrl.isBlank() || config.selectorJsonData
             .isBlank()) return
         if (!config.ajaxPlayerUrl.startsWith("http")) return
-        val el = document.selectFirst(config.selectorJsonData) ?: return
+        val el = SelectorResolver.selectFirst(document, config
+            .selectorJsonData, "${config.id}:selectorJsonData") ?: return
         val eastPostId = el.attr("data-post")
         if (eastPostId.isNotBlank()) {
             collectEastPlayPlayers(document, currentUrl, eastPostId, links)
@@ -53,7 +54,8 @@ class LinkCollector(private val config: ProviderConfig) {
         currentUrl: String, postId: String,
         links: MutableSet<Pair<String, String?>>) {
         runCatching {
-            val options = document.select(config.selectorJsonData)
+            val options = SelectorResolver.select(document, config
+                .selectorJsonData, "${config.id}:selectorJsonData")
             logDebug(config.id, "EastPlay AJAX options: ${options.size} for post $postId")
             options.forEach { opt ->
                 val nume = opt.attr("data-nume")
@@ -93,7 +95,8 @@ class LinkCollector(private val config: ProviderConfig) {
         links: MutableSet<Pair<String, String?>>) {
         if (config.linkOptions.isBlank()) return
         logDebug(config.id, "LINK_OPTIONS selector: ${config.linkOptions}")
-        val matches = document.select(config.linkOptions)
+        val matches = SelectorResolver.select(document, config
+            .linkOptions, "${config.id}:linkOptions")
         logDebug(config.id, "LINK_OPTIONS => ${matches.size} match(es)")
         matches.forEach { container ->
             val anchors = container.select("a")
@@ -113,7 +116,8 @@ class LinkCollector(private val config: ProviderConfig) {
     fun collectDownloadItems(document: Document,
         links: MutableSet<Pair<String, String?>>) {
         if (config.downloadItems.isBlank()) return
-        val dlMatches = document.select(config.downloadItems)
+        val dlMatches = SelectorResolver.select(document, config
+            .downloadItems, "${config.id}:downloadItems")
         logDebug(config.id, "DOWNLOAD_ITEMS selector '${config.downloadItems}' => ${dlMatches.size} match(es)")
         dlMatches.forEach { container ->
             container.select("a").forEach { a -> val href = a
@@ -126,7 +130,8 @@ class LinkCollector(private val config: ProviderConfig) {
         links: MutableSet<Pair<String, String?>>) {
         if (config.switchVideoSelector.isBlank()) return
         logDebug(config.id, "SWITCH_VIDEO selector: ${config.switchVideoSelector}")
-        val matches = document.select(config.switchVideoSelector)
+        val matches = SelectorResolver.select(document, config
+            .switchVideoSelector, "${config.id}:switchVideoSelector")
         logDebug(config.id, "SWITCH_VIDEO => ${matches.size} match(es)")
         matches.forEach { el ->
             val onclick = el.attr("onclick")
@@ -140,8 +145,10 @@ class LinkCollector(private val config: ProviderConfig) {
 
     fun collectIframes(document: Document, links: MutableSet<Pair<String,
         String?>>) {
-        val iframeTagMatches = if (config.iframeTag.isNotBlank()) document
-            .select(config.iframeTag) else org.jsoup.select.Elements()
+        val iframeTagMatches = if (config.iframeTag.isNotBlank())
+            SelectorResolver.select(document, config.iframeTag,
+                "${config.id}:iframeTag")
+            else org.jsoup.select.Elements()
         logDebug(config.id, "iframeTag => ${iframeTagMatches.size} iframe(s)")
         iframeTagMatches.forEach { el ->
             config.iframeSources.forEach { attr -> val s = el
