@@ -46,6 +46,11 @@ data class ProviderConfig(
     val globalHeaders: Map<String, String> = emptyMap(),
     val googleReferer: Boolean = false,
 
+    // ── WebView / Cloudflare ──
+    // Saat true, fetchDocument mencoba menyelesaikan challenge Cloudflare
+    // (Managed Challenge / Turnstile) via WebView dan menyimpan cookie cf_clearance.
+    val useWebViewFallback: Boolean = false,
+
     // ── Navigation ──
     val mainPageLists: List<Pair<String, String>> = emptyList(),
 
