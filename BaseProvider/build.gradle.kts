@@ -29,8 +29,6 @@ android {
 
 val cloudstream3Jar: String? = System.getenv("CLOUDSTREAM3_JAR")?.takeIf { it.isNotBlank() }
 
-val cloudstream3Jar: String? = System.getenv("CLOUDSTREAM3_JAR")?.takeIf { it.isNotBlank() }
-
 dependencies {
     implementation(kotlin("stdlib"))
     implementation("com.github.Blatzar:NiceHttp:0.4.16")
