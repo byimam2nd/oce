@@ -12,7 +12,7 @@ object SmartThrottle {
         .ConcurrentHashMap<String, Int>()
     private val retryAfterUntil = java.util.concurrent
         .ConcurrentHashMap<String, Long>()
-    private const val MIN_DELAY = 500L
+    private const val MIN_DELAY = 150L
     private const val MAX_DELAY = 5000L
     private const val BACKOFF_PER_FAILURE = 500L
 

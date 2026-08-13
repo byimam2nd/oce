@@ -17,8 +17,6 @@ import org.json.JSONObject
 import org.jsoup.nodes.Document
 import java.util.concurrent.atomic.AtomicInteger
 
-private const val MIN_SEARCH_RESULTS = 20
-
 class ProviderScrapper(
     private val api: MainAPI,
     private val config: ProviderConfig,
@@ -134,22 +132,23 @@ class ProviderScrapper(
             }
         }
         return runCatching {
-            val results = mutableListOf<SearchResponse>()
-            for (page in 1..config.searchPageLimit) {
-                if (results.size >= MIN_SEARCH_RESULTS) break
-                val url = config.searchPathPattern.replace("{baseUrl}",
-                    baseUrl).replace("{page}", page.toString()).replace("{query}", encodedQuery)
-                val document = fetchDocument(url, config, refer, htmlCache =
-                    htmlCache)
-                val pageResults = if (config.searchItems.isNotBlank()) {
-                    SelectorResolver.select(document, config.searchItems,
-                        "${config.id}:searchItems")
-                        .mapNotNull { runCatching { mapper
-                            .toSearchResult(it, url) }.getOrNull() }
-                } else emptyList()
-                results.addAll(pageResults)
-            }
-            results.distinctBy { it.url }
+            val pages = (1..config.searchPageLimit)
+            coroutineScope {
+                pages.map { page ->
+                    async {
+                        val url = config.searchPathPattern.replace("{baseUrl}",
+                            baseUrl).replace("{page}", page.toString()).replace("{query}", encodedQuery)
+                        val document = fetchDocument(url, config, refer, htmlCache =
+                            htmlCache)
+                        if (config.searchItems.isNotBlank()) {
+                            SelectorResolver.select(document, config.searchItems,
+                                "${config.id}:searchItems")
+                                .mapNotNull { runCatching { mapper
+                                    .toSearchResult(it, url) }.getOrNull() }
+                        } else emptyList()
+                    }
+                }.awaitAll()
+            }.flatten().distinctBy { it.url }
         }.getOrElse { e ->
             logFail(
                 config.id,
