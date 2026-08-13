@@ -1,5 +1,6 @@
 package com.baseprovider.core
 
+import com.baseprovider.cache.ExpiringCache
 import com.baseprovider.config.*
 import com.baseprovider.log.*
 import com.baseprovider.model.*
@@ -28,11 +29,14 @@ class DetailPageScrapper(
     private val config: ProviderConfig,
     private val mapper: ProviderMapper
 ) {
+    private val htmlCache = ExpiringCache<Document>(config.cacheTtlMinutes * 60 * 1000L)
+
     suspend fun load(url: String): LoadResponse = loadRecursive(url, 0)
 
     private suspend fun loadRecursive(url: String,
         depth: Int): LoadResponse {
-        val document = fetchDocument(url, config, referer = config.mainUrl)
+        val document = fetchDocument(url, config, referer = config.mainUrl,
+            htmlCache = htmlCache)
         val currentUrl = url
         if (depth < 2 && config.followLinkSelector.isNotBlank()) {
             val nextAnchor = SelectorResolver.selectFirst(document,
@@ -92,7 +96,7 @@ class DetailPageScrapper(
                     metadata.poster) else emptyList()
             }
             val trk = async {
-                withTimeout(4000L) {
+                withTimeout(2000L) {
                     runCatching {
                         APIHolder.getTracker(listOf(metadata.title),
                             TrackerType.getTypes(type), metadata.year,
