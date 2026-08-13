@@ -42,7 +42,12 @@ object CompiledRegexPatterns {
     fun prioritizeAdaptiveUrls(urls: Collection<String>): List<String> {
         if (urls.isEmpty()) return emptyList()
         val m3u8s = urls.filter { it.contains(".m3u8", ignoreCase = true) }
-        if (m3u8s.isNotEmpty()) return filterMasterM3u8(urls)
+        if (m3u8s.isNotEmpty()) {
+            val masters = m3u8s.filter { it.contains("master", true) || it
+                .contains("manifest", true) || it.contains("playlist", true) }
+            return if (masters.isNotEmpty()) masters
+                .distinct() else listOf(m3u8s.first())
+        }
         val mpds = urls.filter { it.contains(".mpd", ignoreCase = true) }
         if (mpds.isNotEmpty()) return mpds.distinct()
         return urls.distinct()
