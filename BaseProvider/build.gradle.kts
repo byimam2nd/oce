@@ -21,7 +21,15 @@ android {
             resources.srcDirs("src/main/kotlin/com/baseprovider/config")
         }
     }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
 }
+
+val cloudstream3Jar: String? = System.getenv("CLOUDSTREAM3_JAR")?.takeIf { it.isNotBlank() }
+
+val cloudstream3Jar: String? = System.getenv("CLOUDSTREAM3_JAR")?.takeIf { it.isNotBlank() }
 
 dependencies {
     implementation(kotlin("stdlib"))
@@ -37,4 +45,14 @@ dependencies {
     testImplementation("io.mockk:mockk:1.13.12")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
     testImplementation("org.json:json:20231013")
+
+    // CloudStream3 classes (TvType, Log, WebViewResolver, ...) untuk unit test.
+    // Bukan artifact maven — di-resolve plugin sebagai JAR hasil download
+    // (https://github.com/recloudstream/cloudstream/releases/download/<release>/classes.jar).
+    // Hanya dipakai saat CLOUDSTREAM3_JAR diset (langkah unit test di CI);
+    // build provider normal tidak terpengaruh.
+    if (cloudstream3Jar != null) {
+        compileOnly(files(cloudstream3Jar))
+        testImplementation(files(cloudstream3Jar))
+    }
 }

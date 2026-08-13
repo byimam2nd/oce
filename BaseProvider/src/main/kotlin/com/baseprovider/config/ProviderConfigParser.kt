@@ -8,35 +8,24 @@ import org.json.JSONObject
 private const val PARSER_TAG = "ProviderConfigParser"
 
 /**
- * Daftar key JSON yang dikenali parser. Digunakan utk mendeteksi typo / key
- * yang tidak dikenal di config provider (lihat `warnUnknownKeys`).
- * Update saat ada field baru di [ProviderConfig].
+ * Daftar key JSON yang dikenali parser. Di-derive dari field [ProviderConfig]
+ * via reflection (constructor properties), sehingga tidak bisa desync dengan
+ * definisi class. Dipakai utk mendeteksi typo / key yang tak dikenal.
+ *
+ * - Field `by lazy` (derived, nama backing field berakhiran `$delegate`) di-exclude
+ * - Field static (mis. `Companion`) di-exclude
  */
-val KNOWN_CONFIG_KEYS: Set<String> = setOf(
-    "id", "name", "mainUrl", "seriesUrl", "searchUrl", "lang", "supportedTypes",
-    "searchPathPattern", "mainPagePathPattern", "moviePathSegment", "tvPathSegment",
-    "episodeDataUrlPattern", "searchPageLimit", "reverseEpisodes", "isJsonSearch",
-    "searchJsonRoot", "searchJsonTitle", "searchJsonHref", "searchJsonPoster",
-    "searchJsonPosterPrefix", "searchJsonType", "useDocumentLarge", "cacheTtlMinutes",
-    "isHorizontal", "mirrorUrls", "uaPool", "refererPlayerMode", "iframeSelectors",
-    "qualityStripRegex", "globalHeaders", "googleReferer", "mainPageLists",
-    "allowedExtractors", "dubKeyword", "ongoingKeyword", "episodeKeyword",
-    "seriesKeyword", "comingSoonKeywords",
-    "searchItems", "searchTitle", "searchHref", "searchPoster", "searchRating",
-    "searchEpText",
-    "loadTitle", "loadPoster", "loadBanner", "loadDesc", "loadInfoBox", "loadTags",
-    "loadRating", "loadStatus", "loadTrailer", "loadRecommend",
-    "episodeItems", "episodeHref", "episodeTitle", "episodeNum", "episodeDesc",
-    "episodeTime",
-    "linkOptions", "downloadItems", "actorItems", "actorName",
-    "watchButtons", "seasonContainer", "imdbExternal", "tmdbExternal", "iframeTag",
-    "followLinkSelector", "switchVideoSelector",
-    "ajaxPlayerUrl", "selectorJsonData",
-    "attrImage", "attrHref", "attrValue", "iframeSources",
-    "hrefCleanRegex", "hrefCleanReplace",
-    "yearSelector", "yearExtractorRegex",
-    "bloatRegex"
-)
+val KNOWN_CONFIG_KEYS: Set<String> by lazy {
+    ProviderConfig::class.java.declaredFields
+        .asSequence()
+        .filter { field ->
+            !java.lang.reflect.Modifier.isStatic(field.modifiers) &&
+                !field.name.endsWith("\$delegate") &&
+                !field.isSynthetic
+        }
+        .map { it.name }
+        .toSet()
+}
 
 private fun warnUnknownKeys(id: String, json: JSONObject) {
     val unknown = json.keys().asSequence()

@@ -97,6 +97,13 @@ jobs:
           cd $GITHUB_WORKSPACE/src
           python3 scripts/validate_providers.py
 
+      - name: Run BaseProvider unit tests
+        run: |
+          cd $GITHUB_WORKSPACE/src
+          curl -sL "https://github.com/recloudstream/cloudstream/releases/download/pre-release/classes.jar" \
+            -o /tmp/cs3-classes.jar
+          CLOUDSTREAM3_JAR=/tmp/cs3-classes.jar ./gradlew :BaseProvider:testDebugUnitTest --stacktrace
+
       - name: Build Plugins
         run: |
           cd $GITHUB_WORKSPACE/src

@@ -3,6 +3,7 @@ package com.baseprovider.config
 import com.lagradost.api.Log
 import org.json.JSONObject
 import java.net.URL
+import java.util.concurrent.ConcurrentHashMap
 
 object ConfigRegistry {
     private const val TAG = "ConfigRegistry"
@@ -23,7 +24,8 @@ object ConfigRegistry {
 
     private class CachedConfig(val config: ProviderConfig, val fetchedAt: Long)
 
-    private val remoteCache = mutableMapOf<String, CachedConfig>()
+    private val remoteCache = ConcurrentHashMap<String, CachedConfig>()
+    private val bundledCache = ConcurrentHashMap<String, ProviderConfig>()
 
     fun get(id: String): ProviderConfig {
         val fileName = providers[id]
@@ -71,6 +73,7 @@ object ConfigRegistry {
     }
 
     private fun loadBundled(fileName: String): ProviderConfig? {
+        bundledCache[fileName]?.let { return it }
         return try {
             val stream = this::class.java.classLoader?.getResourceAsStream("$fileName.json")
                 ?: return null
@@ -78,7 +81,7 @@ object ConfigRegistry {
             val json = JSONObject(jsonStr)
             val id = json.optString("id", fileName)
             Log.d(TAG, "Loaded bundled config: $fileName.json")
-            fromJson(id, json)
+            fromJson(id, json).also { bundledCache[fileName] = it }
         } catch (e: Exception) {
             Log.w(TAG, "Bundled load failed for $fileName.json: ${e.message}")
             null
