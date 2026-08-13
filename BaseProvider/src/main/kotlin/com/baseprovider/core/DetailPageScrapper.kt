@@ -16,6 +16,7 @@ import com.lagradost.cloudstream3.utils.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeout
+import org.jsoup.nodes.Document
 
 private data class LoadedPageData(
     val recommendations: List<SearchResponse>,
