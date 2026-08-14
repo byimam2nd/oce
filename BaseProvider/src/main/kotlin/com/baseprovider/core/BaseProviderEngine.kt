@@ -32,6 +32,9 @@ class BaseProviderEngine(
     )
     private val prefetchScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val prefetchSemaphore = Semaphore(3)
+    // User-play hanya menunggu prefetch in-flight sampai batas ini; sisanya
+    // lanjut race first-video sendiri supaya tombol play tidak nge-spin lama.
+    private val USER_AWAIT_PREFETCH_MS = 4000L
 
     suspend fun getMainPage(page: Int,
         request: MainPageRequest): HomePageResponse {
@@ -68,23 +71,59 @@ class BaseProviderEngine(
         if (!config.prefetchEnabled) {
             return scrapper.loadLinks(data, isCasting, subtitleCallback, callback)
         }
-        val (ok, cached) = prefetchCache.getOrLoadLinks(data) {
-            val subtitles = mutableListOf<SubtitleFile>()
-            val links = mutableListOf<ExtractorLink>()
-            val success = scrapper.loadLinks(
-                data,
-                isCasting,
-                { subtitles.add(it) },
-                { links.add(it) },
-                waitForAll = true
-            )
-            success to PrefetchCache.CachedLinks(subtitles, links)
-        }
-        if (ok) {
+        // 1) Cache hit → instan, tanpa network.
+        prefetchCache.getLinks(data)?.let { cached ->
             cached.subtitles.forEach(subtitleCallback)
             cached.links.forEach(callback)
+            return true
         }
-        return ok
+        // 2) Ada prefetch in-flight untuk data ini: tunggu SEBENTAR (race
+        //    link-pertama biasanya cepat). Jika timeout, jangan menunggu
+        //    prefetch penuh — lanjut jalur user sendiri.
+        if (prefetchCache.isLinksLoading(data)) {
+            val res = prefetchCache.awaitLinks(data, USER_AWAIT_PREFETCH_MS)
+            if (res != null) {
+                val (ok, cached) = res
+                if (ok) {
+                    cached.subtitles.forEach(subtitleCallback)
+                    cached.links.forEach(callback)
+                    return true
+                }
+            }
+        }
+        // 3) User path: race first-video (waitForAll=false) supaya player cepat.
+        //    Sekaligus warm full-cache di background untuk play berikutnya.
+        val userOk = scrapper.loadLinks(data, isCasting, subtitleCallback, callback)
+        ensureLinksCached(data)
+        return userOk
+    }
+
+    /**
+     * Warm full-cache links untuk [data] di background (waitForAll=true) —
+     * in-flight guard di PrefetchCache mencegah double-fetch jika prefetch
+     * episode juga berjalan.
+     */
+    private fun ensureLinksCached(data: String) {
+        if (prefetchCache.isLinksFresh(data) || prefetchCache.isLinksLoading(data)) return
+        prefetchScope.launch {
+            prefetchSemaphore.withPermit {
+                runCatching {
+                    val (_, cached) = prefetchCache.getOrLoadLinks(data) {
+                        val subtitles = mutableListOf<SubtitleFile>()
+                        val links = mutableListOf<ExtractorLink>()
+                        val success = scrapper.loadLinks(
+                            data,
+                            false,
+                            { subtitles.add(it) },
+                            { links.add(it) },
+                            waitForAll = true
+                        )
+                        success to PrefetchCache.CachedLinks(subtitles, links)
+                    }
+                    warmPlayerConnections(cached.links)
+                }
+            }
+        }
     }
 
     /**
@@ -129,26 +168,7 @@ class BaseProviderEngine(
         val episodes = episodesOf(response).take(config.prefetchEpisodeLimit)
         episodes.forEach { ep ->
             val data = ep.data?.takeIf { it.isNotBlank() } ?: return@forEach
-            if (prefetchCache.isLinksFresh(data)) return@forEach
-            prefetchScope.launch {
-                prefetchSemaphore.withPermit {
-                    runCatching {
-                        val (_, cached) = prefetchCache.getOrLoadLinks(data) {
-                            val subtitles = mutableListOf<SubtitleFile>()
-                            val links = mutableListOf<ExtractorLink>()
-                            val success = scrapper.loadLinks(
-                                data,
-                                false,
-                                { subtitles.add(it) },
-                                { links.add(it) },
-                                waitForAll = true
-                            )
-                            success to PrefetchCache.CachedLinks(subtitles, links)
-                        }
-                        warmPlayerConnections(cached.links)
-                    }
-                }
-            }
+            ensureLinksCached(data)
         }
     }
 

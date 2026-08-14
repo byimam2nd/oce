@@ -4,6 +4,7 @@ import com.lagradost.cloudstream3.extractors.*
 import com.lagradost.cloudstream3.utils.*
 
 import com.lagradost.api.Log
+import kotlinx.coroutines.withTimeout
 import org.mozilla.javascript.Context
 import org.mozilla.javascript.Function
 import org.mozilla.javascript.Scriptable
@@ -28,8 +29,11 @@ private suspend fun ensureLk21Scope(ctx: Context): Scriptable {
         && now - cachedPlayerJsTime < PLAYER_JS_REFRESH_MS) {
         cachedPlayerJsText ?: error("Text null after null check")
     } else {
-        app.get("https://assets.lk21.party/js/player.js?v=4").text
-            .also { cachedPlayerJsText = it }
+        // M6: fetch player.js dengan timeout — tanpa batas bisa memblokir
+        // decrypt semua link Lk21 saat jaringan lambat.
+        withTimeout(10_000L) {
+            app.get("https://assets.lk21.party/js/player.js?v=4").text
+        }.also { cachedPlayerJsText = it }
     }
 
     synchronized(lk21Lock) {

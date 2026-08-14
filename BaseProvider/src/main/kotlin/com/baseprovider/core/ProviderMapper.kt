@@ -9,11 +9,29 @@ import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import org.json.JSONObject
+import java.util.concurrent.ConcurrentHashMap
 
 class ProviderMapper(
     private val api: MainAPI,
     private val config: ProviderConfig,
 ) {
+
+    // L4: regex hrefClean dikompilasi sekali per pola unik, tidak per elemen
+    // (toSearchResult dipanggil untuk tiap item hasil search).
+    private val compiledHrefClean = ConcurrentHashMap<String, Regex?>()
+
+    private fun hrefCleanRegex(): Regex? {
+        val pattern = config.hrefCleanRegex
+        if (pattern.isBlank()) return null
+        return compiledHrefClean.computeIfAbsent(pattern) {
+            runCatching { Regex(it) }.getOrNull()
+        }
+    }
+
+    private fun compiledRegex(pattern: String): Regex? =
+        compiledHrefClean.computeIfAbsent(pattern) {
+            runCatching { Regex(it) }.getOrNull()
+        }
 
     fun toSearchResult(element: Element, baseUrl: String? =
         null): SearchResponse? {
@@ -40,11 +58,10 @@ class ProviderMapper(
                     ?: element.parent()?.selectFirst("a")
             }
             var href = fixUrlSmart(hrefEl?.attr("href"), base)
-            if (config.hrefCleanRegex.isNotBlank() && config
-                .hrefCleanReplace.isNotBlank()) {
+            val cleanRx = hrefCleanRegex()
+            if (cleanRx != null && config.hrefCleanReplace.isNotBlank()) {
                 href = try {
-                    href.replace(Regex(config.hrefCleanRegex), config
-                        .hrefCleanReplace)
+                    href.replace(cleanRx, config.hrefCleanReplace)
                 } catch (_: Exception) { href }
             }
             val poster = if (config.searchPoster.isNotBlank()) {
@@ -122,8 +139,8 @@ class ProviderMapper(
                 .yearExtractorRegex.isNotBlank()) {
                 val yearEl = SelectorResolver.selectFirst(document,
                     config.yearSelector, "$key:yearSelector")
-                try { Regex(config.yearExtractorRegex).find(yearEl
-                    ?.text() ?: "")?.groupValues?.get(1)
+                try { compiledRegex(config.yearExtractorRegex)
+                    ?.find(yearEl?.text() ?: "")?.groupValues?.get(1)
                         ?.toIntOrNull() } catch (_: Exception) { null }
             } else null
         }

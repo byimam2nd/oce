@@ -30,15 +30,19 @@ fun findPackedJsInPage(html: String): Triple<String, List<String>, Int>? {
 
 fun decodePackedJs(payload: String, keywords: List<String>,
     base: Int): String {
-    var result = payload
-    for (i in keywords.size - 1 downTo 0) {
-        val kw = keywords.getOrNull(i) ?: continue
-        if (kw.isNotBlank()) {
-            val encoded = Regex.escape(toBase(i, base))
-            result = result.replace(Regex("\\b$encoded\\b"), kw)
-        }
+    // Single-pass: bangun SATU alternation regex untuk semua keyword, lalu
+    // satu replace. Sebelumnya regex di-compile ulang + full-string replace
+    // per keyword (ratusan-thousands) — lambat di 7 extractor.
+    val parts = keywords.mapIndexedNotNull { i, kw ->
+        if (kw.isNotBlank()) (Regex.escape(toBase(i, base)) to kw) else null
     }
-    return result
+    if (parts.isEmpty()) return payload
+    val alternation = parts.joinToString("|") { it.first }
+    val pattern = Regex("\\b(?:$alternation)\\b")
+    val byEncoded = parts.toMap()
+    return pattern.replace(payload) { m ->
+        byEncoded[m.value] ?: m.value
+    }
 }
 
 private fun toBase(n: Int, base: Int): String {

@@ -5,6 +5,7 @@ import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.security.MessageDigest
 
 /**
  * Extractor dengan cache decrypt adaptif built-in.
@@ -20,7 +21,6 @@ import okhttp3.RequestBody.Companion.toRequestBody
  */
 abstract class CachedExtractorApi : ExtractorApi() {
     private val decryptCache = AdaptiveDecryptCache()
-
     protected suspend fun cachedGetText(
         url: String,
         referer: String? = null,
@@ -57,12 +57,21 @@ abstract class CachedExtractorApi : ExtractorApi() {
         referer: String? = null,
         headers: Map<String, String> = emptyMap()
     ): String {
-        val key = "POST:$url:${jsonBody.hashCode()}:${referer ?: ""}"
+        // Pakai body mentah (bukan hashCode 32-bit) untuk menghindari key
+        // collision antar request decrypt yang berbeda. SHA-256 mencegah key
+        // jadi sangat panjang sekaligus bebas collision.
+        val key = "POST:$url:${jsonBody.sha256Hex()}:${referer ?: ""}"
         return decryptCache.get(key) ?: run {
             val text = app.post(url, headers = headers, requestBody = jsonBody
                 .toRequestBody("application/json".toMediaType())).text
             decryptCache.put(key, text)
             text
         }
+    }
+
+    private fun String.sha256Hex(): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+            .digest(toByteArray())
+        return digest.joinToString("") { "%02x".format(it) }
     }
 }

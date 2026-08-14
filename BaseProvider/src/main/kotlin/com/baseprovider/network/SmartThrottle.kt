@@ -2,6 +2,8 @@ package com.baseprovider.network
 
 import com.lagradost.api.Log
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.net.URI
 import kotlin.random.Random
 
@@ -14,30 +16,44 @@ object SmartThrottle {
         .ConcurrentHashMap<String, Long>()
     private val pacingDelay = java.util.concurrent
         .ConcurrentHashMap<String, Long>()
+    // L5: lock per-domain supaya read-check-delay-write di wait() atomik.
+    // Tanpa lock, request paralel ke domain sama sama-sama membaca lastRequest
+    // lama dan sama-sama melewatkan delay -> burst tanpa pacing. Mutex (bukan
+    // synchronized) agar delay di dalamnya tidak memblokir thread — menunggu
+    // antrian coroutine juga suspend, bukan blocking.
+    private val domainLocks = java.util.concurrent
+        .ConcurrentHashMap<String, Mutex>()
     private const val MIN_DELAY = 50L
     private const val MAX_DELAY = 5000L
     private const val DEFAULT_DELAY = 150L
     private const val BACKOFF_PER_FAILURE = 500L
     private const val DECAY_FACTOR = 0.85
+    // Cap terpisah untuk Retry-After server: nilai ini TIDAK boleh digabung
+    // dengan cap pacing (MAX_DELAY). Server mengirim "wait 60s" -> kita hormati
+    // hingga batas ini, bukan memangkas ke 5s.
+    private const val MAX_RETRY_AFTER_MS = 60_000L
 
     private fun currentDelay(domain: String): Long =
         pacingDelay[domain] ?: DEFAULT_DELAY
 
     suspend fun wait(domain: String) {
-        val now = System.currentTimeMillis()
-        val lastRequest = lastRequestMap[domain] ?: 0L
-        val diff = now - lastRequest
-        val base = currentDelay(domain)
-        val failBoost = minOf((failureCount[domain] ?: 0) * BACKOFF_PER_FAILURE, MAX_DELAY - base)
-        val retryAfterBoost = retryAfterUntil[domain]
-            ?.takeIf { it > now }
-            ?.let { minOf(it - now, MAX_DELAY - base) }
-            ?: 0L
-        val effectiveDelay = base + maxOf(failBoost, retryAfterBoost)
-        if (diff < effectiveDelay) {
-            delay(effectiveDelay - diff + Random.nextLong(100L))
+        val lock = domainLocks.computeIfAbsent(domain) { Mutex() }
+        lock.withLock {
+            val now = System.currentTimeMillis()
+            val lastRequest = lastRequestMap[domain] ?: 0L
+            val diff = now - lastRequest
+            val base = currentDelay(domain)
+            val failBoost = minOf((failureCount[domain] ?: 0) * BACKOFF_PER_FAILURE, MAX_DELAY - base)
+            val retryAfterBoost = retryAfterUntil[domain]
+                ?.takeIf { it > now }
+                ?.let { minOf(it - now, MAX_RETRY_AFTER_MS) }
+                ?: 0L
+            val effectiveDelay = base + maxOf(failBoost, retryAfterBoost)
+            if (diff < effectiveDelay) {
+                delay(effectiveDelay - diff + Random.nextLong(100L))
+            }
+            lastRequestMap[domain] = System.currentTimeMillis()
         }
-        lastRequestMap[domain] = System.currentTimeMillis()
     }
 
     fun reportFailure(domain: String) {

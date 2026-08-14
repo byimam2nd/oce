@@ -140,18 +140,21 @@ class ProviderScrapper(
         return runCatching {
             val pages = (1..config.searchPageLimit)
             coroutineScope {
+                val searchSemaphore = Semaphore(2)
                 pages.map { page ->
-                    async {
-                        val url = config.searchPathPattern.replace("{baseUrl}",
-                            baseUrl).replace("{page}", page.toString()).replace("{query}", encodedQuery)
-                        val document = fetchDocument(url, config, refer, htmlCache =
-                            htmlCache)
-                        if (config.searchItems.isNotBlank()) {
-                            SelectorResolver.select(document, config.searchItems,
-                                "${config.id}:searchItems")
-                                .mapNotNull { runCatching { mapper
-                                    .toSearchResult(it, url) }.getOrNull() }
-                        } else emptyList()
+                    async(Dispatchers.IO) {
+                        searchSemaphore.withPermit {
+                            val url = config.searchPathPattern.replace("{baseUrl}",
+                                baseUrl).replace("{page}", page.toString()).replace("{query}", encodedQuery)
+                            val document = fetchDocument(url, config, refer, htmlCache =
+                                htmlCache)
+                            if (config.searchItems.isNotBlank()) {
+                                SelectorResolver.select(document, config.searchItems,
+                                    "${config.id}:searchItems")
+                                    .mapNotNull { runCatching { mapper
+                                        .toSearchResult(it, url) }.getOrNull() }
+                            } else emptyList()
+                        }
                     }
                 }.awaitAll()
             }.flatten().distinctBy { it.url }
@@ -180,18 +183,26 @@ class ProviderScrapper(
                 referer = config.mainUrl, skipCache = false,
                 htmlCache = htmlCache)
             val currentUrl = data
-            val allPossibleLinks = mutableSetOf<Pair<String, String?>>()
+            val allPossibleLinks = java.util.Collections
+                .synchronizedSet(mutableSetOf<Pair<String, String?>>())
             val videoCount = AtomicInteger(0)
             val wrappedCallback: (ExtractorLink) -> Unit =
                 { link -> videoCount.incrementAndGet(); callback(link) }
 
-            linkCollector.collectAjaxPlayers(document, currentUrl,
-                allPossibleLinks)
-            linkCollector.collectLinkOptions(document, allPossibleLinks)
-            linkCollector.collectDownloadItems(document, allPossibleLinks)
-            linkCollector.collectSwitchVideoButtons(document, currentUrl,
-                allPossibleLinks)
-            linkCollector.collectIframes(document, allPossibleLinks)
+            // M1: collectAjaxPlayers (network POST) dijalankan PARALEL dengan
+            // kolektor DOM (cepat) — bukan serial. Hasil AJAX digabung saat siap.
+            coroutineScope {
+                val ajaxCollect = async(Dispatchers.IO) {
+                    linkCollector.collectAjaxPlayers(document, currentUrl,
+                        allPossibleLinks)
+                }
+                linkCollector.collectLinkOptions(document, allPossibleLinks)
+                linkCollector.collectDownloadItems(document, allPossibleLinks)
+                linkCollector.collectSwitchVideoButtons(document, currentUrl,
+                    allPossibleLinks)
+                linkCollector.collectIframes(document, allPossibleLinks)
+                ajaxCollect.await()
+            }
 
             if (allPossibleLinks.isEmpty()) {
                 logFail(

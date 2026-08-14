@@ -8,6 +8,8 @@ import com.lagradost.cloudstream3.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import org.json.JSONObject
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
@@ -62,42 +64,46 @@ class LinkCollector(private val config: ProviderConfig) {
             logDebug(config.id, "EastPlay AJAX options: ${options.size} for post $postId")
             // Fetch tiap option secara paralel (bukan sekuensial) — dengan
             // banyak server, memangkas RTT beruntun sebelum ekstraksi.
+            // Dibatasi Semaphore agar 30-50 option tidak membuka request serentak.
             coroutineScope {
+                val eastPlaySemaphore = Semaphore(3)
                 options.mapNotNull { opt ->
                     val nume = opt.attr("data-nume")
                     if (nume.isBlank()) return@mapNotNull null
                     async {
-                        val type = opt.attr("data-type").ifBlank { "schtml" }
-                        val label = opt.text().trim()
-                        logDebug(config.id, "Fetching player option nume=$nume type=$type")
-                        runCatching {
-                            val res = app.post(config.ajaxPlayerUrl,
-                                data = mapOf(
-                                    "action" to "player_ajax",
-                                    "post" to postId,
-                                    "nume" to nume,
-                                    "type" to type
-                                ), headers = config.globalHeaders,
-                                    referer = currentUrl).document
-                            val found = mutableListOf<Pair<String, String?>>()
-                            val iframes = res.select("iframe")
-                            if (iframes.isNotEmpty()) {
-                                iframes.forEach { f ->
-                                    val src = f.attr("data-src").ifBlank { f
-                                        .attr("src") }
-                                    if (src.isNotBlank()) found.add(src to label
-                                        .ifBlank { null })
+                        eastPlaySemaphore.withPermit {
+                            val type = opt.attr("data-type").ifBlank { "schtml" }
+                            val label = opt.text().trim()
+                            logDebug(config.id, "Fetching player option nume=$nume type=$type")
+                            runCatching {
+                                val res = app.post(config.ajaxPlayerUrl,
+                                    data = mapOf(
+                                        "action" to "player_ajax",
+                                        "post" to postId,
+                                        "nume" to nume,
+                                        "type" to type
+                                    ), headers = config.globalHeaders,
+                                        referer = currentUrl).document
+                                val found = mutableListOf<Pair<String, String?>>()
+                                val iframes = res.select("iframe")
+                                if (iframes.isNotEmpty()) {
+                                    iframes.forEach { f ->
+                                        val src = f.attr("data-src").ifBlank { f
+                                            .attr("src") }
+                                        if (src.isNotBlank()) found.add(src to label
+                                            .ifBlank { null })
+                                    }
+                                } else {
+                                    res.select("video source, video").forEach { v ->
+                                        val src = v.attr("data-src").ifBlank { v
+                                            .attr("src") }
+                                        if (src.isNotBlank()) found.add(src to label
+                                            .ifBlank { null })
+                                    }
                                 }
-                            } else {
-                                res.select("video source, video").forEach { v ->
-                                    val src = v.attr("data-src").ifBlank { v
-                                        .attr("src") }
-                                    if (src.isNotBlank()) found.add(src to label
-                                        .ifBlank { null })
-                                }
-                            }
-                            found
-                        }.getOrDefault(emptyList<Pair<String, String?>>())
+                                found
+                            }.getOrDefault(emptyList<Pair<String, String?>>())
+                        }
                     }
                 }.awaitAll().flatten().forEach { links.add(it) }
             }

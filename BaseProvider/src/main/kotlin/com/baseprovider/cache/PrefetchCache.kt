@@ -4,6 +4,7 @@ import com.lagradost.cloudstream3.LoadResponse
 import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -61,6 +62,18 @@ class PrefetchCache(
 
     fun isLinksFresh(data: String): Boolean =
         linkCache[data]?.let { isFresh(it.timestamp) } ?: false
+
+    /** Apakah ada fetch link in-flight untuk [data]. */
+    fun isLinksLoading(data: String): Boolean =
+        linkInFlight.containsKey(data)
+
+    /**
+     * Tunggu fetch link in-flight untuk [data] sampai [timeoutMs]. Return null
+     * jika tidak ada in-flight atau timeout — pemanggil (jalur user-play) lalu
+     * jalan dengan hasil parsial sendiri, TIDAK menunggu prefetch penuh.
+     */
+    suspend fun awaitLinks(data: String, timeoutMs: Long): Pair<Boolean, CachedLinks>? =
+        linkInFlight[data]?.let { withTimeoutOrNull(timeoutMs) { it.await() } }
 
     fun clear() {
         loadCache.clear()

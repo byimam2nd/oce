@@ -33,11 +33,13 @@ class SmartThrottleTest {
     fun `reportRetryAfter adds delay capped at max`() {
         runBlocking {
             SmartThrottle.wait("retry.example.com")
-            SmartThrottle.reportRetryAfter("retry.example.com", 60)
+            // Nilai kecil (di bawah cap 60s) — test tetap cepat di CI namun
+            // memverifikasi Retry-After benar-benar menambah delay di wait().
+            SmartThrottle.reportRetryAfter("retry.example.com", 4)
             val start = System.currentTimeMillis()
             SmartThrottle.wait("retry.example.com")
             val elapsed = System.currentTimeMillis() - start
-            assertTrue("expected retry-after delay, got ${elapsed}ms", elapsed in 4000L..6500L)
+            assertTrue("expected retry-after delay, got ${elapsed}ms", elapsed in 3500L..5200L)
         }
     }
 

@@ -304,6 +304,10 @@ object SelectorResolver {
         val bestElements = mutableListOf<Element>()
         for (el in document.getAllElements()) {
             if (++scanned > MAX_RELOCATE_SCAN) break
+            // Pre-filter murah: lewati elemen yang tag-nya beda tanpa menjalankan
+            // similarity (subtree walk + LCS) yang mahal. Tag sama cukup karena
+            // fingerprint menyimpan tag elemen asli yang pernah match.
+            if (el.tagName() != fp.tag) continue
             val s = similarity(fp, el)
             if (s > best) { best = s; bestElements.clear(); bestElements.add(el) }
             else if (s == best && s > 0) { bestElements.add(el) }

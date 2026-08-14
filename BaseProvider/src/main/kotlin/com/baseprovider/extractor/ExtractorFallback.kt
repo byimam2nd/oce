@@ -5,13 +5,38 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.*
 import com.lagradost.cloudstream3.utils.*
 
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
+
+// Batas total waktu untuk blok extractor paralel (local extractor) supaya
+// satu extractor yang lambat tidak menahan jalur fallback ke global/direct.
+private const val EXTRACTOR_BLOCK_TIMEOUT_MS = 20_000L
+
+/**
+ * Selesai pada hasil pertama: jika link pertama terkumpul, cancel extractor
+ * lain yang masih jalan (latency = extractor tercepat, bukan terlambat).
+ * Jika semua selesai tanpa link (allDone), lanjut fallback. Caller tidak
+ * memblokir menunggu extractor yang lambat.
+ */
+private suspend fun selectFirstOf(
+    firstLink: CompletableDeferred<Unit>,
+    allDone: CompletableDeferred<Unit>
+) {
+    select<Unit> {
+        firstLink.onAwait {
+            // Link pertama ditemukan — hentikan extractor lain yang menunggu.
+            coroutineContext.cancelChildren()
+        }
+        allDone.onAwait { Unit }
+    }
+}
 
 suspend fun loadExtractorWithFallbackCustom(
     url: String,
@@ -44,23 +69,48 @@ suspend fun loadExtractorWithFallbackCustom(
     }
 
     if (matchingExtractors.isNotEmpty()) {
-        coroutineScope {
-            val semaphore = Semaphore(3)
-            matchingExtractors.forEach { extractor ->
-                launch { semaphore.withPermit {
-                    runCatching {
-                        extractor.getUrl(url, referer, subtitleCallback,
-                            internalCallback)
-                    }.onFailure { e ->
-                        logFail(
-                            providerId,
-                            "Local Extractor (${extractor.name}) failed for $url: ${e.message}",
-                            url = url, method = "extractLinks",
-                            type = FailureType.EXTRACTOR_FAILURE,
-                            selectors = extractor.name
-                        )
+        // Jalankan extractor paralel (sem 3) tapi SELESAI saat link pertama
+        // ditemukan — jangan menunggu extractor terlambat. Job lain di-cancel.
+        val firstLink = CompletableDeferred<Unit>()
+        val allDone = CompletableDeferred<Unit>()
+        val firstCallback: (ExtractorLink) -> Unit = { link ->
+            internalCallback(link)
+            firstLink.complete(Unit)
+        }
+        withTimeoutOrNull(EXTRACTOR_BLOCK_TIMEOUT_MS) {
+            coroutineScope {
+                val semaphore = Semaphore(3)
+                val extractorJobs = matchingExtractors.map { extractor ->
+                    launch {
+                        semaphore.withPermit {
+                            runCatching {
+                                extractor.getUrl(url, referer, subtitleCallback,
+                                    firstCallback)
+                            }.onFailure { e ->
+                                // Cancellation (dari cancel-on-first-success atau
+                                // timeout blok) WAJIB diteruskan, bukan ditelan —
+                                // kalau ditelan, extractor lambat tidak berhenti dan
+                                // coroutineScope menunggu sampai timeout alaminya.
+                                if (e is kotlinx.coroutines.CancellationException) {
+                                    throw e
+                                }
+                                logFail(
+                                    providerId,
+                                    "Local Extractor (${extractor.name}) failed for $url: ${e.message}",
+                                    url = url, method = "extractLinks",
+                                    type = FailureType.EXTRACTOR_FAILURE,
+                                    selectors = extractor.name
+                                )
+                            }
+                        }
                     }
-                } }
+                }
+                launch {
+                    extractorJobs.forEach { it.join() }
+                    allDone.complete(Unit)
+                }
+                // Selesai saat link pertama terkumpul — ekstraktor lain di-cancel.
+                selectFirstOf(firstLink, allDone)
             }
         }
     }

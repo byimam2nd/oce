@@ -20,6 +20,10 @@ object SelectorValidator {
     private val URL_PREFIX = Regex("""^(https?:)?//""")
     private val DATA_IMAGE = Regex("""(?i)^data:image/""")
     private val EPISODE_TOKEN = Regex("""(?i)(?:episode|ep|eps)\s*\d+|(?:eps?\.?)""")
+
+    // L4: regex dibebankan ke satu instance file-level, bukan dibuat ulang
+    // tiap pemanggilan isValidTitle (yang bisa ribuan kali per scan).
+    private val WHITESPACE_SPLIT = Regex("\\s+")
     private val SENTENCE_MARKS = charArrayOf('.', '!', '?', ';')
 
     /** Nilai kosong/blank selalu ditolak untuk semua tipe. */
@@ -44,7 +48,7 @@ object SelectorValidator {
         if (v.contains('\n')) return false
         val marks = v.count { it in SENTENCE_MARKS }
         if (v.length > 40 && marks >= 3) return false
-        if (v.split(Regex("\\s+")).size > 45) return false
+        if (v.split(WHITESPACE_SPLIT).size > 45) return false
         return true
     }
 

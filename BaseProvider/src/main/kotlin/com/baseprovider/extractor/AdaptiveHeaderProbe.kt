@@ -1,9 +1,14 @@
 package com.baseprovider.extractor
 
 import com.lagradost.cloudstream3.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import java.net.URI
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Probe otomatis pemilihan header video per-host (konsep adaptive, tanpa
@@ -12,13 +17,18 @@ import java.net.URI
  *  - REFERER: UA+Accept + referer (hint atau origin video)
  * Pilih varian yang valid (2xx/3xx) dan paling cepat. Hasil di-cache per-host
  * sehingga host berikutnya tidak di-probe ulang dalam satu sesi.
+ *
+ * Probe TIDAK memblokir link pertama: host baru langsung dapat mode BARE
+ * (aman, minimal header), lalu probe dijalankan di background (single-flight)
+ * untuk menyempurnakan keputusan link-link berikutnya ke host yang sama.
  */
 object AdaptiveHeaderProbe {
     enum class Mode { BARE, REFERER }
 
     data class Decision(val mode: Mode, val referer: String?)
 
-    private val cache = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, Decision>>()
+    private val cache = ConcurrentHashMap<String, Pair<Long, Decision>>()
+    private val inFlight = ConcurrentHashMap<String, Boolean>()
     private const val TTL_MS = 60 * 60_000L
     private const val PROBE_TIMEOUT = 4000L
 
@@ -28,12 +38,26 @@ object AdaptiveHeaderProbe {
         cache[host]?.let { (ts, d) ->
             if (System.currentTimeMillis() - ts < TTL_MS) return d
         }
-        val decision = probe(url, refererHint)
-        cache[host] = System.currentTimeMillis() to decision
-        return decision
+        // Host baru: kirim link dengan mode BARE dulu (tidak menunggu probe).
+        // Probe dijalankan background sekali saja per host (single-flight).
+        if (inFlight.putIfAbsent(host, true) == null) {
+            backgroundScope.launch {
+                runCatching {
+                    val decision = probe(url, refererHint)
+                    cache[host] = System.currentTimeMillis() to decision
+                }.onFailure { cache[host] = System.currentTimeMillis() to Decision(Mode.BARE, null) }
+                inFlight.remove(host)
+            }
+        }
+        return Decision(Mode.BARE, null)
     }
 
-    fun reset() = cache.clear()
+    fun reset() {
+        cache.clear()
+        inFlight.clear()
+    }
+
+    private val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private suspend fun probe(url: String, refererHint: String?): Decision =
         coroutineScope {

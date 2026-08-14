@@ -7,41 +7,53 @@ import com.baseprovider.model.*
 import com.baseprovider.network.*
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import kotlinx.coroutines.withTimeoutOrNull
 import org.jsoup.Jsoup
 
 class FallbackPipeline(private val config: ProviderConfig) {
 
+    /**
+     * Per-link timeout budget: chain extractor lokal → global → direct →
+     * deep-scan → manual iframe tidak boleh menghabiskan 60-90s per link
+     * rusak. Timeout → link dianggap gagal, lanjut link berikutnya.
+     */
     suspend fun processLink(
         raw: String, label: String?, currentUrl: String,
         subtitleCallback: (SubtitleFile) -> Unit,
         wrappedCallback: (ExtractorLink) -> Unit
     ) {
-        runCatching {
-            val decodedRaw = decodeRawLink(raw)
-            val fixedUrl = fixUrlSmart(decodedRaw, currentUrl)
-                .safeHttpsify().substringBefore("#").fixKnownDomainAliases()
-            if (fixedUrl.isBlank()) return@runCatching
+        withTimeoutOrNull(PER_LINK_TIMEOUT_MS) {
+            runCatching {
+                val decodedRaw = decodeRawLink(raw)
+                val fixedUrl = fixUrlSmart(decodedRaw, currentUrl)
+                    .safeHttpsify().substringBefore("#").fixKnownDomainAliases()
+                if (fixedUrl.isBlank()) return@runCatching
 
-            logDebug(config.id, "Processing link: $fixedUrl (label: $label)")
+                logDebug(config.id, "Processing link: $fixedUrl (label: $label)")
 
-            val okDirect = runCatching {
-                loadExtractorWithFallbackCustom(
-                    fixedUrl, currentUrl, subtitleCallback,
-                    headers = config.globalHeaders,
-                    callback = wrappedCallback,
-                    providerTag = config.id,
-                    qualityStripRegex = config.qualityStripRegexCompiled
-                )
-            }.getOrDefault(false)
-            if (!okDirect) {
-                if (ProviderExtractors.hasMatchingExtractor(fixedUrl)) {
-                    logDebug(config.id, "Skipping manual iframe fetch: extractor already tried for $fixedUrl")
-                    return@runCatching
+                val okDirect = runCatching {
+                    loadExtractorWithFallbackCustom(
+                        fixedUrl, currentUrl, subtitleCallback,
+                        headers = config.globalHeaders,
+                        callback = wrappedCallback,
+                        providerTag = config.id,
+                        qualityStripRegex = config.qualityStripRegexCompiled
+                    )
+                }.getOrDefault(false)
+                if (!okDirect) {
+                    if (ProviderExtractors.hasMatchingExtractor(fixedUrl)) {
+                        logDebug(config.id, "Skipping manual iframe fetch: extractor already tried for $fixedUrl")
+                        return@runCatching
+                    }
+                    tryManualIframeFetch(fixedUrl, label, currentUrl,
+                        subtitleCallback, wrappedCallback)
                 }
-                tryManualIframeFetch(fixedUrl, label, currentUrl,
-                    subtitleCallback, wrappedCallback)
-            }
-        }.getOrElse { e -> logDebug(config.id, "Link Processor Error on $raw: ${e.message}") }
+            }.getOrElse { e -> logDebug(config.id, "Link Processor Error on $raw: ${e.message}") }
+        }
+    }
+
+    companion object {
+        private const val PER_LINK_TIMEOUT_MS = 20_000L
     }
 
     private suspend fun decodeRawLink(raw: String): String {
@@ -67,7 +79,7 @@ class FallbackPipeline(private val config: ProviderConfig) {
 
         val playerDoc = fetchDocument(
             fixedUrl, config, referer = refererForPlayer,
-            skipCache = true
+            skipCache = false
         )
         val iframeSelectors = config.iframeSelectors
         val iframeAttributes = config.iframeSources

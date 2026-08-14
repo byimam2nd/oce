@@ -63,6 +63,15 @@ suspend fun <T> executeWithRetry(
         try { return block() } catch (e: Exception) {
             // cancellation murni (user cancel) harus diteruskan, bukan timeout
             if (e is CancellationException && e !is TimeoutCancellationException) throw e
+            // Timeout: anggap budget waktu per-attempt sudah habis — jangan
+            // retry berulang (3x timeout = ~45s stall per URL). Konversi ke
+            // exception non-cancellation agar tidak membatalkan coroutine
+            // parent; fetchDocument akan mencoba mirror/UA lain.
+            if (e is TimeoutCancellationException) {
+                throw java.net.SocketTimeoutException(
+                    "Request timed out after ${e.message ?: "timeout"}"
+                )
+            }
             if (e is HttpStatusException) {
                 when {
                     e.code == 429 -> {
@@ -97,6 +106,13 @@ suspend fun <T> executeWithRetry(
                 val msg = e.message ?: ""
                 if (NON_RETRYABLE_HTTP.containsMatchIn(msg)) throw e
                 if (CLOUDFLARE_HTTP.containsMatchIn(msg)) throw e
+                // Timeout/IO/connect: jangan retry di sini — fetchDocument sudah
+                // menangani dengan rotasi UA + mirror. Retry berulang justru
+                // memperpanjang stall (3x timeout = ~45s per URL).
+                if (e is java.net.SocketTimeoutException ||
+                    e is java.io.IOException ||
+                    e is java.net.ConnectException
+                ) throw e
                 lastException = e
                 if (attempt < maxRetries - 1) {
                     val rateLimited = RATE_LIMIT_HTTP.containsMatchIn(msg)

@@ -40,9 +40,31 @@ class DetailPageScrapper(
         val document = fetchDocument(url, config, referer = config.mainUrl,
             htmlCache = htmlCache)
         val currentUrl = url
+        val key = config.id
+        // M2: cek kelengkapan page-1 DENGAN selector murah (tanpa panggil
+        // extractMetadata yang ber-log METADATA_FAILURE — page-1 yang sengaja
+        // stub untuk di-follow tidak boleh memunculkan failure palsu). Hanya
+        // follow (fetch halaman kedua) jika metadata/episodes kritis kurang.
+        val titlePresent = config.loadTitle.isNotBlank() && SelectorResolver
+            .textValidated(document, config.loadTitle, "$key:loadTitle",
+                FieldType.TITLE) != null
+        val posterPresent = config.loadPoster.isNotBlank() && SelectorResolver
+            .selectValidated(document, config.loadPoster, "$key:loadPoster",
+                FieldType.POSTER) { it.safeExtractImage(config.attrImage) } != null
         if (depth < 2 && config.followLinkSelector.isNotBlank()) {
-            val nextAnchor = SelectorResolver.selectFirst(document,
-                config.followLinkSelector, "${config.id}:followLinkSelector")
+            val needsFollow = !titlePresent || !posterPresent
+            val epHints = if (config.episodeItems.isNotBlank()) {
+                SelectorResolver.select(document, config.episodeItems,
+                    "${key}:episodeItems").isNotEmpty()
+            } else false
+            // Follow jika metadata kritis kurang ATAU episode tidak ada di
+            // page-1 — follow selector biasanya menunjuk halaman yang
+            // melengkapi data. Tanpa cek episode, halaman dengan title OK
+            // tapi episode kosong akan kehilangan daftar episode.
+            val missingData = needsFollow || !epHints
+            val nextAnchor = if (missingData) SelectorResolver.selectFirst(
+                document, config.followLinkSelector,
+                "${key}:followLinkSelector") else null
             val nextHref = nextAnchor?.attr("href")
             if (!nextHref.isNullOrBlank() && !nextHref.startsWith("javascript:", true)) {
                 val nextUrl = fixUrlSmart(nextHref, currentUrl)
