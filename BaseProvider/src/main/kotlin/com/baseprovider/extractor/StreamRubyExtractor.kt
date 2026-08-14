@@ -46,14 +46,4 @@ open class StreamRuby : ExtractorApi() {
         }
     }
 }
-            }
-            urls = CompiledRegexPatterns.extractAllVideoUrls(decoded)
-        }
-        CompiledRegexPatterns.filterMasterM3u8(urls).forEach {
-            MasterLinkGenerator.createSmartLink(this.name, it, null,
-                headers = MasterLinkGenerator.minimalVideoHeaders,
-                bareHeaders = true, callback = callback)
-        }
-    }
-}
 
