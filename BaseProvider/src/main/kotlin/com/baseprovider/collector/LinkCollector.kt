@@ -64,10 +64,10 @@ class LinkCollector(private val config: ProviderConfig) {
             // banyak server, memangkas RTT beruntun sebelum ekstraksi.
             coroutineScope {
                 options.mapNotNull { opt ->
+                    val nume = opt.attr("data-nume")
+                    if (nume.isBlank()) return@mapNotNull null
                     async {
-                        val nume = opt.attr("data-nume")
                         val type = opt.attr("data-type").ifBlank { "schtml" }
-                        if (nume.isBlank()) return@async null
                         val label = opt.text().trim()
                         logDebug(config.id, "Fetching player option nume=$nume type=$type")
                         runCatching {
@@ -97,7 +97,7 @@ class LinkCollector(private val config: ProviderConfig) {
                                 }
                             }
                             found
-                        }.getOrDefault(emptyList())
+                        }.getOrDefault(emptyList<Pair<String, String?>>())
                     }
                 }.awaitAll().flatten().forEach { links.add(it) }
             }
