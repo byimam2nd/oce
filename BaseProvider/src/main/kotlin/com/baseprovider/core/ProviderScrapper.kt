@@ -177,7 +177,7 @@ class ProviderScrapper(
     ): Boolean {
         return runCatching {
             val document = fetchDocument(data, config,
-                referer = config.mainUrl, skipCache = true,
+                referer = config.mainUrl, skipCache = false,
                 htmlCache = htmlCache)
             val currentUrl = data
             val allPossibleLinks = mutableSetOf<Pair<String, String?>>()

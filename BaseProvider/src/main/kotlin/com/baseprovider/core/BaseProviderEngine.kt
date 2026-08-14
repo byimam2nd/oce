@@ -10,6 +10,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import java.net.URI
 
 class BaseProviderEngine(
     api: MainAPI,
@@ -132,7 +133,7 @@ class BaseProviderEngine(
             prefetchScope.launch {
                 prefetchSemaphore.withPermit {
                     runCatching {
-                        prefetchCache.getOrLoadLinks(data) {
+                        val (_, cached) = prefetchCache.getOrLoadLinks(data) {
                             val subtitles = mutableListOf<SubtitleFile>()
                             val links = mutableListOf<ExtractorLink>()
                             val success = scrapper.loadLinks(
@@ -144,6 +145,26 @@ class BaseProviderEngine(
                             )
                             success to PrefetchCache.CachedLinks(subtitles, links)
                         }
+                        warmPlayerConnections(cached.links)
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Warm koneksi ke host player yang sudah diketahui dari hasil ekstraksi
+     * links — TCP+TLS (via app.get) disiapkan di background sehingga saat
+     * user play, handshake ke host player sudah selesai.
+     */
+    private fun warmPlayerConnections(links: List<ExtractorLink>) {
+        val hosts = links.mapNotNull { runCatching { URI(it.url).host }
+            .getOrNull() }.filter { it.isNotBlank() }.distinct().take(3)
+        hosts.forEach { host ->
+            prefetchScope.launch {
+                prefetchSemaphore.withPermit {
+                    runCatching {
+                        app.get("https://$host/", timeout = 3000L)
                     }
                 }
             }

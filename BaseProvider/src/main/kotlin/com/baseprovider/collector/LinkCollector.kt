@@ -5,6 +5,9 @@ import com.baseprovider.log.*
 import com.baseprovider.model.*
 import com.baseprovider.network.*
 import com.lagradost.cloudstream3.*
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import org.json.JSONObject
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
@@ -57,36 +60,46 @@ class LinkCollector(private val config: ProviderConfig) {
             val options = SelectorResolver.select(document, config
                 .selectorJsonData, "${config.id}:selectorJsonData")
             logDebug(config.id, "EastPlay AJAX options: ${options.size} for post $postId")
-            options.forEach { opt ->
-                val nume = opt.attr("data-nume")
-                val type = opt.attr("data-type").ifBlank { "schtml" }
-                if (nume.isBlank()) return@forEach
-                val label = opt.text().trim()
-                logDebug(config.id, "Fetching player option nume=$nume type=$type")
-                val res = app.post(config.ajaxPlayerUrl,
-                    data = mapOf(
-                        "action" to "player_ajax",
-                        "post" to postId,
-                        "nume" to nume,
-                        "type" to type
-                    ), headers = config.globalHeaders,
-                        referer = currentUrl).document
-                val iframes = res.select("iframe")
-                if (iframes.isNotEmpty()) {
-                    iframes.forEach { f ->
-                        val src = f.attr("data-src").ifBlank { f
-                            .attr("src") }
-                        if (src.isNotBlank()) links.add(src to label
-                            .ifBlank { null })
+            // Fetch tiap option secara paralel (bukan sekuensial) — dengan
+            // banyak server, memangkas RTT beruntun sebelum ekstraksi.
+            coroutineScope {
+                options.mapNotNull { opt ->
+                    async {
+                        val nume = opt.attr("data-nume")
+                        val type = opt.attr("data-type").ifBlank { "schtml" }
+                        if (nume.isBlank()) return@async null
+                        val label = opt.text().trim()
+                        logDebug(config.id, "Fetching player option nume=$nume type=$type")
+                        runCatching {
+                            val res = app.post(config.ajaxPlayerUrl,
+                                data = mapOf(
+                                    "action" to "player_ajax",
+                                    "post" to postId,
+                                    "nume" to nume,
+                                    "type" to type
+                                ), headers = config.globalHeaders,
+                                    referer = currentUrl).document
+                            val found = mutableListOf<Pair<String, String?>>()
+                            val iframes = res.select("iframe")
+                            if (iframes.isNotEmpty()) {
+                                iframes.forEach { f ->
+                                    val src = f.attr("data-src").ifBlank { f
+                                        .attr("src") }
+                                    if (src.isNotBlank()) found.add(src to label
+                                        .ifBlank { null })
+                                }
+                            } else {
+                                res.select("video source, video").forEach { v ->
+                                    val src = v.attr("data-src").ifBlank { v
+                                        .attr("src") }
+                                    if (src.isNotBlank()) found.add(src to label
+                                        .ifBlank { null })
+                                }
+                            }
+                            found
+                        }.getOrDefault(emptyList())
                     }
-                } else {
-                    res.select("video source, video").forEach { v ->
-                        val src = v.attr("data-src").ifBlank { v
-                            .attr("src") }
-                        if (src.isNotBlank()) links.add(src to label
-                            .ifBlank { null })
-                    }
-                }
+                }.awaitAll().flatten().forEach { links.add(it) }
             }
         }.onFailure { e -> logDebug(config.id, "EastPlay AJAX player collection failed: ${e.message}") }
     }
