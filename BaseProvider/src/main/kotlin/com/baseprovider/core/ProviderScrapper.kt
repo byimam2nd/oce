@@ -8,9 +8,15 @@ import com.baseprovider.model.*
 import com.baseprovider.network.*
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import org.json.JSONObject
@@ -162,9 +168,13 @@ class ProviderScrapper(
         }
     }
 
-    suspend fun loadLinks(data: String, isCasting: Boolean,
+    suspend fun loadLinks(
+        data: String,
+        isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
-            callback: (ExtractorLink) -> Unit): Boolean {
+        callback: (ExtractorLink) -> Unit,
+        waitForAll: Boolean = false
+    ): Boolean {
         return runCatching {
             val document = fetchDocument(data, config,
                 referer = config.mainUrl, skipCache = true,
@@ -192,20 +202,49 @@ class ProviderScrapper(
                     type = FailureType.SELECTOR_FAILURE,
                     selectors = config.linkOptions.ifBlank { "none" }
                 )
+                return@runCatching false
             }
 
-            coroutineScope {
-                allPossibleLinks.filter { it.first.isNotBlank() && !it
-                    .first.startsWith("#") }.map { (raw, label) -> async {
-                    linkSemaphore.withPermit { fallbackPipeline
-                        .processLink(raw, label, currentUrl,
-                            subtitleCallback, wrappedCallback) }
-                } }.awaitAll()
+            val pendingLinks = allPossibleLinks
+                .filter { it.first.isNotBlank() && !it.first.startsWith("#") }
+                .sortedByDescending { priorityOf(it.first) }
+
+            // First-valid race: langsung return begitu video pertama ditemukan.
+            // Ekstraktor tersisa tetap berjalan di background (fire-and-forget)
+            // sehingga player tidak menunggu SEMUA server dicoba.
+            // Jika waitForAll=true (jalur cache/prefetch), tunggu semua job
+            // selesai supaya cache menyimpan hasil LENGKAP.
+            val firstVideo = CompletableDeferred<Boolean>()
+            val allDone = CompletableDeferred<Unit>()
+            val jobs = pendingLinks.map { (raw, label) ->
+                linkRaceScope.launch {
+                    runCatching {
+                        linkSemaphore.withPermit { fallbackPipeline
+                            .processLink(raw, label, currentUrl,
+                                subtitleCallback, wrappedCallback) }
+                    }
+                    if (videoCount.get() > 0) firstVideo.complete(true)
+                }
+            }
+            linkRaceScope.launch {
+                jobs.forEach { it.join() }
+                allDone.complete(Unit)
+                fallbackPipeline.logLinkResults(videoCount.get(),
+                    pendingLinks.size, data)
             }
 
-            fallbackPipeline.logLinkResults(videoCount.get(),
-                allPossibleLinks.size, data)
-            true
+            if (waitForAll) {
+                allDone.await()
+                videoCount.get() > 0
+            } else {
+                // Selesai saat video pertama ditemukan (true) ATAU semua job
+                // selesai tanpa video (hasil akhir). Jika true, sisa job tetap
+                // jalan di background — jangan cancel.
+                select {
+                    firstVideo.onAwait { true }
+                    allDone.onAwait { videoCount.get() > 0 }
+                }
+            }
         }.getOrElse { e ->
             val ft = if (e.message?.contains("cancel", true) ==
                 true) FailureType.CANCELLED else FailureType
@@ -213,4 +252,29 @@ class ProviderScrapper(
             logCritical(config.id, "LoadLinks Critical Failure on data: $data", e, url = data, method = "loadLinks", type = ft); false
         }
     }
+
+    /**
+     * Prioritas ekstraksi: urutkan link agar yang paling mungkin menghasilkan
+     * video diekstrak lebih dulu → link pertama cepat sampai ke player.
+     */
+    private fun priorityOf(raw: String): Int {
+        val u = raw.lowercase()
+        return when {
+            u.contains(".m3u8") || u.contains(".mpd") || u.contains("master") ||
+                u.contains("playlist") || u.contains(".ts") -> 100
+            u.contains(".mp4") || u.contains(".webm") || u.contains(".mkv") ||
+                u.contains(".mov") -> 90
+            u.contains("anichin.stream") || u.contains("abyssplayer") ||
+                u.contains("gdriveplayer") || u.contains("sibnet") ||
+                u.contains("dailymotion") -> 80
+            u.contains("youtube") || u.contains("ok.ru") ||
+                u.contains("rumble") || u.contains("vimeo") -> 70
+            u.contains("short.") -> 20
+            else -> 50
+        }
+    }
+
+    private val linkRaceScope = CoroutineScope(
+        SupervisorJob() + Dispatchers.IO
+    )
 }

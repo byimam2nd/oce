@@ -74,7 +74,8 @@ class BaseProviderEngine(
                 data,
                 isCasting,
                 { subtitles.add(it) },
-                { links.add(it) }
+                { links.add(it) },
+                waitForAll = true
             )
             success to PrefetchCache.CachedLinks(subtitles, links)
         }
@@ -138,7 +139,8 @@ class BaseProviderEngine(
                                 data,
                                 false,
                                 { subtitles.add(it) },
-                                { links.add(it) }
+                                { links.add(it) },
+                                waitForAll = true
                             )
                             success to PrefetchCache.CachedLinks(subtitles, links)
                         }
