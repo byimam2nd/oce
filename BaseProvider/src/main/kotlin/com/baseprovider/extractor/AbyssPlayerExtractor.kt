@@ -1,4 +1,5 @@
 package com.baseprovider.extractor
+import com.baseprovider.cache.ExpiringCache
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.*
 import com.lagradost.cloudstream3.utils.*
@@ -11,6 +12,8 @@ class AbyssPlayer : ExtractorApi() {
     override var name = "AbyssPlayer"
     override var mainUrl = "https://abyssplayer.com"
     override val requiresReferer = true
+
+    private val decryptCache = ExpiringCache<String>(6 * 60 * 60 * 1000L)
 
     override suspend fun getUrl(url: String, referer: String?,
         subtitleCallback: (SubtitleFile) -> Unit,
@@ -25,11 +28,15 @@ class AbyssPlayer : ExtractorApi() {
             .data() }
         val encrypted = Regex("""const\s+datas\s*=\s*"([^"]*)"""").find(scriptData)?.groupValues?.getOrNull(1) ?: return
 
-        val response = app.post("https://enc-dec.app/api/dec-abyss",
-            headers = headers,
-            requestBody = """{"text":"$encrypted"}""".trimIndent()
-                .toRequestBody("application/json".toMediaType())
-        ).text
+        val response = decryptCache.get(url) ?: run {
+            val resp = app.post("https://enc-dec.app/api/dec-abyss",
+                headers = headers,
+                requestBody = """{"text":"$encrypted"}""".trimIndent()
+                    .toRequestBody("application/json".toMediaType())
+            ).text
+            decryptCache.put(url, resp)
+            resp
+        }
         val json = JSONObject(response).optJSONObject("result") ?: return
         val sources = json.optJSONArray("sources") ?: return
         val sourceUrls = mutableListOf<String>()

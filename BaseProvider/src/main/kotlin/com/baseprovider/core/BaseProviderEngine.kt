@@ -41,8 +41,13 @@ class BaseProviderEngine(
         return home
     }
 
-    suspend fun search(query: String): List<SearchResponse> =
-        scrapper.search(query)
+    suspend fun search(query: String): List<SearchResponse> {
+        val results = scrapper.search(query)
+        if (config.prefetchEnabled) {
+            prefetchSearchItems(results)
+        }
+        return results
+    }
 
     suspend fun load(url: String): LoadResponse {
         if (!config.prefetchEnabled) return detailScrapper.load(url)
@@ -86,20 +91,31 @@ class BaseProviderEngine(
      * di-skip (terus pakai cache), yang expired di-fetch ulang di background.
      */
     private fun prefetchHomeItems(home: HomePageResponse) {
-        val items = home.items.flatMap { it.list }
-            .mapNotNull { it.url.takeIf { u -> u.isNotBlank() } }
-            .distinct()
+        prefetchItemUrls(home.items.flatMap { it.list }
+            .mapNotNull { it.url.takeIf { u -> u.isNotBlank() } })
+    }
+
+    /**
+     * Saat hasil search tampil, warm episode page untuk hasil teratas dengan
+     * pola yang sama seperti home list → klik hasil search jadi instan.
+     */
+    private fun prefetchSearchItems(results: List<SearchResponse>) {
+        prefetchItemUrls(results.mapNotNull { it.url.takeIf { u -> u.isNotBlank() } })
+    }
+
+    private fun prefetchItemUrls(urls: List<String>) {
+        urls.distinct()
             .take(config.prefetchHomeLimit)
-        items.forEach { url ->
-            if (prefetchCache.isLoadFresh(url)) return@forEach
-            prefetchScope.launch {
-                prefetchSemaphore.withPermit {
-                    runCatching {
-                        prefetchCache.getOrLoad(url) { detailScrapper.load(url) }
+            .forEach { url ->
+                if (prefetchCache.isLoadFresh(url)) return@forEach
+                prefetchScope.launch {
+                    prefetchSemaphore.withPermit {
+                        runCatching {
+                            prefetchCache.getOrLoad(url) { detailScrapper.load(url) }
+                        }
                     }
                 }
             }
-        }
     }
 
     /**
