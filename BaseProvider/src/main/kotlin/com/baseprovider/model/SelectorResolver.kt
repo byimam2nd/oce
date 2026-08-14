@@ -127,7 +127,7 @@ object SelectorResolver {
             if (key.isNotBlank() && isBroken(key, variant)) continue
             val el = runCatching { document.selectFirst(variant) }.getOrNull()
             if (el == null) continue
-            if (type.isValid(extract(el))) {
+            if (SelectorValidator.isValid(type, extract(el))) {
                 if (key.isNotBlank()) {
                     saveFingerprint(key, el)
                     unmarkBroken(key, variant)
@@ -330,7 +330,7 @@ object SelectorResolver {
         var best: Element? = null
         var bestScore = 0
         for (el in candidates) {
-            if (!type.isValid(extract(el))) continue
+            if (!SelectorValidator.isValid(type, extract(el))) continue
             val s = similarity(fp, el)
             if (s > bestScore) { bestScore = s; best = el }
         }
