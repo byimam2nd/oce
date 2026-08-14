@@ -52,7 +52,7 @@ object SmartThrottle {
         retryAfterUntil.remove(domain)
         // Turunkan delay pacing bertahap menuju floor MIN_DELAY saat sukses.
         pacingDelay.compute(domain) { _, prev ->
-            maxOf((prev ?: DEFAULT_DELAY) * DECAY_FACTOR, MIN_DELAY)
+            maxOf(((prev ?: DEFAULT_DELAY) * DECAY_FACTOR).toLong(), MIN_DELAY)
         }
     }
 
