@@ -1,6 +1,7 @@
 package com.baseprovider.extractor
 
 import com.baseprovider.cache.AdaptiveDecryptCache
+import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
