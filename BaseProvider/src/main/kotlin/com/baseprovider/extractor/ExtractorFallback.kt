@@ -7,9 +7,9 @@ import com.lagradost.cloudstream3.utils.*
 
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withTimeout
@@ -32,7 +32,7 @@ private suspend fun selectFirstOf(
     select<Unit> {
         firstLink.onAwait {
             // Link pertama ditemukan — hentikan extractor lain yang menunggu.
-            coroutineContext.cancelChildren()
+            currentCoroutineContext().cancelChildren()
         }
         allDone.onAwait { Unit }
     }

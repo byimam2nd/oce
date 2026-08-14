@@ -51,10 +51,10 @@ suspend fun fetchDocument(
 
     // Budget global: total waktu utk semua mirror + varian UA. Host dead/lambat
     // tidak boleh membuat fetchDocument menggantung puluhan detik.
-    return try {
-        withTimeout(GLOBAL_TIMEOUT) {
+    val result = try {
+        withTimeout<Document>(GLOBAL_TIMEOUT) {
             for ((attemptUrl, host) in fallbackUrls) {
-                if (!skipCache) { htmlCache?.get(attemptUrl)?.let { return it } }
+                if (!skipCache) { htmlCache?.get(attemptUrl)?.let { return@withTimeout it } }
                 if (host.isNotBlank() && HostCircuitBreaker.isOpen(host)) continue
                 var hostFailed = false
                 // Track per host: host hanya dihukum (breaker/throttle) SEKALI per
@@ -105,7 +105,7 @@ suspend fun fetchDocument(
                                 HostCircuitBreaker.reportSuccess(host)
                                 SmartThrottle.reportSuccess(host)
                             }
-                            return doc
+                            return@withTimeout doc
                         } catch (e: Exception) {
                             lastError = e
                             hostFailed = true
@@ -180,6 +180,7 @@ suspend fun fetchDocument(
             "Global fetch timeout for $url"
         )
     }
+    return result
 }
 
 private fun googleReferer(config: ProviderConfig): String? =
