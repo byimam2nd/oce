@@ -1,17 +1,14 @@
 package com.baseprovider.extractor
-import com.baseprovider.cache.AdaptiveDecryptCache
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.*
 import com.lagradost.cloudstream3.utils.*
 
 import org.json.JSONObject
 
-open class MegaPlay : ExtractorApi() {
+open class MegaPlay : CachedExtractorApi() {
     override var name = "MegaPlay"
     override var mainUrl = "https://megaplay.buzz"
     override val requiresReferer = false
-
-    private val decryptCache = AdaptiveDecryptCache()
 
     override suspend fun getUrl(url: String, referer: String?,
         subtitleCallback: (SubtitleFile) -> Unit,
@@ -20,11 +17,7 @@ open class MegaPlay : ExtractorApi() {
         val id = doc.selectFirst("#megaplay-player")
             ?.attr("data-id") ?: return
         val apiUrl = "$mainUrl/stream/getSources?id=$id"
-        val responseText = decryptCache.get(apiUrl) ?: run {
-            val resp = app.get(apiUrl).text
-            decryptCache.put(apiUrl, resp)
-            resp
-        }
+        val responseText = cachedGetText(apiUrl)
         val json = JSONObject(responseText)
         val m3u8 = json.optJSONObject("sources")
             ?.optString("file") ?: return
