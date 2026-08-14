@@ -1,5 +1,5 @@
 package com.baseprovider.extractor
-import com.baseprovider.cache.ExpiringCache
+import com.baseprovider.cache.AdaptiveDecryptCache
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.*
 import com.lagradost.cloudstream3.utils.*
@@ -13,7 +13,7 @@ class AbyssPlayer : ExtractorApi() {
     override var mainUrl = "https://abyssplayer.com"
     override val requiresReferer = true
 
-    private val decryptCache = ExpiringCache<String>(6 * 60 * 60 * 1000L)
+    private val decryptCache = AdaptiveDecryptCache()
 
     override suspend fun getUrl(url: String, referer: String?,
         subtitleCallback: (SubtitleFile) -> Unit,
