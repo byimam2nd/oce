@@ -24,7 +24,7 @@ abstract class CachedExtractorApi : ExtractorApi() {
     protected suspend fun cachedGetText(
         url: String,
         referer: String? = null,
-        headers: Map<String, String>? = null
+        headers: Map<String, String> = emptyMap()
     ): String {
         val key = "GET:$url:${referer ?: ""}"
         return decryptCache.get(key) ?: run {
@@ -38,7 +38,7 @@ abstract class CachedExtractorApi : ExtractorApi() {
         url: String,
         data: Map<String, String>? = null,
         referer: String? = null,
-        headers: Map<String, String>? = null
+        headers: Map<String, String> = emptyMap()
     ): String {
         val body = data?.entries?.sortedBy { it.key }
             ?.joinToString(",") { "${it.key}=${it.value}" }.orEmpty()
@@ -55,7 +55,7 @@ abstract class CachedExtractorApi : ExtractorApi() {
         url: String,
         jsonBody: String,
         referer: String? = null,
-        headers: Map<String, String>? = null
+        headers: Map<String, String> = emptyMap()
     ): String {
         val key = "POST:$url:${jsonBody.hashCode()}:${referer ?: ""}"
         return decryptCache.get(key) ?: run {
