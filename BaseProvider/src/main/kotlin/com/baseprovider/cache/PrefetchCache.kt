@@ -1,8 +1,8 @@
 package com.baseprovider.cache
 
 import com.lagradost.cloudstream3.LoadResponse
+import com.lagradost.cloudstream3.SubtitleFile
 import com.lagradost.cloudstream3.utils.ExtractorLink
-import com.lagradost.cloudstream3.utils.SubtitleFile
 import kotlinx.coroutines.CompletableDeferred
 import java.util.concurrent.ConcurrentHashMap
 
@@ -36,7 +36,7 @@ class PrefetchCache(
     private val loadCache = ConcurrentHashMap<String, Entry<LoadResponse>>()
     private val linkCache = ConcurrentHashMap<String, Entry<CachedLinks>>()
     private val loadInFlight = ConcurrentHashMap<String, CompletableDeferred<LoadResponse?>>()
-    private val linkInFlight = ConcurrentHashMap<String, CompletableDeferred<CachedLinks?>>()
+    private val linkInFlight = ConcurrentHashMap<String, CompletableDeferred<Pair<Boolean, CachedLinks>?>>()
 
     fun getLoad(url: String): LoadResponse? = loadCache[url]?.let { e ->
         if (isFresh(e.timestamp)) e.value else null

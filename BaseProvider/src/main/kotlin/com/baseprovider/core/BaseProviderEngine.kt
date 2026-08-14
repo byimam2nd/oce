@@ -13,7 +13,7 @@ import kotlinx.coroutines.sync.withPermit
 
 class BaseProviderEngine(
     api: MainAPI,
-    config: ProviderConfig
+    private val config: ProviderConfig
 ) {
     private val mapper = ProviderMapper(api = api, config = config)
     private val scrapper = ProviderScrapper(
@@ -86,7 +86,7 @@ class BaseProviderEngine(
      * di-skip (terus pakai cache), yang expired di-fetch ulang di background.
      */
     private fun prefetchHomeItems(home: HomePageResponse) {
-        val items = home.list.flatMap { it.list }
+        val items = home.items.flatMap { it.list }
             .mapNotNull { it.url.takeIf { u -> u.isNotBlank() } }
             .distinct()
             .take(config.prefetchHomeLimit)
