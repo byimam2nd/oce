@@ -39,6 +39,12 @@ data class ProviderConfig(
     val refererPlayerMode: String = "current_url",
     val iframeSelectors: String = "iframe",
 
+    // ── Prefetch (auto-warm) ──
+    val prefetchEnabled: Boolean = true,
+    val prefetchHomeLimit: Int = 12,
+    val prefetchEpisodeLimit: Int = 20,
+    val prefetchTtlMinutes: Long = 30L,
+
     // ── Name Cleaning ──
     val qualityStripRegex: String = """\d{3,4}p|HD|SD|FHD""",
 

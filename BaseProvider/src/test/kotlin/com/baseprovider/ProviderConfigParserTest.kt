@@ -62,6 +62,27 @@ class ProviderConfigParserTest {
         assertTrue(config.reverseEpisodes)
         assertEquals(2, config.searchPageLimit)
         assertEquals("", config.searchItems)
+        assertTrue(config.prefetchEnabled)
+        assertEquals(12, config.prefetchHomeLimit)
+        assertEquals(20, config.prefetchEpisodeLimit)
+        assertEquals(30L, config.prefetchTtlMinutes)
+    }
+
+    @Test
+    fun `fromJson parses prefetch overrides`() {
+        val json = JSONObject("""{
+            "mainUrl": "https://prefetch.com",
+            "supportedTypes": ["Movie"],
+            "prefetchEnabled": false,
+            "prefetchHomeLimit": 4,
+            "prefetchEpisodeLimit": 10,
+            "prefetchTtlMinutes": 60
+        }""")
+        val config = fromJson("prefetch", json)
+        assertFalse(config.prefetchEnabled)
+        assertEquals(4, config.prefetchHomeLimit)
+        assertEquals(10, config.prefetchEpisodeLimit)
+        assertEquals(60L, config.prefetchTtlMinutes)
     }
 
     @Test

@@ -67,6 +67,10 @@ fun fromJson(id: String, json: JSONObject): ProviderConfig {
         uaPool = jsonArrayToList(json.optJSONArray("uaPool")),
         refererPlayerMode = json.optString("refererPlayerMode", "current_url"),
         iframeSelectors = json.optString("iframeSelectors", "iframe"),
+        prefetchEnabled = json.optBoolean("prefetchEnabled", true),
+        prefetchHomeLimit = json.optInt("prefetchHomeLimit", 12),
+        prefetchEpisodeLimit = json.optInt("prefetchEpisodeLimit", 20),
+        prefetchTtlMinutes = json.optLong("prefetchTtlMinutes", 30L),
         qualityStripRegex = json.optString("qualityStripRegex", """\d{3,4}p|HD|SD|FHD"""),
         globalHeaders = jsonObjectToMap(json
             .optJSONObject("globalHeaders")),
