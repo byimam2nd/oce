@@ -6,7 +6,7 @@ import org.jsoup.select.Elements
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Resolver selector multi-fallback + adaptive relocate.
+ * Resolver selector multi-fallback + adaptive relocate + self-correction.
  *
  * Konsep diport dari Scrapling `scrapling/parser.py` (adaptive):
  *  1. Selector string boleh berisi beberapa varian dipisah `||` — dicoba
@@ -17,6 +17,10 @@ import java.util.concurrent.ConcurrentHashMap
  *     "relocate": scan seluruh elemen, beri skor kemiripan terhadap
  *     fingerprint, ambil elemen dengan skor tertinggi ≥ threshold. Hasilnya
  *     di-save ulang (self-healing) sehingga makin akurat tiap iterasi.
+ *  3. Self-correction via validasi tipe: varian yang match DOM tapi hasilnya
+ *     bukan tipe yang diharapkan (mis. teks deskripsi di posisi judul)
+ *     ditolak dan varian itu di-blacklist sementara; iterasi berikutnya
+ *     mencoba varian berikutnya. Validasi rule-based di [SelectorValidator].
  *
  * Storage bersifat in-memory per sesi (tanpa persistensi disk).
  */
@@ -24,6 +28,7 @@ object SelectorResolver {
     private const val SEPARATOR = "||"
     private const val DEFAULT_THRESHOLD = 40
     private const val MAX_RELOCATE_SCAN = 3000
+    private const val MAX_BROKEN_PER_KEY = 8
 
     private data class Fingerprint(
         val tag: String,
@@ -38,6 +43,10 @@ object SelectorResolver {
 
     // key = providerId:fieldName -> fingerprint elemen pertama yang match
     private val fingerprints = ConcurrentHashMap<String, Fingerprint>()
+
+    // key = providerId:fieldName -> varian selector yang match DOM tapi
+    // hasilnya gagal validasi tipe (di-blacklist sementara).
+    private val brokenVariants = ConcurrentHashMap<String, MutableSet<String>>()
 
     private val SPECIAL_ATTRS = listOf("class", "id", "href", "src")
 
@@ -98,7 +107,61 @@ object SelectorResolver {
         key: String = ""
     ): String? = selectFirst(document, selector, key)?.text()?.trim()
 
-    fun reset() = fingerprints.clear()
+    /**
+     * Self-correction loop. Sama dengan [selectFirst] tetapi setiap hasil
+     * divalidasi terhadap [type]. Varian yang match DOM tapi hasilnya bukan
+     * tipe yang diharapkan ditolak (di-blacklist sementara), lalu lanjut ke
+     * varian berikutnya; jika semua varian gagal validasi, coba relocate
+     * via fingerprint.
+     */
+    fun selectValidated(
+        document: Element,
+        selector: String,
+        key: String,
+        type: FieldType,
+        extract: (Element) -> String?
+    ): Element? {
+        if (selector.isBlank()) return null
+        val v = variants(selector)
+        for (variant in v) {
+            if (key.isNotBlank() && isBroken(key, variant)) continue
+            val el = runCatching { document.selectFirst(variant) }.getOrNull()
+            if (el == null) continue
+            if (type.isValid(extract(el))) {
+                if (key.isNotBlank()) {
+                    saveFingerprint(key, el)
+                    unmarkBroken(key, variant)
+                }
+                return el
+            }
+            if (key.isNotBlank()) markBroken(key, variant)
+        }
+        if (key.isNotBlank()) {
+            relocateValidated(document, key, type, extract)?.let { el ->
+                saveFingerprint(key, el)
+                return el
+            }
+        }
+        return null
+    }
+
+    /**
+     * Versi teks dari [selectValidated]: hasil harus lolos validasi tipe
+     * sebelum dipakai. Return null jika semua varian gagal.
+     */
+    fun textValidated(
+        document: Element,
+        selector: String,
+        key: String,
+        type: FieldType
+    ): String? =
+        selectValidated(document, selector, key, type) { it.text()?.trim() }
+            ?.text()?.trim()
+
+    fun reset() {
+        fingerprints.clear()
+        brokenVariants.clear()
+    }
 
     // ── Fingerprint (mirip Scrapling element_to_dict) ──
 
@@ -251,5 +314,54 @@ object SelectorResolver {
         }
         Log.d("OCE", "Adaptive relocate: '$key' matched ${bestElements.size} element(s) (score=$best)")
         return bestElements
+    }
+
+    // ── Relocate + validasi tipe (self-correction lanjutan) ──
+
+    private fun relocateValidated(
+        document: Element,
+        key: String,
+        type: FieldType,
+        extract: (Element) -> String?
+    ): Element? {
+        val candidates = relocateAll(document, key)
+        if (candidates.isEmpty()) return null
+        val fp = fingerprints[key] ?: return null
+        var best: Element? = null
+        var bestScore = 0
+        for (el in candidates) {
+            if (!type.isValid(extract(el))) continue
+            val s = similarity(fp, el)
+            if (s > bestScore) { bestScore = s; best = el }
+        }
+        if (best != null) {
+            Log.d("OCE", "Self-correct: relocate '$key' with valid ${type.name} (score=$bestScore)")
+            return best
+        }
+        Log.d("OCE", "Self-correct: relocate '$key' failed validation (all candidates invalid ${type.name})")
+        return null
+    }
+
+    // ── Broken variant tracking (selector yang match tapi hasil salah) ──
+
+    private fun isBroken(key: String, variant: String): Boolean {
+        val set = brokenVariants[key] ?: return false
+        return variant in set
+    }
+
+    private fun markBroken(key: String, variant: String) {
+        val set = brokenVariants.getOrPut(key) { mutableSetOf() }
+        if (set.size >= MAX_BROKEN_PER_KEY) {
+            // Jangan biarkan set membengkak — reset saat penuh agar bisa
+            // "lupa" dan mencoba lagi (situs bisa berubah lagi).
+            brokenVariants.remove(key)
+            brokenVariants[key] = mutableSetOf(variant)
+        } else {
+            set.add(variant)
+        }
+    }
+
+    private fun unmarkBroken(key: String, variant: String) {
+        brokenVariants[key]?.remove(variant)
     }
 }

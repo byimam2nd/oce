@@ -21,8 +21,8 @@ class ProviderMapper(
             val base = baseUrl ?: config.mainUrl
             val key = config.id
             val titleEl = if (config.searchTitle.isNotBlank()) {
-                SelectorResolver.selectFirst(element, config.searchTitle, "$key:searchTitle")
-                    ?: element.parent()?.let { SelectorResolver.selectFirst(it, config.searchTitle, "$key:searchTitle") }
+                SelectorResolver.selectValidated(element, config.searchTitle, "$key:searchTitle", FieldType.TITLE) { it.text()?.trim() }
+                    ?: element.parent()?.let { SelectorResolver.selectValidated(it, config.searchTitle, "$key:searchTitle", FieldType.TITLE) { it.text()?.trim() } }
             } else {
                 element.selectFirst("h2, h3")
             }
@@ -48,7 +48,7 @@ class ProviderMapper(
                 } catch (_: Exception) { href }
             }
             val poster = if (config.searchPoster.isNotBlank()) {
-                SelectorResolver.selectFirst(element, config.searchPoster, "$key:searchPoster")
+                SelectorResolver.selectValidated(element, config.searchPoster, "$key:searchPoster", FieldType.POSTER) { it.safeExtractImage(config.attrImage) }
                     ?.safeExtractImage(config.attrImage)
             } else {
                 element.selectFirst("img")?.safeExtractImage(config
@@ -88,12 +88,12 @@ class ProviderMapper(
         currentUrl: String): MetadataPackage {
         val key = config.id
         val rawTitle = if (config.loadTitle.isNotBlank()) SelectorResolver
-            .selectFirst(document, config.loadTitle, "$key:loadTitle")?.text()
+            .textValidated(document, config.loadTitle, "$key:loadTitle", FieldType.TITLE)
             ?: "Unknown Title" else "Unknown Title"
         val title = rawTitle.safeCleanBloat(rawTitle, config.bloatRegex)
             .safeDeduplicate()
         val poster = if (config.loadPoster.isNotBlank()) SelectorResolver
-            .selectFirst(document, config.loadPoster, "$key:loadPoster")
+            .selectValidated(document, config.loadPoster, "$key:loadPoster", FieldType.POSTER) { it.safeExtractImage(config.attrImage) }
             ?.safeExtractImage(config.attrImage) ?: "" else ""
 
         if (title == "Unknown Title" || poster.isBlank()) {
