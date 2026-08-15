@@ -71,6 +71,7 @@ fun fromJson(id: String, json: JSONObject): ProviderConfig {
         prefetchHomeLimit = json.optInt("prefetchHomeLimit", 12),
         prefetchEpisodeLimit = json.optInt("prefetchEpisodeLimit", 20),
         prefetchTtlMinutes = json.optLong("prefetchTtlMinutes", 30L),
+        posterResizeUrl = json.optString("posterResizeUrl", ""),
         qualityStripRegex = json.optString("qualityStripRegex", """\d{3,4}p|HD|SD|FHD"""),
         globalHeaders = jsonObjectToMap(json
             .optJSONObject("globalHeaders")),

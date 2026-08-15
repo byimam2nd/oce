@@ -88,7 +88,7 @@ class ProviderMapper(
                 .supportedTypes.contains(TvType.Anime)) TvType
                     .Anime else TvType.TvSeries
             api.newAnimeSearchResponse(title, href, type) {
-                this.posterUrl = poster
+                this.posterUrl = PosterResizer.resize(poster, config.posterResizeUrl)
                 this.posterHeaders = config.globalHeaders.toMutableMap()
                     .apply { put("Referer", config.mainUrl) }
                 this.score = Score.from10(rating)
@@ -268,9 +268,11 @@ class ProviderMapper(
                                     ?.filter { it.isDigit() }
                                         ?.toIntOrNull()
                             } else null
-                            this.posterUrl = ep.selectFirst("img")
-                                ?.safeExtractImage(config
-                                    .attrImage) ?: poster
+                            this.posterUrl = PosterResizer.resize(
+                                ep.selectFirst("img")?.safeExtractImage(config
+                                    .attrImage) ?: poster,
+                                config.posterResizeUrl
+                            )
                         }
                     }.onFailure { e ->
                         logDebug(config.id, "Episode mapping failed: ${e.message}")

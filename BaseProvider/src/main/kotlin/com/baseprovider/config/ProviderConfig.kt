@@ -45,6 +45,12 @@ data class ProviderConfig(
     val prefetchEpisodeLimit: Int = 20,
     val prefetchTtlMinutes: Long = 30L,
 
+    // ── Poster Resize (adaptive) ──
+    // Template rewrite poster/thumbnail URL ke image proxy on-the-fly.
+    // Token {url} = URL asli (URL-encoded). Kosong = mati (URL asli).
+    // Contoh: https://images.weserv.nl/?url={url}&w=342&output=avif,webp
+    val posterResizeUrl: String = "",
+
     // ── Name Cleaning ──
     val qualityStripRegex: String = """\d{3,4}p|HD|SD|FHD""",
 
