@@ -17,20 +17,20 @@ class OceSettingsTest {
 
     @Test
     fun `filterMainPageLists returns all when enabled is null`() {
-        val lists = listOf("A" to "/a", "B" to "/b")
+        val lists = listOf("/a" to "A", "/b" to "B")
         assertEquals(lists, OceSettings.filterMainPageLists(lists, null))
     }
 
     @Test
     fun `filterMainPageLists filters by category name`() {
-        val lists = listOf("A" to "/a", "B" to "/b", "C" to "/c")
+        val lists = listOf("/a" to "A", "/b" to "B", "/c" to "C")
         val filtered = OceSettings.filterMainPageLists(lists, setOf("A", "C"))
-        assertEquals(listOf("A" to "/a", "C" to "/c"), filtered)
+        assertEquals(listOf("/a" to "A", "/c" to "C"), filtered)
     }
 
     @Test
     fun `filterMainPageLists returns empty when enabled set is empty`() {
-        val lists = listOf("A" to "/a", "B" to "/b")
+        val lists = listOf("/a" to "A", "/b" to "B")
         assertTrue(OceSettings.filterMainPageLists(lists, emptySet()).isEmpty())
     }
 
