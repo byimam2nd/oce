@@ -46,6 +46,11 @@ class OceSettingsTest {
     }
 
     @Test
+    fun `customCategories is empty without context`() {
+        assertTrue(OceSettings.customCategories("test").isEmpty())
+    }
+
+    @Test
     fun `applyOverrides returns base unchanged without context`() {
         assertEquals(base, OceSettings.applyOverrides("test", base))
     }

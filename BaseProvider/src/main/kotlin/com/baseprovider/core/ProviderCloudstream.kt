@@ -56,12 +56,14 @@ open class ProviderCloudstream : MainAPI() {
     open var globalHeaders: Map<String, String> = config.globalHeaders
 
     override val mainPage: List<MainPageData>
-        get() = mainPageOf(
-            *OceSettings.filterMainPageLists(
+        get() {
+            val base = OceSettings.filterMainPageLists(
                 config.mainPageLists,
                 OceSettings.enabledCategories(providerId)
-            ).toTypedArray()
-        )
+            )
+            val custom = OceSettings.customCategories(providerId)
+            return mainPageOf(*base.toTypedArray()) + mainPageOf(*custom.toTypedArray())
+        }
 
     private val engine by lazy { BaseProviderEngine(api = this, config =
         config) }
