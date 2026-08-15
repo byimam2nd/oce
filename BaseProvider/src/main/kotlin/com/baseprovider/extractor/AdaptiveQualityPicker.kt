@@ -34,16 +34,15 @@ object AdaptiveQualityPicker {
      */
     internal fun parseVariants(masterText: String): List<OkRuVariant> {
         val variants = mutableListOf<OkRuVariant>()
-        val streamInf = Regex(
-            """#EXT-X-STREAM-INF:.*?BANDWIDTH=(\d+).*?(?:RESOLUTION=\d+x(\d+))?"""
-        )
+        val bandwidthRegex = Regex("""BANDWIDTH=(\d+)""")
+        val resolutionRegex = Regex("""RESOLUTION=\d+x(\d+)""")
         val lines = masterText.lines()
         var i = 0
         while (i < lines.size) {
-            val match = streamInf.find(lines[i])
-            if (match != null) {
-                val bandwidth = match.groupValues[1].toLongOrNull() ?: 0L
-                val height = match.groupValues[2].toIntOrNull() ?: 0
+            val line = lines[i]
+            val bandwidth = bandwidthRegex.find(line)?.groupValues?.get(1)?.toLongOrNull()
+            if (line.startsWith("#EXT-X-STREAM-INF") && bandwidth != null) {
+                val height = resolutionRegex.find(line)?.groupValues?.get(1)?.toIntOrNull() ?: 0
                 var j = i + 1
                 while (j < lines.size && (lines[j].isBlank() || lines[j].startsWith("#"))) j++
                 if (j < lines.size) {
