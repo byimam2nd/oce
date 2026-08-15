@@ -271,7 +271,7 @@ class ProviderMapper(
                             this.posterUrl = PosterResizer.resize(
                                 ep.selectFirst("img")?.safeExtractImage(config
                                     .attrImage) ?: poster,
-                                config.posterResizeUrl
+                                config.thumbnailResizeUrl.ifBlank { config.posterResizeUrl }
                             )
                         }
                     }.onFailure { e ->

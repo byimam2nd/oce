@@ -50,6 +50,10 @@ data class ProviderConfig(
     // Token {url} = URL asli (URL-encoded). Kosong = mati (URL asli).
     // Contoh: https://images.weserv.nl/?url={url}&w=342&output=avif,webp
     val posterResizeUrl: String = "",
+    // Template khusus thumbnail episode — ditampilkan lebih kecil dari poster
+    // grid, jadi bisa pakai lebar lebih kecil (~200px). Kosong = fallback ke
+    // posterResizeUrl.
+    val thumbnailResizeUrl: String = "",
 
     // ── Name Cleaning ──
     val qualityStripRegex: String = """\d{3,4}p|HD|SD|FHD""",

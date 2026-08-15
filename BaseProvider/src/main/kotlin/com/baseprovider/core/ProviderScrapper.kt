@@ -59,11 +59,18 @@ class ProviderScrapper(
                 htmlCache)
             val isHorizontal = config.isHorizontal
             val home = if (config.searchItems.isNotBlank()) {
-                SelectorResolver.select(document, config.searchItems,
+                val elements = SelectorResolver.select(document, config.searchItems,
                     "${config.id}:searchItems")
-                    .mapNotNull { runCatching { mapper.toSearchResult(it,
-                        url) }.getOrNull() }
-                    .distinctBy { it.url }
+                // Mapping paralel via async/await: tiap item diproses independen,
+                // hasil digabung HANYA setelah SEMUA selesai (awaitAll) → list
+                // home selalu lengkap, tidak pernah setengah-setengah.
+                coroutineScope {
+                    elements.map { el ->
+                        async(Dispatchers.IO) {
+                            runCatching { mapper.toSearchResult(el, url) }.getOrNull()
+                        }
+                    }.awaitAll().filterNotNull().distinctBy { it.url }
+                }
             } else emptyList()
             newHomePageResponse(list = HomePageList(name = request.name,
                 list = home, isHorizontalImages = isHorizontal), hasNext =
@@ -149,10 +156,16 @@ class ProviderScrapper(
                             val document = fetchDocument(url, config, refer, htmlCache =
                                 htmlCache)
                             if (config.searchItems.isNotBlank()) {
-                                SelectorResolver.select(document, config.searchItems,
+                                val elements = SelectorResolver.select(document, config.searchItems,
                                     "${config.id}:searchItems")
-                                    .mapNotNull { runCatching { mapper
-                                        .toSearchResult(it, url) }.getOrNull() }
+                                coroutineScope {
+                                    elements.map { el ->
+                                        async(Dispatchers.IO) {
+                                            runCatching { mapper
+                                                .toSearchResult(el, url) }.getOrNull()
+                                        }
+                                    }.awaitAll().filterNotNull()
+                                }
                             } else emptyList()
                         }
                     }

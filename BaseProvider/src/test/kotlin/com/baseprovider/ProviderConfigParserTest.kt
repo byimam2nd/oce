@@ -35,7 +35,9 @@ class ProviderConfigParserTest {
             "searchItems": ".poster",
             "loadTitle": "h1.entry-title",
             "globalHeaders": {"Referer": "https://test.com"},
-            "mirrorUrls": ["https://mirror1.com", "https://mirror2.com"]
+            "mirrorUrls": ["https://mirror1.com", "https://mirror2.com"],
+            "posterResizeUrl": "https://proxy/?url={url}&w=342",
+            "thumbnailResizeUrl": "https://proxy/?url={url}&w=200"
         }
         """.trimIndent()
         val json = JSONObject(raw)
@@ -49,6 +51,8 @@ class ProviderConfigParserTest {
         assertEquals("h1.entry-title", config.loadTitle)
         assertEquals(mapOf("Referer" to "https://test.com"), config.globalHeaders)
         assertEquals(listOf("https://mirror1.com", "https://mirror2.com"), config.mirrorUrls)
+        assertEquals("https://proxy/?url={url}&w=342", config.posterResizeUrl)
+        assertEquals("https://proxy/?url={url}&w=200", config.thumbnailResizeUrl)
         assertTrue(config.isHorizontal)
         assertFalse(config.reverseEpisodes)
     }

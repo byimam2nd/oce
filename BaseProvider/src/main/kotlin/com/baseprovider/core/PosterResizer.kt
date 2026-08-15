@@ -22,12 +22,30 @@ package com.baseprovider.core
  * mekanisme failover: provider dengan CDN hotlink-protected set template kosong.
  */
 object PosterResizer {
+
+    // URL yang sudah lewat proxy resize / CDN optimizer — rewrite ulang hanya
+    // akan double-compress (turunkan kualitas) tanpa manfaat tambahan.
+    private val RESIZE_QUERY_REGEX = Regex(
+        """[?&](?:w|width|resize|s|size)=\d+""",
+        RegexOption.IGNORE_CASE
+    )
+
     fun resize(url: String?, template: String): String? {
         if (url.isNullOrBlank()) return url
         if (template.isBlank() || !template.contains("{url}")) return url
+        if (alreadyResized(url)) return url
         val encoded = runCatching {
             java.net.URLEncoder.encode(url, "UTF-8").replace("+", "%20")
         }.getOrDefault(url)
         return template.replace("{url}", encoded)
     }
+
+    /**
+     * Deteksi URL yang sudah berukuran/teroptimasi sehingga tidak perlu
+     * di-rewrite ulang: mengandung query resize (mis. `?w=342`) atau `?s=`,
+     * `?size=`. CDN yang sudah menerima parameter ukuran langsung menurunkan
+     * kualitas tanpa perlu proxy tambahan.
+     */
+    private fun alreadyResized(url: String): Boolean =
+        RESIZE_QUERY_REGEX.containsMatchIn(url)
 }

@@ -51,11 +51,29 @@ class PosterResizerTest {
 
     @Test
     fun `url with existing query params is encoded as single value`() {
-        val url = "https://cdn.com/img.jpg?w=780&h=1000"
+        val url = "https://cdn.com/img.jpg?v=780&h=1000"
         val out = PosterResizer.resize(url, "https://proxy/?url={url}")
         assertEquals(
-            "https://proxy/?url=https%3A%2F%2Fcdn.com%2Fimg.jpg%3Fw%3D780%26h%3D1000",
+            "https://proxy/?url=https%3A%2F%2Fcdn.com%2Fimg.jpg%3Fv%3D780%26h%3D1000",
             out
         )
+    }
+
+    @Test
+    fun `url already resized with w query is not rewritten`() {
+        val url = "https://cdn.com/img.jpg?w=342"
+        assertEquals(url, PosterResizer.resize(url, "https://proxy/?url={url}&w=342"))
+    }
+
+    @Test
+    fun `url already resized with width query is not rewritten`() {
+        val url = "https://cdn.com/img.jpg?width=200"
+        assertEquals(url, PosterResizer.resize(url, "https://proxy/?url={url}&w=200"))
+    }
+
+    @Test
+    fun `url already resized with s query is not rewritten`() {
+        val url = "https://cdn.com/img.jpg?s=200"
+        assertEquals(url, PosterResizer.resize(url, "https://proxy/?url={url}&w=200"))
     }
 }
