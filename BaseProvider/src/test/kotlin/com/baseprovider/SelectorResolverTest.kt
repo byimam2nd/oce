@@ -84,4 +84,41 @@ class SelectorResolverTest {
         val el = SelectorResolver.selectFirst(doc, "div.no-such-thing", "test:nofp")
         assertNull(el)
     }
+
+    @Test
+    fun `detectEpisodeLinks finds episode anchors by url and text`() {
+        val epHtml = """
+            <html><body>
+              <div class="gmr-listseries">
+                <a class="button active gmr-all-serie" href="https://site.com/tv/show-2026/">Lihat Semua Episode</a>
+                <a class="button" href="https://site.com/eps/show-season-1-episode-1/">S1 Eps1</a>
+                <a class="button" href="https://site.com/eps/show-season-1-episode-2/">S1 Eps2</a>
+                <a href="https://site.com/nonton/other/">Step 1</a>
+              </div>
+            </body></html>
+        """.trimIndent()
+        val doc = Jsoup.parse(epHtml)
+        val links = SelectorResolver.detectEpisodeLinks(
+            doc, "https://site.com/tv/show-2026/"
+        )
+        assertEquals(2, links.size)
+        assertEquals("https://site.com/eps/show-season-1-episode-1/", links[0].attr("href"))
+        assertEquals("https://site.com/eps/show-season-1-episode-2/", links[1].attr("href"))
+    }
+
+    @Test
+    fun `detectEpisodeLinks skips same-page and non-episode links`() {
+        val epHtml = """
+            <html><body>
+              <a href="https://site.com/tv/show-2026/">Lihat Semua Episode</a>
+              <a href="https://site.com/download/abc123">Link Download 1</a>
+              <a href="https://site.com/tv/show-2026/">Show Page</a>
+            </body></html>
+        """.trimIndent()
+        val doc = Jsoup.parse(epHtml)
+        val links = SelectorResolver.detectEpisodeLinks(
+            doc, "https://site.com/tv/show-2026/"
+        )
+        assertTrue(links.isEmpty())
+    }
 }

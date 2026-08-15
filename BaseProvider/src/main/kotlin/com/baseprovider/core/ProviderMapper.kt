@@ -79,7 +79,12 @@ class ProviderMapper(
                 ?.text()?.safeExtractEpNum() else null
             val hasTvPath = config.tvPathSegment.isNotBlank() && href
                 .contains(config.tvPathSegment)
-            val isMovie = !hasTvPath && (
+            // Heuristic adaptive: URL tv-like tanpa butuh tvPathSegment config
+            // (mis. /tv/, /series/, /anime/) dikenali sebagai series walaupun
+            // config belum di-update struktur situsnya.
+            val urlLooksTv = listOf("/tv/", "/series/", "/anime/", "/drama/",
+                "/episode/", "/eps/").any { href.contains(it, true) }
+            val isMovie = !hasTvPath && !urlLooksTv && (
                 (config.moviePathSegment.isNotBlank() && href
                     .contains(config.moviePathSegment))
                     || href.contains("movie", true)

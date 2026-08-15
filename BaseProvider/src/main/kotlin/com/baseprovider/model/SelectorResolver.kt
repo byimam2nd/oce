@@ -50,6 +50,39 @@ object SelectorResolver {
 
     private val SPECIAL_ATTRS = listOf("class", "id", "href", "src")
 
+    // ── Adaptive episode-link detection (URL pattern, tanpa selector) ──
+    // Dipakai sebagai fallback saat config.episodeItems gagal match (struktur
+    // situs berubah). Cukup robust untuk pola episode umum: /eps/, /episode/,
+    // /season-..., /ep-, atau teks "Eps N"/"Episode N".
+    private val EPISODE_URL_REGEX = Regex(
+        """(?i)(?:/eps/|/episode/|/ep/|-episode-|/season-|-season-|/ep-)"""
+    )
+    private val EPISODE_TEXT_REGEX = Regex(
+        """(?i)(?:\bepisode\b|\beps?\b)\s*(\d+(?:\.\d+)?)"""
+    )
+
+    /**
+     * Scan seluruh anchor halaman; ambil yang URL atau teksnya cocok pola
+     * episode. Href yang sama dengan halaman saat ini (mis. tombol "Lihat
+     * Semua Episode") di-skip agar tidak jadi episode self-loop.
+     */
+    fun detectEpisodeLinks(document: Element, currentUrl: String): Elements {
+        val out = Elements()
+        for (a in document.select("a[href]")) {
+            val href = a.attr("href")
+            if (href.isBlank()) continue
+            val abs = runCatching { fixUrlSmart(href, currentUrl) }
+                .getOrDefault(href)
+            if (abs == currentUrl) continue
+            val text = a.text()
+            if (EPISODE_URL_REGEX.containsMatchIn(abs) ||
+                EPISODE_TEXT_REGEX.containsMatchIn(text)) {
+                out.add(a)
+            }
+        }
+        return out
+    }
+
     /** Pecah selector multi-varian. Selector lama tanpa `||` tetap satu item. */
     fun variants(selector: String): List<String> =
         selector.split(SEPARATOR).map { it.trim() }.filter { it.isNotBlank() }

@@ -51,12 +51,20 @@ class DetailPageScrapper(
         val posterPresent = config.loadPoster.isNotBlank() && SelectorResolver
             .selectValidated(document, config.loadPoster, "$key:loadPoster",
                 FieldType.POSTER) { it.safeExtractImage(config.attrImage) } != null
+        val epItems = if (config.episodeItems.isNotBlank()) SelectorResolver
+            .select(document, config.episodeItems, "${config.id}:episodeItems")
+            else org.jsoup.select.Elements()
+        // Adaptive fallback: selector episodeItems gagal (struktur situs berubah),
+        // tapi halaman tetap memuat link-link episode (pola /eps/, -episode-, dll).
+        // Tanpa fallback ini epItems kosong -> isMovie=true -> tampil hanya 1 video.
+        val episodeLinks = if (epItems.isEmpty() &&
+            config.supportedTypes.any { it != TvType.Movie }) {
+            SelectorResolver.detectEpisodeLinks(document, currentUrl)
+        } else org.jsoup.select.Elements()
+        val effectiveEpItems = if (epItems.isNotEmpty()) epItems else episodeLinks
         if (depth < 2 && config.followLinkSelector.isNotBlank()) {
             val needsFollow = !titlePresent || !posterPresent
-            val epHints = if (config.episodeItems.isNotBlank()) {
-                SelectorResolver.select(document, config.episodeItems,
-                    "${key}:episodeItems").isNotEmpty()
-            } else false
+            val epHints = effectiveEpItems.isNotEmpty()
             // Follow jika metadata kritis kurang ATAU episode tidak ada di
             // page-1 — follow selector biasanya menunjuk halaman yang
             // melengkapi data. Tanpa cek episode, halaman dengan title OK
@@ -75,18 +83,21 @@ class DetailPageScrapper(
 
         val metadata = mapper.extractMetadata(document, currentUrl)
 
-        val epItems = if (config.episodeItems.isNotBlank()) SelectorResolver
-            .select(document, config.episodeItems, "${config.id}:episodeItems")
-            else org.jsoup.select.Elements()
         val seasonDataScript = if (config.seasonContainer
             .isNotBlank()) SelectorResolver.selectFirst(document,
                 config.seasonContainer, "${config.id}:seasonContainer") else null
         val hasTvPath = config.tvPathSegment.isNotBlank() && currentUrl
             .contains(config.tvPathSegment)
-        val isMovie = (seasonDataScript == null) && !hasTvPath && (
+        // Heuristic isMovie tidak hanya mengandalkan epItems.isEmpty(): URL yang
+        // jelas tv-like (/tv/, /series/, /anime/, /episode/) menandakan series
+        // walaupun selector episode gagal match. Movie -> moviePathSegment atau
+        // tidak ada indikator series sama sekali.
+        val urlLooksTv = listOf("/tv/", "/series/", "/anime/", "/drama/",
+            "/episode/", "/eps/").any { currentUrl.contains(it, true) }
+        val isMovie = (seasonDataScript == null) && !hasTvPath && !urlLooksTv && (
             (config.moviePathSegment.isNotBlank() && currentUrl
                 .contains(config.moviePathSegment))
-                || epItems.isEmpty()
+                || effectiveEpItems.isEmpty()
         )
         val type = if (isMovie) TvType.Movie else if (config.supportedTypes
             .contains(TvType.Anime)) TvType.Anime else TvType.TvSeries
@@ -116,7 +127,7 @@ class DetailPageScrapper(
             }
             val eps = async {
                 if (!isMovie) mapper.extractEpisodes(document,
-                    currentUrl, seasonDataScript, epItems,
+                    currentUrl, seasonDataScript, effectiveEpItems,
                     metadata.poster) else emptyList()
             }
             val trk = async {
