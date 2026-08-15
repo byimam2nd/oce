@@ -77,13 +77,13 @@ internal class SettingsDialog {
         layout.addView(caption(context, "Kategori tambahan dari URL mana pun di situs provider."))
         val customName = EditText(context).apply {
             hint = "Nama kategori (mis. Anime Action)"
-            singleLine = true
+            setSingleLine(true)
         }
         layout.addView(customName)
         val customUrl = EditText(context).apply {
             hint = "URL kategori (mis. https://site/genre/action/)"
             inputType = InputType.TYPE_TEXT_VARIATION_URI
-            singleLine = true
+            setSingleLine(true)
         }
         layout.addView(customUrl)
 
