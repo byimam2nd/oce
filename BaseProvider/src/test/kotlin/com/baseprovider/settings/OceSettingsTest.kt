@@ -1,0 +1,53 @@
+package com.baseprovider.settings
+
+import com.baseprovider.config.ProviderConfig
+import com.lagradost.cloudstream3.TvType
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class OceSettingsTest {
+
+    private val base = ProviderConfig(
+        id = "test",
+        mainUrl = "https://test.com",
+        supportedTypes = setOf(TvType.Movie)
+    )
+
+    @Test
+    fun `filterMainPageLists returns all when enabled is null`() {
+        val lists = listOf("A" to "/a", "B" to "/b")
+        assertEquals(lists, OceSettings.filterMainPageLists(lists, null))
+    }
+
+    @Test
+    fun `filterMainPageLists filters by category name`() {
+        val lists = listOf("A" to "/a", "B" to "/b", "C" to "/c")
+        val filtered = OceSettings.filterMainPageLists(lists, setOf("A", "C"))
+        assertEquals(listOf("A" to "/a", "C" to "/c"), filtered)
+    }
+
+    @Test
+    fun `filterMainPageLists returns empty when enabled set is empty`() {
+        val lists = listOf("A" to "/a", "B" to "/b")
+        assertTrue(OceSettings.filterMainPageLists(lists, emptySet()).isEmpty())
+    }
+
+    @Test
+    fun `enabledCategories is null without attached context`() {
+        assertNull(OceSettings.enabledCategories("test"))
+    }
+
+    @Test
+    fun `accessors fall back to defaults without context`() {
+        assertTrue(OceSettings.prefetchEnabled("test", true))
+        assertEquals(30L, OceSettings.cacheTtlMinutes("test", 30L))
+        assertEquals(2, OceSettings.searchPageLimit("test", 2))
+    }
+
+    @Test
+    fun `applyOverrides returns base unchanged without context`() {
+        assertEquals(base, OceSettings.applyOverrides("test", base))
+    }
+}

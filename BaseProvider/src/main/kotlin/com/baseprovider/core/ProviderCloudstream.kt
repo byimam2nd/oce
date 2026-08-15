@@ -2,12 +2,13 @@ package com.baseprovider.core
 
 import com.baseprovider.config.*
 import com.baseprovider.log.*
+import com.baseprovider.settings.OceSettings
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 
 open class ProviderCloudstream : MainAPI() {
 
-    protected val providerId: String by lazy {
+    val providerId: String by lazy {
         this::class.java.simpleName.replace("Provider", "").replace(Regex("[^a-zA-Z0-9]"), "")
     }
 
@@ -15,7 +16,9 @@ open class ProviderCloudstream : MainAPI() {
         logDebug(providerId, "Initializing BaseProvider Engine V2.2.0")
     }
 
-    val config: ProviderConfig by lazy { ConfigRegistry.get(providerId) }
+    val config: ProviderConfig by lazy {
+        OceSettings.applyOverrides(providerId, ConfigRegistry.get(providerId))
+    }
 
     override var name = config.name
     override var mainUrl = config.mainUrl
@@ -53,8 +56,13 @@ open class ProviderCloudstream : MainAPI() {
 
     open var globalHeaders: Map<String, String> = config.globalHeaders
 
-    override val mainPage = mainPageOf(*config.mainPageLists
-        .toTypedArray())
+    override val mainPage: List<MainPageData>
+        get() = mainPageOf(
+            *OceSettings.filterMainPageLists(
+                config.mainPageLists,
+                OceSettings.enabledCategories(providerId)
+            ).toTypedArray()
+        )
 
     private val engine by lazy { BaseProviderEngine(api = this, config =
         config) }
