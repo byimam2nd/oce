@@ -38,11 +38,10 @@ class BaseProviderEngine(
 
     suspend fun getMainPage(page: Int,
         request: MainPageRequest): HomePageResponse {
-        val home = scrapper.getMainPage(page, request)
-        if (config.prefetchEnabled) {
-            prefetchHomeItems(home)
-        }
-        return home
+        // Tanpa prefetch home: item di home list sangat banyak (banyak kategori),
+        // prefetch detail page tiap item justru membombardir situs dan
+        // memperlambat. Warm hanya dilakukan saat user membuka detail page.
+        return scrapper.getMainPage(page, request)
     }
 
     suspend fun search(query: String): List<SearchResponse> {
@@ -124,16 +123,6 @@ class BaseProviderEngine(
                 }
             }
         }
-    }
-
-    /**
-     * Saat home list tampil, warm episode page (LoadResponse) untuk item yang
-     * terlihat. Update check berbasis TTL: item yang cache-nya masih fresh
-     * di-skip (terus pakai cache), yang expired di-fetch ulang di background.
-     */
-    private fun prefetchHomeItems(home: HomePageResponse) {
-        prefetchItemUrls(home.items.flatMap { it.list }
-            .mapNotNull { it.url.takeIf { u -> u.isNotBlank() } })
     }
 
     /**
