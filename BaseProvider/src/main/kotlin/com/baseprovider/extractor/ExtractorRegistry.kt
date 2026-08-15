@@ -16,7 +16,8 @@ object ProviderExtractors {
         Morencius(),
         MegaPlay(), AWSStream(), LuluStream(), Dhcplay(), Voe(), Xtwap(),
             Gdplayer(), Vidguardto2(), Movearnpre(),
-        Lk21PlayerPage(), VideoNodePage(), Dailymotion()
+        Lk21PlayerPage(), VideoNodePage(), Dailymotion(),
+        PlayCdn(), EmTurbovid()
     )
 
     private val normalizedList: List<Pair<String, ExtractorApi>> = list
