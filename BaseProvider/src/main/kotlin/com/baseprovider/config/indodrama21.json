@@ -8,7 +8,6 @@
   "mainPagePathPattern": "{baseUrl}/{data}/page/{page}",
   "moviePathSegment": "/movie/",
   "tvPathSegment": "/tv/",
-  "searchPageLimit": 2,
   "reverseEpisodes": false,
   "useDocumentLarge": true,
   "refererPlayerMode": "series_url",

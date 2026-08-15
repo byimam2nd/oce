@@ -41,7 +41,6 @@ open class ProviderCloudstream : MainAPI() {
     open var moviePathSegment = config.moviePathSegment
     open var tvPathSegment = config.tvPathSegment
     open var episodeDataUrlPattern = config.episodeDataUrlPattern
-    open var searchPageLimit = config.searchPageLimit
     open var reverseEpisodes = config.reverseEpisodes
     open var isJsonSearch = config.isJsonSearch
     open var searchJsonRoot = config.searchJsonRoot
@@ -73,6 +72,9 @@ open class ProviderCloudstream : MainAPI() {
 
     override suspend fun search(query: String): List<SearchResponse> =
         engine.search(query)
+
+    override suspend fun search(query: String, page: Int): SearchResponseList =
+        engine.search(query, page)
 
     override suspend fun quickSearch(query: String): List<SearchResponse>? =
         engine.search(query)

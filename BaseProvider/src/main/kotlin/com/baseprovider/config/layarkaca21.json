@@ -16,7 +16,6 @@
   "searchPathPattern": "{baseUrl}/?s={query}",
   "moviePathSegment": "/",
   "tvPathSegment": "/nontondrama/",
-  "searchPageLimit": 1,
   "reverseEpisodes": false,
   "useDocumentLarge": true,
   "refererPlayerMode": "series_url",

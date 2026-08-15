@@ -18,8 +18,7 @@ internal class SettingsDialog {
         val layout: LinearLayout,
         val categoryChecks: Map<String, CheckBox>,
         val prefetchCheck: CheckBox,
-        val ttlSpinner: Spinner,
-        val limitSpinner: Spinner
+        val ttlSpinner: Spinner
     )
 
     fun show(context: Context, providerId: String, config: ProviderConfig) {
@@ -74,14 +73,7 @@ internal class SettingsDialog {
         )
         layout.addView(labelRow(context, "Cache TTL (minutes)", ttlSpinner))
 
-        val limitSpinner = spinnerFor(
-            context,
-            LIMIT_OPTIONS.map { it.toString() },
-            LIMIT_OPTIONS.indexOf(prefs.getInt(KEY_SEARCH_LIMIT, config.searchPageLimit))
-        )
-        layout.addView(labelRow(context, "Search page limit", limitSpinner))
-
-        return Controls(layout, catChecks, prefetchCheck, ttlSpinner, limitSpinner)
+        return Controls(layout, catChecks, prefetchCheck, ttlSpinner)
     }
 
     private fun save(providerId: String, controls: Controls) {
@@ -91,7 +83,6 @@ internal class SettingsDialog {
             .putString(KEY_CATEGORIES, enabled.joinToString(","))
             .putBoolean(KEY_PREFETCH, controls.prefetchCheck.isChecked)
             .putLong(KEY_CACHE_TTL, TTL_OPTIONS[controls.ttlSpinner.selectedItemPosition])
-            .putInt(KEY_SEARCH_LIMIT, LIMIT_OPTIONS[controls.limitSpinner.selectedItemPosition])
             .apply()
         reloadHome()
     }
@@ -151,8 +142,6 @@ internal class SettingsDialog {
         const val KEY_CATEGORIES = "enabled_categories"
         const val KEY_PREFETCH = "prefetch_enabled"
         const val KEY_CACHE_TTL = "cache_ttl_minutes"
-        const val KEY_SEARCH_LIMIT = "search_page_limit"
         val TTL_OPTIONS = longArrayOf(5L, 15L, 30L, 60L, 120L)
-        val LIMIT_OPTIONS = intArrayOf(1, 2, 3, 5)
     }
 }

@@ -43,7 +43,6 @@ class OceSettingsTest {
     fun `accessors fall back to defaults without context`() {
         assertTrue(OceSettings.prefetchEnabled("test", true))
         assertEquals(30L, OceSettings.cacheTtlMinutes("test", 30L))
-        assertEquals(2, OceSettings.searchPageLimit("test", 2))
     }
 
     @Test

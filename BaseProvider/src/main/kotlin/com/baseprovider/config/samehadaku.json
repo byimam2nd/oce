@@ -6,7 +6,6 @@
   "supportedTypes": ["Anime", "AnimeMovie", "OVA"],
   "searchPathPattern": "{baseUrl}/?s={query}",
   "tvPathSegment": "/anime/",
-  "searchPageLimit": 2,
   "reverseEpisodes": true,
   "isHorizontal": true,
   "globalHeaders": {

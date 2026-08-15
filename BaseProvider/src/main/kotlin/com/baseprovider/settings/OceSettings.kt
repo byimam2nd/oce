@@ -49,17 +49,11 @@ object OceSettings {
         return p.getLong(KEY_CACHE_TTL, default)
     }
 
-    fun searchPageLimit(providerId: String, default: Int): Int {
-        val p = prefs(providerId) ?: return default
-        return p.getInt(KEY_SEARCH_LIMIT, default)
-    }
-
     fun applyOverrides(providerId: String, base: ProviderConfig): ProviderConfig {
         val p = prefs(providerId) ?: return base
         return base.copy(
             prefetchEnabled = p.getBoolean(KEY_PREFETCH, base.prefetchEnabled),
-            cacheTtlMinutes = p.getLong(KEY_CACHE_TTL, base.cacheTtlMinutes),
-            searchPageLimit = p.getInt(KEY_SEARCH_LIMIT, base.searchPageLimit)
+            cacheTtlMinutes = p.getLong(KEY_CACHE_TTL, base.cacheTtlMinutes)
         )
     }
 
@@ -74,5 +68,4 @@ object OceSettings {
     internal const val KEY_CATEGORIES = "enabled_categories"
     internal const val KEY_PREFETCH = "prefetch_enabled"
     internal const val KEY_CACHE_TTL = "cache_ttl_minutes"
-    internal const val KEY_SEARCH_LIMIT = "search_page_limit"
 }

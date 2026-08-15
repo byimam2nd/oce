@@ -51,7 +51,6 @@ fun fromJson(id: String, json: JSONObject): ProviderConfig {
         moviePathSegment = json.optString("moviePathSegment", "/movie/"),
         tvPathSegment = json.optString("tvPathSegment", "/anime/"),
         episodeDataUrlPattern = json.optString("episodeDataUrlPattern", "{url}"),
-        searchPageLimit = json.optInt("searchPageLimit", 2),
         reverseEpisodes = json.optBoolean("reverseEpisodes", true),
         isJsonSearch = json.optBoolean("isJsonSearch", false),
         searchJsonRoot = json.optString("searchJsonRoot", "data"),

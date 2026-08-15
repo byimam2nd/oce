@@ -22,7 +22,6 @@ data class ProviderConfig(
     val episodeDataUrlPattern: String = "{url}",
 
     // ── Features ──
-    val searchPageLimit: Int = 2,
     val reverseEpisodes: Boolean = true,
     val isJsonSearch: Boolean = false,
     val searchJsonRoot: String = "data",

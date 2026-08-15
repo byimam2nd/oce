@@ -88,7 +88,7 @@ class ProviderScrapper(
         }
     }
 
-    suspend fun search(query: String): List<SearchResponse> {
+    suspend fun search(query: String, page: Int = 1): List<SearchResponse> {
         val encodedQuery = runCatching { java.net.URLEncoder.encode(query, "UTF-8") }.getOrDefault(query)
         val baseUrl = config.searchUrl?.takeIf { it
             .isNotBlank() } ?: config.mainUrl
@@ -145,32 +145,22 @@ class ProviderScrapper(
             }
         }
         return runCatching {
-            val pages = (1..config.searchPageLimit)
-            coroutineScope {
-                val searchSemaphore = Semaphore(2)
-                pages.map { page ->
-                    async(Dispatchers.IO) {
-                        searchSemaphore.withPermit {
-                            val url = config.searchPathPattern.replace("{baseUrl}",
-                                baseUrl).replace("{page}", page.toString()).replace("{query}", encodedQuery)
-                            val document = fetchDocument(url, config, refer, htmlCache =
-                                htmlCache)
-                            if (config.searchItems.isNotBlank()) {
-                                val elements = SelectorResolver.select(document, config.searchItems,
-                                    "${config.id}:searchItems")
-                                coroutineScope {
-                                    elements.map { el ->
-                                        async(Dispatchers.IO) {
-                                            runCatching { mapper
-                                                .toSearchResult(el, url) }.getOrNull()
-                                        }
-                                    }.awaitAll().filterNotNull()
-                                }
-                            } else emptyList()
+            val url = config.searchPathPattern.replace("{baseUrl}",
+                baseUrl).replace("{page}", page.toString()).replace("{query}", encodedQuery)
+            val document = fetchDocument(url, config, refer, htmlCache =
+                htmlCache)
+            if (config.searchItems.isNotBlank()) {
+                val elements = SelectorResolver.select(document, config.searchItems,
+                    "${config.id}:searchItems")
+                coroutineScope {
+                    elements.map { el ->
+                        async(Dispatchers.IO) {
+                            runCatching { mapper
+                                .toSearchResult(el, url) }.getOrNull()
                         }
-                    }
-                }.awaitAll()
-            }.flatten().distinctBy { it.url }
+                    }.awaitAll().filterNotNull().distinctBy { it.url }
+                }
+            } else emptyList()
         }.getOrElse { e ->
             logFail(
                 config.id,

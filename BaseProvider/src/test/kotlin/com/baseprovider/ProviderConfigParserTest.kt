@@ -64,7 +64,6 @@ class ProviderConfigParserTest {
         assertEquals("defaults", config.name)
         assertEquals("id", config.lang)
         assertTrue(config.reverseEpisodes)
-        assertEquals(2, config.searchPageLimit)
         assertEquals("", config.searchItems)
         assertTrue(config.prefetchEnabled)
         assertEquals(12, config.prefetchHomeLimit)

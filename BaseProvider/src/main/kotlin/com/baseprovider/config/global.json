@@ -13,7 +13,6 @@
   "tvPathSegment": "/anime/",
   "episodeDataUrlPattern": "{url}",
 
-  "searchPageLimit": 2,
   "reverseEpisodes": true,
   "isJsonSearch": false,
   "searchJsonRoot": "data",
