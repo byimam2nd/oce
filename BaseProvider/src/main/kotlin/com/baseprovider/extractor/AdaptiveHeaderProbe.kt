@@ -69,11 +69,12 @@ object AdaptiveHeaderProbe {
     private fun buildCombos(url: String, refererHint: String?): List<Combo> {
         val origin = originOf(url)
         val referer = refererHint ?: origin
+        val originHeader = origin?.let { mapOf("Origin" to it) } ?: emptyMap()
         return listOf(
             Combo(Mode.BARE, null, minimalHeaders),
             Combo(Mode.REFERER, referer, minimalHeaders),
-            Combo(Mode.ORIGIN, referer, minimalHeaders + ("Origin" to origin)),
-            Combo(Mode.BROWSER_LIKE, referer, browserLikeHeaders + ("Origin" to origin))
+            Combo(Mode.ORIGIN, referer, minimalHeaders + originHeader),
+            Combo(Mode.BROWSER_LIKE, referer, browserLikeHeaders + originHeader)
         )
     }
 
