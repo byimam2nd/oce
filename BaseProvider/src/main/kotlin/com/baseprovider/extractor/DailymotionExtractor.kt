@@ -17,11 +17,13 @@ class Dailymotion : ExtractorApi() {
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ) {
+        // Format geo.dailymotion.com/player/xid0t.html?video=ID -> ambil ID
+        // dari query param, bukan dari path (xid0t.html tidak match regex).
+        val id = Regex("""[?&]video=([^&]+)""").find(url)?.groupValues
+            ?.get(1) ?: url.substringAfterLast('/')
+            .substringBefore('?').takeIf { videoIdRegex.matches(it) } ?: return
         val embedUrl = if (url.contains("/embed/") || url.contains(
-            "/video/")) url else "${baseUrl}/embed/video/$url"
-        val id = embedUrl.substringAfterLast('/')
-            .substringBefore('?').takeIf { videoIdRegex
-            .matches(it) } ?: return
+            "/video/")) url else "${baseUrl}/embed/video/$id"
         val metadataUrl = "$baseUrl/player/metadata/video/$id"
 
         val response = app.get(metadataUrl, referer = embedUrl).text

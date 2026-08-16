@@ -67,6 +67,11 @@ object MasterLinkGenerator {
         var effectiveHeaders = safeHeaders
         if (bareHeaders) {
             val decision = AdaptiveHeaderProbe.resolve(url, referer)
+            if (!decision.valid) {
+                // Link gagal test (non-2xx/3xx) di BOTH bare & referer.
+                // Jangan kirim link rusak ke player (avoid error 2004).
+                return
+            }
             if (decision.mode == AdaptiveHeaderProbe.Mode.REFERER) {
                 effectiveReferer = decision.referer
             } else {

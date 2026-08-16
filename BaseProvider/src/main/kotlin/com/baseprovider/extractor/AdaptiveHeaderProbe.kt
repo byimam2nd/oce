@@ -1,12 +1,9 @@
 package com.baseprovider.extractor
 
 import com.lagradost.cloudstream3.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
 import java.net.URI
 import java.util.concurrent.ConcurrentHashMap
 
@@ -18,46 +15,64 @@ import java.util.concurrent.ConcurrentHashMap
  * Pilih varian yang valid (2xx/3xx) dan paling cepat. Hasil di-cache per-host
  * sehingga host berikutnya tidak di-probe ulang dalam satu sesi.
  *
- * Probe TIDAK memblokir link pertama: host baru langsung dapat mode BARE
- * (aman, minimal header), lalu probe dijalankan di background (single-flight)
- * untuk menyempurnakan keputusan link-link berikutnya ke host yang sama.
+ * Probe BLOCKING: link TIDAK dikirim ke player sebelum lolos test. Jika kedua
+ * varian gagal (non-2xx/3xx), Decision.valid=false dan caller harus SKIP link
+ * (jangan kirim link rusak yang berakhir error 2004 di player). Single-flight
+ * per-host: pemanggil bersamaan menunggu hasil probe yang sama, bukan memulai
+ * probe ganda.
  */
 object AdaptiveHeaderProbe {
     enum class Mode { BARE, REFERER }
 
-    data class Decision(val mode: Mode, val referer: String?)
+    data class Decision(val mode: Mode, val referer: String?, val valid: Boolean = true)
 
     private val cache = ConcurrentHashMap<String, Pair<Long, Decision>>()
-    private val inFlight = ConcurrentHashMap<String, Boolean>()
+    private val inFlight = ConcurrentHashMap<String, CompletableDeferred<Decision>>()
     private const val TTL_MS = 60 * 60_000L
     private const val PROBE_TIMEOUT = 4000L
 
     suspend fun resolve(url: String, refererHint: String?): Decision {
         val host = runCatching { URI(url).host }.getOrNull()
-            ?: return Decision(Mode.BARE, null)
+            ?: return Decision(Mode.BARE, null, valid = false)
         cache[host]?.let { (ts, d) ->
             if (System.currentTimeMillis() - ts < TTL_MS) return d
         }
-        // Host baru: kirim link dengan mode BARE dulu (tidak menunggu probe).
-        // Probe dijalankan background sekali saja per host (single-flight).
-        if (inFlight.putIfAbsent(host, true) == null) {
-            backgroundScope.launch {
-                runCatching {
-                    val decision = probe(url, refererHint)
-                    cache[host] = System.currentTimeMillis() to decision
-                }.onFailure { cache[host] = System.currentTimeMillis() to Decision(Mode.BARE, null) }
-                inFlight.remove(host)
+        // Single-flight: satu probe per host, pemanggil lain menunggu hasil yang sama.
+        while (true) {
+            inFlight[host]?.let { return it.await() }
+            val deferred = CompletableDeferred<Decision>()
+            if (inFlight.putIfAbsent(host, deferred) == null) {
+                try {
+                    val decision = try {
+                        probe(url, refererHint)
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Decision(Mode.BARE, null, valid = false)
+                    }
+                    // Hanya cache hasil VALID. Hasil invalid tidak di-cache agar
+                    // link yang sempat down (transient) bisa di-probe ulang,
+                    // bukan mem-blow seluruh host selama 60 menit.
+                    if (decision.valid) {
+                        cache[host] = System.currentTimeMillis() to decision
+                    }
+                    deferred.complete(decision)
+                } catch (e: Throwable) {
+                    // Owner dibatalkan: pastikan waiter tidak hang, lalu teruskan.
+                    deferred.complete(Decision(Mode.BARE, null, valid = false))
+                    throw e
+                } finally {
+                    inFlight.remove(host)
+                }
+                return deferred.await()
             }
         }
-        return Decision(Mode.BARE, null)
     }
 
     fun reset() {
         cache.clear()
         inFlight.clear()
     }
-
-    private val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private suspend fun probe(url: String, refererHint: String?): Decision =
         coroutineScope {
@@ -73,9 +88,9 @@ object AdaptiveHeaderProbe {
 
             when {
                 bareMs != null && (refMs == null || bareMs <= refMs) ->
-                    Decision(Mode.BARE, null)
-                refMs != null -> Decision(Mode.REFERER, referer)
-                else -> Decision(Mode.BARE, null)
+                    Decision(Mode.BARE, null, valid = true)
+                refMs != null -> Decision(Mode.REFERER, referer, valid = true)
+                else -> Decision(Mode.BARE, null, valid = false)
             }
         }
 
