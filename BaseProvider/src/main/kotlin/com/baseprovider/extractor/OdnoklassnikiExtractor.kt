@@ -31,28 +31,13 @@ open class Odnoklassniki : ExtractorApi() {
             ?.let { MasterLinkGenerator.decodeUnicodeEscapes(it) }
         if (!hlsUrl.isNullOrBlank()) {
             Log.d("OkRu", "Using adaptive HLS: ${hlsUrl.take(90)}...")
-            // Adaptive quality picker: pilih SATU varian stabil sesuai kecepatan
-            // CDN OkRu (throttle fluktuatif bikin ABR penuh sering buffering).
-            // Gagal -> fallback ke master penuh (perilaku lama). Additive.
-            val pickedUrl = AdaptiveQualityPicker.selectBestVariant(hlsUrl, videoHeaders)
-            if (pickedUrl != null) {
-                Log.d("OkRu", "Adaptive picker selected stable variant: ${pickedUrl.take(90)}...")
-                callback(newExtractorLink(
-                    source = this.name,
-                    name = this.name,
-                    url = pickedUrl,
-                    type = ExtractorLinkType.M3U8
-                ) {
-                    this.referer = ""
-                    this.headers = videoHeaders
-                })
-            } else {
-                MasterLinkGenerator.createSmartLink(
-                    this.name, hlsUrl, null,
-                    headers = videoHeaders, bareHeaders = true,
-                    callback = callback
-                )
-            }
+            // Kirim master HLS penuh (perilaku stabil). Headers dipilih otomatis
+            // per-host oleh AdaptiveHeaderProbe (bare vs referer).
+            MasterLinkGenerator.createSmartLink(
+                this.name, hlsUrl, null,
+                headers = videoHeaders, bareHeaders = true,
+                callback = callback
+            )
             return
         }
 
