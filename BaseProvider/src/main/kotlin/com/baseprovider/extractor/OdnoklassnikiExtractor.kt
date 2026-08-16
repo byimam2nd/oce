@@ -32,7 +32,7 @@ open class Odnoklassniki : ExtractorApi() {
         if (!hlsUrl.isNullOrBlank()) {
             Log.d("OkRu", "Using adaptive HLS: ${hlsUrl.take(90)}...")
             // Kirim master HLS penuh (perilaku stabil). Headers dipilih otomatis
-            // per-host oleh AdaptiveHeaderProbe (bare vs referer).
+            // per-host oleh AdaptiveHeaderProbe (uji combo bare/referer/origin/browser).
             MasterLinkGenerator.createSmartLink(
                 this.name, hlsUrl, null,
                 headers = videoHeaders, bareHeaders = true,

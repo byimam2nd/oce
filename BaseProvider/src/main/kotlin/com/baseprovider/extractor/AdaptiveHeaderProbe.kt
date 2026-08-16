@@ -9,31 +9,77 @@ import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Probe otomatis pemilihan header video per-host (konsep adaptive, tanpa
- * test manual per extractor). Untuk host pertama kali, uji 2 varian:
- *  - BARE   : UA+Accept saja, tanpa referer (pola OkRu yang terbukti anti-throttle)
- *  - REFERER: UA+Accept + referer (hint atau origin video)
- * Pilih varian yang valid (2xx/3xx) dan paling cepat. Hasil di-cache per-host
- * sehingga host berikutnya tidak di-probe ulang dalam satu sesi.
+ * test manual per extractor). Untuk host pertama kali, uji beberapa combo
+ * header secara paralel dan pilih yang valid (2xx/3xx) dan paling cepat:
+ *  - BARE        : UA+Accept saja, tanpa referer (pola OkRu yang terbukti anti-throttle)
+ *  - REFERER     : UA+Accept + referer (hint atau origin video)
+ *  - ORIGIN      : UA+Accept + referer + Origin (CDN yang memvalidasi Origin)
+ *  - BROWSER_LIKE: header browser penuh (Accept-Language, Sec-Fetch-*, Origin)
+ * Hasil di-cache per-host sehingga host berikutnya tidak di-probe ulang
+ * dalam satu sesi.
  *
- * Probe BLOCKING: link TIDAK dikirim ke player sebelum lolos test. Jika kedua
- * varian gagal (non-2xx/3xx), Decision.valid=false dan caller harus SKIP link
+ * Probe BLOCKING: link TIDAK dikirim ke player sebelum lolos test. Jika semua
+ * combo gagal (non-2xx/3xx), Decision.valid=false dan caller harus SKIP link
  * (jangan kirim link rusak yang berakhir error 2004 di player). Single-flight
  * per-host: pemanggil bersamaan menunggu hasil probe yang sama, bukan memulai
  * probe ganda.
  */
 object AdaptiveHeaderProbe {
-    enum class Mode { BARE, REFERER }
+    enum class Mode { BARE, REFERER, ORIGIN, BROWSER_LIKE }
 
-    data class Decision(val mode: Mode, val referer: String?, val valid: Boolean = true)
+    data class Decision(
+        val mode: Mode,
+        val referer: String?,
+        val headers: Map<String, String>,
+        val valid: Boolean = true
+    )
+
+    private data class Combo(
+        val mode: Mode,
+        val referer: String?,
+        val headers: Map<String, String>
+    )
 
     private val cache = ConcurrentHashMap<String, Pair<Long, Decision>>()
     private val inFlight = ConcurrentHashMap<String, CompletableDeferred<Decision>>()
     private const val TTL_MS = 60 * 60_000L
-    private const val PROBE_TIMEOUT = 4000L
+    // NiceHttp timeout dalam DETIK (callTimeout/connectTimeout TimeUnit.SECONDS).
+    private const val PROBE_TIMEOUT = 5L
+
+    private val minimalHeaders = mapOf(
+        "Accept" to "*/*",
+        "User-Agent" to DEFAULT_UA
+    )
+
+    private val browserLikeHeaders = mapOf(
+        "Accept" to "*/*",
+        "Accept-Language" to "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Connection" to "keep-alive",
+        "Sec-Fetch-Dest" to "empty",
+        "Sec-Fetch-Mode" to "cors",
+        "Sec-Fetch-Site" to "cross-site",
+        "User-Agent" to DEFAULT_UA
+    )
+
+    private fun originOf(url: String): String? = runCatching {
+        val u = URI(url)
+        "${u.scheme}://${u.host}${if (u.port > 0 && u.port != 80 && u.port != 443) ":${u.port}" else ""}"
+    }.getOrNull()
+
+    private fun buildCombos(url: String, refererHint: String?): List<Combo> {
+        val origin = originOf(url)
+        val referer = refererHint ?: origin
+        return listOf(
+            Combo(Mode.BARE, null, minimalHeaders),
+            Combo(Mode.REFERER, referer, minimalHeaders),
+            Combo(Mode.ORIGIN, referer, minimalHeaders + ("Origin" to origin)),
+            Combo(Mode.BROWSER_LIKE, referer, browserLikeHeaders + ("Origin" to origin))
+        )
+    }
 
     suspend fun resolve(url: String, refererHint: String?): Decision {
         val host = runCatching { URI(url).host }.getOrNull()
-            ?: return Decision(Mode.BARE, null, valid = false)
+            ?: return Decision(Mode.BARE, null, minimalHeaders, valid = false)
         cache[host]?.let { (ts, d) ->
             if (System.currentTimeMillis() - ts < TTL_MS) return d
         }
@@ -48,7 +94,7 @@ object AdaptiveHeaderProbe {
                     } catch (e: kotlinx.coroutines.CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        Decision(Mode.BARE, null, valid = false)
+                        Decision(Mode.BARE, null, minimalHeaders, valid = false)
                     }
                     // Hanya cache hasil VALID. Hasil invalid tidak di-cache agar
                     // link yang sempat down (transient) bisa di-probe ulang,
@@ -59,7 +105,7 @@ object AdaptiveHeaderProbe {
                     deferred.complete(decision)
                 } catch (e: Throwable) {
                     // Owner dibatalkan: pastikan waiter tidak hang, lalu teruskan.
-                    deferred.complete(Decision(Mode.BARE, null, valid = false))
+                    deferred.complete(Decision(Mode.BARE, null, minimalHeaders, valid = false))
                     throw e
                 } finally {
                     inFlight.remove(host)
@@ -74,37 +120,33 @@ object AdaptiveHeaderProbe {
         inFlight.clear()
     }
 
+    /**
+     * Uji semua combo paralel; pilih yang valid (2xx/3xx) dan paling cepat.
+     * Jika tidak ada yang valid -> Decision.invalid.
+     */
     private suspend fun probe(url: String, refererHint: String?): Decision =
         coroutineScope {
-            val referer = refererHint ?: runCatching {
-                val u = URI(url)
-                "${u.scheme}://${u.host}${if (u.port > 0 && u.port != 80 && u.port != 443) ":${u.port}" else ""}"
-            }.getOrNull()
-
-            val bare = async { probeOnce(url, null) }
-            val withRef = async { probeOnce(url, referer) }
-            val bareMs = bare.await()
-            val refMs = withRef.await()
-
-            when {
-                bareMs != null && (refMs == null || bareMs <= refMs) ->
-                    Decision(Mode.BARE, null, valid = true)
-                refMs != null -> Decision(Mode.REFERER, referer, valid = true)
-                else -> Decision(Mode.BARE, null, valid = false)
+            val combos = buildCombos(url, refererHint)
+            val timed = combos.map { combo ->
+                async { combo to probeOnce(url, combo) }
+            }.map { it.await() }
+            val valid = timed.filter { it.second != null }
+                .minByOrNull { it.second!! }
+            if (valid == null) {
+                Decision(Mode.BARE, null, minimalHeaders, valid = false)
+            } else {
+                val (combo, _) = valid
+                Decision(combo.mode, combo.referer, combo.headers, valid = true)
             }
         }
 
-    private suspend fun probeOnce(url: String, referer: String?): Long? =
+    private suspend fun probeOnce(url: String, combo: Combo): Long? =
         runCatching {
             val start = System.currentTimeMillis()
             val r = app.get(
                 url,
-                referer = referer,
-                headers = mapOf(
-                    "User-Agent" to DEFAULT_UA,
-                    "Accept" to "*/*",
-                    "Range" to "bytes=0-1023"
-                ),
+                referer = combo.referer,
+                headers = combo.headers + mapOf("Range" to "bytes=0-1023"),
                 timeout = PROBE_TIMEOUT
             )
             if (r.code in 200..399) System.currentTimeMillis() - start else null

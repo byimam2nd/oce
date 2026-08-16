@@ -61,23 +61,19 @@ object MasterLinkGenerator {
 
         // Adaptive headers: untuk link bare, probe otomatis (valid + tercepat)
         // per-host, hasil di-cache. Menghindari test manual per extractor
-        // (kasus OkRu dulu): CDN yang mau referer dipakai referer, CDN yang
-        // throttle kalau referer salah jatuh ke bare.
+        // (kasus OkRu dulu): uji beberapa combo header (bare/referer/origin/
+        // browser-like) paralel, pilih yang valid 2xx/3xx dan tercepat.
         var effectiveReferer = referer
         var effectiveHeaders = safeHeaders
         if (bareHeaders) {
             val decision = AdaptiveHeaderProbe.resolve(url, referer)
             if (!decision.valid) {
-                // Link gagal test (non-2xx/3xx) di BOTH bare & referer.
+                // Link gagal test (non-2xx/3xx) di semua combo header.
                 // Jangan kirim link rusak ke player (avoid error 2004).
                 return
             }
-            if (decision.mode == AdaptiveHeaderProbe.Mode.REFERER) {
-                effectiveReferer = decision.referer
-            } else {
-                effectiveReferer = null
-            }
-            effectiveHeaders = minimalVideoHeaders
+            effectiveReferer = decision.referer
+            effectiveHeaders = decision.headers
         }
 
         val cleanName = source.replace(qualityStripRegex, "").trim()
