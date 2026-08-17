@@ -112,13 +112,16 @@ jobs:
   # ========================================
   publish-beta:
     needs: build
-    if: ${{ secrets.OCE_DISTRIBUTOR_APP_ID != '' && secrets.OCE_DISTRIBUTOR_APP_PEM != '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      OCE_DISTRIBUTOR_APP_ID: ${{ secrets.OCE_DISTRIBUTOR_APP_ID }}
+      OCE_DISTRIBUTOR_APP_PEM: ${{ secrets.OCE_DISTRIBUTOR_APP_PEM }}
 
     steps:
       - name: Generate GitHub App token
         id: app-token
+        if: ${{ env.OCE_DISTRIBUTOR_APP_ID != '' && env.OCE_DISTRIBUTOR_APP_PEM != '' }}
         uses: actions/create-github-app-token@v1
         with:
           app-id: ${{ secrets.OCE_DISTRIBUTOR_APP_ID }}
@@ -127,6 +130,7 @@ jobs:
           repositories: oce
 
       - name: Checkout public distribution (builds branch)
+        if: ${{ env.OCE_DISTRIBUTOR_APP_ID != '' && env.OCE_DISTRIBUTOR_APP_PEM != '' }}
         uses: actions/checkout@v5
         with:
           repository: byimam2nd/oce
@@ -135,12 +139,14 @@ jobs:
           path: dist
 
       - name: Download artifacts
+        if: ${{ env.OCE_DISTRIBUTOR_APP_ID != '' && env.OCE_DISTRIBUTOR_APP_PEM != '' }}
         uses: actions/download-artifact@v4
         with:
           name: beta-artifacts
           path: dist
 
       - name: Deploy beta artifacts
+        if: ${{ env.OCE_DISTRIBUTOR_APP_ID != '' && env.OCE_DISTRIBUTOR_APP_PEM != '' }}
         run: |
           cd dist
           ls -la *.cs3 plugins.json 2>/dev/null || echo "⚠️ No artifacts found"

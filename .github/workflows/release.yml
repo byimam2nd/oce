@@ -106,13 +106,16 @@ jobs:
   # ========================================
   release:
     needs: build
-    if: ${{ secrets.OCE_DISTRIBUTOR_APP_ID != '' && secrets.OCE_DISTRIBUTOR_APP_PEM != '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      OCE_DISTRIBUTOR_APP_ID: ${{ secrets.OCE_DISTRIBUTOR_APP_ID }}
+      OCE_DISTRIBUTOR_APP_PEM: ${{ secrets.OCE_DISTRIBUTOR_APP_PEM }}
 
     steps:
       - name: Generate GitHub App token
         id: app-token
+        if: ${{ env.OCE_DISTRIBUTOR_APP_ID != '' && env.OCE_DISTRIBUTOR_APP_PEM != '' }}
         uses: actions/create-github-app-token@v1
         with:
           app-id: ${{ secrets.OCE_DISTRIBUTOR_APP_ID }}
@@ -121,12 +124,14 @@ jobs:
           repositories: oce
 
       - name: Download artifacts
+        if: ${{ env.OCE_DISTRIBUTOR_APP_ID != '' && env.OCE_DISTRIBUTOR_APP_PEM != '' }}
         uses: actions/download-artifact@v4
         with:
           name: release-artifacts
           path: release-artifacts
 
       - name: Create GitHub Release (public repo)
+        if: ${{ env.OCE_DISTRIBUTOR_APP_ID != '' && env.OCE_DISTRIBUTOR_APP_PEM != '' }}
         uses: softprops/action-gh-release@v2
         with:
           repository: byimam2nd/oce
