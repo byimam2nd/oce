@@ -9,10 +9,21 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.extractors.*
 import com.lagradost.cloudstream3.utils.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
+import org.mozilla.javascript.Context
+import org.mozilla.javascript.NativeJSON
+import org.mozilla.javascript.NativeObject
+import org.mozilla.javascript.Scriptable
+import java.nio.charset.StandardCharsets
+import java.util.Base64
+import javax.crypto.Cipher
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.SecretKeySpec
 
 /**
  * Generic config-driven extractor — SATU sumber kebenaran berisi SEMUA metode
@@ -44,9 +55,14 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
         val videoUrls = mutableSetOf<String>()
 
         fun resolveTemplate(template: String): String {
+            val base = runCatching {
+                val afterScheme = url.substringAfter("://")
+                url.substringBefore("://") + "://" + afterScheme.substringBefore("/")
+            }.getOrDefault(url)
             var out = template
                 .replace("{mainUrl}", config.mainUrl)
                 .replace("{url}", url)
+                .replace("{base}", base)
                 .replace("{id}", id.orEmpty())
                 .replace("{referer}", referer.orEmpty())
                 .replace("{ts}", System.currentTimeMillis().toString())
@@ -62,7 +78,7 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
             if (variant.userAgent.isNotBlank()) {
                 merged["User-Agent"] = variant.userAgent
             }
-            return merged
+            return merged.mapValues { (_, v) -> resolveTemplate(v) }
         }
 
         fun resolveReferer(stepReferer: String): String? {
@@ -233,6 +249,43 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
                     resolved.filter { it.isNotBlank() }.forEach { state.videoUrls.add(it) }
                 }
             }
+            is ExtractorStep.PackedJs -> {
+                val text = state.variables[step.source].orEmpty()
+                val decoded = findPackedJsInPage(text)?.let { (p, k, b) ->
+                    decodePackedJs(p, k, b)
+                } ?: text
+                state.variables[step.store] = decoded
+            }
+            is ExtractorStep.AesGcm -> {
+                val text = state.variables[step.source].orEmpty()
+                runCatching {
+                    val json = JSONObject(text)
+                    val keyParts = when (val kp = resolveJsonPath(text, step.keyPartsPath)) {
+                        is JSONArray -> {
+                            val parts = mutableListOf<String>()
+                            for (i in 0 until kp.length()) parts.add(kp.optString(i, ""))
+                            parts
+                        }
+                        else -> emptyList()
+                    }
+                    val iv = (resolveJsonPath(text, step.ivPath) as? String).orEmpty()
+                    val payload = (resolveJsonPath(text, step.payloadPath) as? String).orEmpty()
+                    val decrypted = decryptAesGcm(keyParts, iv, payload)
+                    state.variables[step.store] = decrypted
+                }
+            }
+            is ExtractorStep.RhinoEval -> {
+                val script = state.variables[step.source].orEmpty()
+                state.variables[step.store] = runRhino(script, step.objectName)
+            }
+            is ExtractorStep.XorSig -> {
+                val url = state.variables[step.source].orEmpty()
+                val decoded = sigDecode(url)
+                if (decoded.isNotBlank()) {
+                    if (step.store.isNotBlank()) state.variables[step.store] = decoded
+                    else state.videoUrls.add(decoded)
+                }
+            }
         }
     }
 
@@ -334,5 +387,68 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
                 callback = callback
             )
         }
+    }
+
+    /** Decrypt AES/GCM/NoPadding: key = b64url(parts[0]) + b64url(parts[1]). */
+    private fun decryptAesGcm(keyParts: List<String>, iv: String, payload: String): String {
+        if (keyParts.isEmpty() || iv.isBlank() || payload.isBlank()) return ""
+        return try {
+            val key = keyParts.joinToString("") { b64UrlDecode(it) }
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(
+                Cipher.DECRYPT_MODE,
+                SecretKeySpec(key, "AES"),
+                GCMParameterSpec(128, b64UrlDecode(iv))
+            )
+            val decrypted = cipher.doFinal(b64UrlDecode(payload))
+            String(decrypted, StandardCharsets.UTF_8)
+                .let { if (it.startsWith("\uFEFF")) it.substring(1) else it }
+        } catch (_: Exception) {
+            ""
+        }
+    }
+
+    private fun b64UrlDecode(s: String): ByteArray {
+        val fixed = s.replace('-', '+').replace('_', '/')
+        val pad = "=".repeat((4 - fixed.length % 4) % 4)
+        return Base64.getDecoder().decode(fixed + pad)
+    }
+
+    /** Eval JS via Rhino di Dispatchers.Default, ambil objek lalu stringify. */
+    private suspend fun runRhino(js: String, objectName: String): String =
+        withContext(Dispatchers.Default) {
+            if (js.isBlank()) return@withContext ""
+            try {
+                val rhino = Context.enter()
+                try {
+                    rhino.optimizationLevel = -1
+                    val scope: Scriptable = rhino.initSafeStandardObjects()
+                    scope.put("window", scope, scope)
+                    rhino.evaluateString(scope, js, "JavaScript", 1, null)
+                    val obj = scope.get(objectName, scope)
+                    if (obj is NativeObject) NativeJSON.stringify(
+                        Context.getCurrentContext(), scope, obj, null, null
+                    ).toString()
+                    else Context.toString(obj)
+                } finally { Context.exit() }
+            } catch (_: Exception) {
+                ""
+            }
+        }
+
+    /** Decode signature URL: xor hex → base64 → drop/reverse/swap (Vidguardto). */
+    private fun sigDecode(url: String): String {
+        if (url.isBlank()) return url
+        val sig = url.split("sig=").getOrNull(1)?.split("&")
+            ?.getOrNull(0) ?: return url
+        val t = sig.chunked(2).joinToString("") { (it.toInt(16) xor 2)
+            .toChar().toString() }.let {
+            val padding = when (it.length % 4) { 2 -> "=="; 3 -> "="; else -> "" }
+            String(Base64.getDecoder().decode((it + padding).toByteArray()))
+        }.dropLast(5).reversed().toCharArray().apply {
+            for (i in indices step 2) { if (i + 1 < size) { this[i] =
+                this[i + 1].also { this[i + 1] = this[i] } } }
+        }.concatToString().dropLast(5)
+        return url.replace(sig, t)
     }
 }

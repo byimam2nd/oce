@@ -1,0 +1,76 @@
+{
+  "id": "ByseSX",
+  "name": "Byse",
+  "mainUrl": "https://byse.sx",
+  "requiresReferer": true,
+  "cached": false,
+  "idSource": {
+    "type": "path"
+  },
+  "variants": [
+    {
+      "name": "default",
+      "headers": {}
+    }
+  ],
+  "steps": [
+    {
+      "step": "fetch",
+      "url": "{base}/api/videos/{id}/embed/details",
+      "referer": "",
+      "headers": {},
+      "store": "details"
+    },
+    {
+      "step": "jsonPath",
+      "path": "embed_frame_url",
+      "source": "details",
+      "filter": "",
+      "store": "embedFrame"
+    },
+    {
+      "step": "regex",
+      "pattern": "^(https?://[^/]+)",
+      "group": 1,
+      "source": "embedFrame",
+      "filter": "",
+      "universal": false,
+      "store": "embedBase"
+    },
+    {
+      "step": "regex",
+      "pattern": "([^/]+?)/?$",
+      "group": 1,
+      "source": "embedFrame",
+      "filter": "",
+      "universal": false,
+      "store": "embedCode"
+    },
+    {
+      "step": "fetch",
+      "url": "{embedBase}/api/videos/{embedCode}/embed/playback",
+      "referer": "",
+      "headers": {
+        "x-embed-parent": "{url}"
+      },
+      "store": "playback"
+    },
+    {
+      "step": "aesGcm",
+      "source": "playback",
+      "keyPartsPath": "playback.key_parts",
+      "ivPath": "playback.iv",
+      "payloadPath": "playback.payload",
+      "store": "plaintext"
+    },
+    {
+      "step": "jsonPath",
+      "path": "sources[].url",
+      "source": "plaintext",
+      "filter": "",
+      "store": ""
+    }
+  ],
+  "videoReferer": "",
+  "outputFilter": "adaptive"
+}

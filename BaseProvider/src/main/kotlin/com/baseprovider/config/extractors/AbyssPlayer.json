@@ -1,0 +1,56 @@
+{
+  "id": "AbyssPlayer",
+  "name": "AbyssPlayer",
+  "mainUrl": "https://abyssplayer.com",
+  "requiresReferer": true,
+  "cached": true,
+  "variants": [
+    {
+      "name": "default",
+      "headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
+        "Origin": "https://playhydrax.com",
+        "Referer": "https://playhydrax.com/"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "step": "fetch",
+      "url": "{url}",
+      "referer": "",
+      "headers": {},
+      "store": "page"
+    },
+    {
+      "step": "regex",
+      "pattern": "const\\s+datas\\s*=\\s*\"([^\"]*)\"",
+      "group": 1,
+      "source": "page",
+      "filter": "",
+      "universal": false,
+      "store": "encrypted"
+    },
+    {
+      "step": "postJson",
+      "url": "https://enc-dec.app/api/dec-abyss",
+      "jsonBody": "{\"text\":\"{encrypted}\"}",
+      "referer": "",
+      "headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
+        "Origin": "https://playhydrax.com",
+        "Referer": "https://playhydrax.com/"
+      },
+      "store": "decrypted"
+    },
+    {
+      "step": "jsonPath",
+      "path": "result.sources[].url",
+      "source": "decrypted",
+      "filter": "",
+      "store": ""
+    }
+  ],
+  "videoReferer": "",
+  "outputFilter": "adaptive"
+}

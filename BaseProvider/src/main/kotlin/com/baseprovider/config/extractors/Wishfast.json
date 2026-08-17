@@ -1,0 +1,56 @@
+{
+  "id": "Wishfast",
+  "name": "wishfast",
+  "mainUrl": "https://wishfast.to",
+  "requiresReferer": true,
+  "cached": false,
+  "variants": [
+    {
+      "name": "default",
+      "headers": {}
+    }
+  ],
+  "steps": [
+    {
+      "step": "fetch",
+      "url": "{url}",
+      "referer": "",
+      "headers": {},
+      "store": "response"
+    },
+    {
+      "step": "packedJs",
+      "source": "response",
+      "store": "decoded"
+    },
+    {
+      "step": "regex",
+      "pattern": "file:\\s*\"(.*?m3u8.*?)\"",
+      "group": 1,
+      "source": "decoded",
+      "filter": "",
+      "universal": false,
+      "store": ""
+    },
+    {
+      "step": "regex",
+      "pattern": "",
+      "group": 1,
+      "source": "decoded",
+      "filter": "",
+      "universal": true,
+      "store": ""
+    },
+    {
+      "step": "regex",
+      "pattern": "",
+      "group": 1,
+      "source": "response",
+      "filter": "",
+      "universal": true,
+      "store": ""
+    }
+  ],
+  "videoReferer": "",
+  "outputFilter": "master"
+}

@@ -1,0 +1,55 @@
+{
+  "id": "Vidguardto2",
+  "name": "Vidguard",
+  "mainUrl": "https://listeamed.net",
+  "requiresReferer": false,
+  "cached": false,
+  "variants": [
+    {
+      "name": "default",
+      "headers": {}
+    }
+  ],
+  "steps": [
+    {
+      "step": "fetch",
+      "url": "{url}",
+      "referer": "",
+      "headers": {},
+      "urlReplace": {
+        "/d/": "/e/",
+        "/v/": "/e/"
+      },
+      "store": "page"
+    },
+    {
+      "step": "regex",
+      "pattern": "(?s)<script[^>]*>(.*?eval.*?)</script>",
+      "group": 1,
+      "source": "page",
+      "filter": "",
+      "universal": false,
+      "store": "script"
+    },
+    {
+      "step": "rhinoEval",
+      "source": "script",
+      "objectName": "svg",
+      "store": "jsonResult"
+    },
+    {
+      "step": "jsonPath",
+      "path": "stream",
+      "source": "jsonResult",
+      "filter": "",
+      "store": "watchlink"
+    },
+    {
+      "step": "xorSig",
+      "source": "watchlink",
+      "store": ""
+    }
+  ],
+  "videoReferer": "",
+  "outputFilter": "none"
+}

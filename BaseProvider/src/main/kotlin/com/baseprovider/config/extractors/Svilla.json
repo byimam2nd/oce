@@ -1,0 +1,64 @@
+{
+  "id": "Svilla",
+  "name": "svilla",
+  "mainUrl": "https://streamruby.com",
+  "requiresReferer": true,
+  "cached": true,
+  "idSource": {
+    "type": "regex",
+    "pattern": "embed-([a-zA-Z0-9]+)\\.html",
+    "group": 1
+  },
+  "variants": [
+    {
+      "name": "default",
+      "headers": {}
+    }
+  ],
+  "steps": [
+    {
+      "step": "postForm",
+      "url": "{mainUrl}/dl",
+      "data": {
+        "op": "embed",
+        "file_code": "{id}",
+        "auto": "1"
+      },
+      "referer": "",
+      "headers": {},
+      "store": "response"
+    },
+    {
+      "step": "regex",
+      "pattern": "",
+      "group": 1,
+      "source": "response",
+      "filter": "",
+      "universal": true,
+      "store": ""
+    },
+    {
+      "step": "packedJs",
+      "source": "response",
+      "store": "decoded"
+    },
+    {
+      "step": "regex",
+      "pattern": "file\\s*:\\s*\"([^\"]+)\"",
+      "group": 1,
+      "source": "decoded",
+      "filter": "http",
+      "universal": false,
+      "store": ""
+    },
+    {
+      "step": "regex",
+      "pattern": "",
+      "group": 1,
+      "source": "decoded",
+      "filter": "",
+      "universal": true,
+      "store": ""
+    }
+  ]
+}

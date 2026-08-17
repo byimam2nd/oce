@@ -21,6 +21,8 @@ val KNOWN_EXTRACTOR_KEYS: Set<String> = setOf(
     "url", "data", "jsonBody", "store", "filter", "universal",
     "startMarker", "endMarker", "template", "source", "path",
     "decodeUnicode", "base", "urlReplace",
+    // crypto steps
+    "keyPartsPath", "ivPath", "payloadPath", "objectName",
     // step type selector
     "step",
 )
@@ -125,6 +127,26 @@ private fun parseStep(json: JSONObject): ExtractorStep? {
         "resolveUrl" -> ExtractorStep.ResolveUrl(
             base = json.optString("base", "{url}"),
             source = json.optString("source", ""),
+        )
+        "packedJs" -> ExtractorStep.PackedJs(
+            source = json.optString("source", "response"),
+            store = json.optString("store", "decoded"),
+        )
+        "aesGcm" -> ExtractorStep.AesGcm(
+            source = json.optString("source", "response"),
+            keyPartsPath = json.optString("keyPartsPath", "playback.key_parts"),
+            ivPath = json.optString("ivPath", "playback.iv"),
+            payloadPath = json.optString("payloadPath", "playback.payload"),
+            store = json.optString("store", "plaintext"),
+        )
+        "rhinoEval" -> ExtractorStep.RhinoEval(
+            source = json.optString("source", "response"),
+            objectName = json.optString("objectName", "svg"),
+            store = json.optString("store", "jsonResult"),
+        )
+        "xorSig" -> ExtractorStep.XorSig(
+            source = json.optString("source", "jsonResult"),
+            store = json.optString("store", "watchlink"),
         )
         else -> {
             Log.w(PARSER_TAG, "Unknown step type: $step")

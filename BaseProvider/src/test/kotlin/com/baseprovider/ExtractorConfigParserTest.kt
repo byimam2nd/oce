@@ -74,6 +74,11 @@ class ExtractorConfigParserTest {
         stepsArr.put(JSONObject("""{"step": "jsonPath", "path": "sources[0].file", "source": "json"}"""))
         stepsArr.put(JSONObject("""{"step": "constructUrl", "template": "{mainUrl}/hls/{id}.m3u8"}"""))
         stepsArr.put(JSONObject("""{"step": "substring", "startMarker": "var urlPlay = '", "endMarker": "'", "source": "page"}"""))
+        stepsArr.put(JSONObject("""{"step": "resolveUrl", "base": "{url}", "source": "cdn"}"""))
+        stepsArr.put(JSONObject("""{"step": "packedJs", "source": "response", "store": "decoded"}"""))
+        stepsArr.put(JSONObject("""{"step": "aesGcm", "source": "response", "keyPartsPath": "playback.key_parts", "ivPath": "playback.iv", "payloadPath": "playback.payload", "store": "plain"}"""))
+        stepsArr.put(JSONObject("""{"step": "rhinoEval", "source": "script", "objectName": "svg", "store": "jsonResult"}"""))
+        stepsArr.put(JSONObject("""{"step": "xorSig", "source": "watchlink", "store": "sig"}"""))
 
         val json = JSONObject()
         json.put("id", "S")
@@ -81,7 +86,7 @@ class ExtractorConfigParserTest {
         json.put("steps", stepsArr)
 
         val config = fromExtractorJson("S", json)
-        assertEquals(7, config.steps.size)
+        assertEquals(13, config.steps.size)
         assertTrue(config.steps[0] is ExtractorStep.Fetch)
         assertTrue(config.steps[1] is ExtractorStep.PostForm)
         assertTrue(config.steps[2] is ExtractorStep.PostJson)
@@ -89,6 +94,11 @@ class ExtractorConfigParserTest {
         assertTrue(config.steps[4] is ExtractorStep.JsonPath)
         assertTrue(config.steps[5] is ExtractorStep.ConstructUrl)
         assertTrue(config.steps[6] is ExtractorStep.Substring)
+        assertTrue(config.steps[7] is ExtractorStep.ResolveUrl)
+        assertTrue(config.steps[8] is ExtractorStep.PackedJs)
+        assertTrue(config.steps[9] is ExtractorStep.AesGcm)
+        assertTrue(config.steps[10] is ExtractorStep.RhinoEval)
+        assertTrue(config.steps[11] is ExtractorStep.XorSig)
 
         val postForm = config.steps[1] as ExtractorStep.PostForm
         assertEquals(mapOf("op" to "embed", "file_code" to "{id}"), postForm.data)
@@ -96,6 +106,19 @@ class ExtractorConfigParserTest {
 
         val jsonPath = config.steps[4] as ExtractorStep.JsonPath
         assertEquals("sources[0].file", jsonPath.path)
+
+        val packedJs = config.steps[8] as ExtractorStep.PackedJs
+        assertEquals("decoded", packedJs.store)
+        val aesGcm = config.steps[9] as ExtractorStep.AesGcm
+        assertEquals("playback.key_parts", aesGcm.keyPartsPath)
+        assertEquals("playback.iv", aesGcm.ivPath)
+        assertEquals("playback.payload", aesGcm.payloadPath)
+        assertEquals("plain", aesGcm.store)
+        val rhino = config.steps[10] as ExtractorStep.RhinoEval
+        assertEquals("svg", rhino.objectName)
+        assertEquals("jsonResult", rhino.store)
+        val xorSig = config.steps[11] as ExtractorStep.XorSig
+        assertEquals("sig", xorSig.store)
     }
 
     @Test
@@ -126,7 +149,10 @@ class ExtractorConfigParserTest {
             "AnichinStream", "EmTurbovid", "Rumble", "Voe",
             "AWSStream", "Hownetwork", "Cloudhownetwork", "PlayCdn",
             "MegaPlay", "Gdplayer", "Dailymotion", "LuluStream",
-            "Odnoklassniki", "Filedon", "Xtwap"
+            "Odnoklassniki", "Filedon", "Xtwap",
+            "StreamRuby", "Svanila", "Svilla", "Movearnpre",
+            "Minochinos", "Morencius", "Wishfast", "AbyssPlayer",
+            "ByseSX", "Vidguardto2"
         )
         for (fileName in bundledFiles) {
             val stream = this::class.java.classLoader?.getResourceAsStream("extractors/$fileName.json")

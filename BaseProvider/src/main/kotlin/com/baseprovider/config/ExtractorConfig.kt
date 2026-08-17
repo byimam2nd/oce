@@ -161,4 +161,37 @@ sealed class ExtractorStep {
         // Sumber URL yang di-resolve: variabel berisi URL yang akan di-resolve.
         val source: String = "",
     ) : ExtractorStep()
+
+    /** Decode packed JS (Dean Edwards packer) dari teks di variabel [source]. */
+    data class PackedJs(
+        val source: String = "response",
+        // Simpan hasil decode ke variabel ini.
+        val store: String = "decoded",
+    ) : ExtractorStep()
+
+    /** Decrypt AES/GCM/NoPadding dari JSON API (pola ByseSX). */
+    data class AesGcm(
+        val source: String = "response",      // JSON berisi key_parts/iv/payload
+        val keyPartsPath: String = "playback.key_parts",
+        val ivPath: String = "playback.iv",
+        val payloadPath: String = "playback.payload",
+        // Simpan plaintext hasil decrypt ke variabel ini.
+        val store: String = "plaintext",
+    ) : ExtractorStep()
+
+    /** Eval JS via Rhino, ambil objek global lalu stringify (pola Vidguardto). */
+    data class RhinoEval(
+        val source: String = "response",      // teks script JS
+        // Nama objek global yang dijadikan JSON (default "svg").
+        val objectName: String = "svg",
+        // Simpan hasil JSON.stringify ke variabel ini.
+        val store: String = "jsonResult",
+    ) : ExtractorStep()
+
+    /** Decode signature URL (xor hex + base64 + reverse/swap) pola Vidguardto. */
+    data class XorSig(
+        val source: String = "jsonResult",    // variabel berisi URL dengan sig=
+        // Simpan hasil decode ke variabel ini.
+        val store: String = "watchlink",
+    ) : ExtractorStep()
 }

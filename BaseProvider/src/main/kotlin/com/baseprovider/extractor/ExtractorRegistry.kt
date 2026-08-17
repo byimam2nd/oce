@@ -33,7 +33,10 @@ object ProviderExtractors {
         "AnichinStream", "EmTurbovid", "Rumble", "Voe",
         "AWSStream", "Hownetwork", "Cloudhownetwork", "PlayCdn",
         "MegaPlay", "Gdplayer", "Dailymotion", "LuluStream",
-        "Odnoklassniki", "Filedon", "Xtwap"
+        "Odnoklassniki", "Filedon", "Xtwap",
+        "StreamRuby", "Svanila", "Svilla", "Movearnpre",
+        "Minochinos", "Morencius", "Wishfast", "AbyssPlayer",
+        "ByseSX", "Vidguardto2"
     )
 
     private fun buildList(): List<ExtractorApi> {

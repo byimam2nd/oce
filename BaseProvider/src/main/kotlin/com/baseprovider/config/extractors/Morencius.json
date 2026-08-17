@@ -1,0 +1,47 @@
+{
+  "id": "Morencius",
+  "name": "Morencius",
+  "mainUrl": "https://morencius.com",
+  "requiresReferer": true,
+  "cached": false,
+  "variants": [
+    {
+      "name": "default",
+      "headers": {}
+    }
+  ],
+  "steps": [
+    {
+      "step": "fetch",
+      "url": "{url}",
+      "referer": "",
+      "headers": {},
+      "store": "response"
+    },
+    {
+      "step": "packedJs",
+      "source": "response",
+      "store": "decoded"
+    },
+    {
+      "step": "regex",
+      "pattern": "",
+      "group": 1,
+      "source": "decoded",
+      "filter": "",
+      "universal": true,
+      "store": ""
+    },
+    {
+      "step": "regex",
+      "pattern": "",
+      "group": 1,
+      "source": "response",
+      "filter": "",
+      "universal": true,
+      "store": ""
+    }
+  ],
+  "videoReferer": "",
+  "outputFilter": "master"
+}
