@@ -33,7 +33,7 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
     override var mainUrl = config.mainUrl
     override val requiresReferer = config.requiresReferer
 
-    private class RunState(
+    private inner class RunState(
         val url: String,
         val referer: String?,
         val id: String?,
