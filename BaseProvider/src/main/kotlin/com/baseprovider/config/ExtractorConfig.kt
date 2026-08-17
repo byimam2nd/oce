@@ -117,17 +117,28 @@ sealed class ExtractorStep {
         val filter: String = "",
         // true = pakai pola universal (mp4|m3u8|mkv|mpd|webm|ts|mov).
         val universal: Boolean = false,
+        // Decode unicode escapes (\uXXXX) pada hasil (pola OkRu).
+        val decodeUnicode: Boolean = false,
+        // Jika diisi: simpan match pertama (setelah filter) ke variabel, bukan
+        // jadi URL video. Berguna untuk menangkap token/id/payload untuk step
+        // berikutnya (pola Gdplayer kaken, AbyssPlayer encrypted, MegaPlay id).
+        val store: String = "",
     ) : ExtractorStep()
 
     /** Ambil URL dari JSON (mis. "file", "videoSource", "sources[0].file"). */
     data class JsonPath(
         val path: String,
         val source: String = "response",
+        // Jika diisi: simpan nilai pertama (String) ke variabel, bukan emit.
+        val store: String = "",
     ) : ExtractorStep()
 
     /** Bangun URL video langsung dari template (pola AnichinStream). */
     data class ConstructUrl(
         val template: String,            // mis. "{mainUrl}/hls/{id}.m3u8"
+        // Jika diisi: simpan hasil ke variabel (bukan emit URL). Berguna untuk
+        // membangun URL API menengah (pola Dailymotion/Gdplayer).
+        val store: String = "",
     ) : ExtractorStep()
 
     /** Ambil URL di antara dua marker (pola EmTurbovid `var urlPlay = '...'`). */
@@ -135,5 +146,14 @@ sealed class ExtractorStep {
         val startMarker: String,
         val endMarker: String,
         val source: String = "response",
+        // Jika diisi: simpan hasil ke variabel, bukan emit URL.
+        val store: String = "",
+    ) : ExtractorStep()
+
+    /** Resolve URL relatif/`//`/`/path` terhadap base (pola Xtwap, PlayCdn). */
+    data class ResolveUrl(
+        val base: String = "{url}",      // template base, mis. "{url}" atau "{mainUrl}"
+        // Sumber URL yang di-resolve: variabel berisi URL yang akan di-resolve.
+        val source: String = "",
     ) : ExtractorStep()
 }

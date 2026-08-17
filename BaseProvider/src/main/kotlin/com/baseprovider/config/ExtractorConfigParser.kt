@@ -20,6 +20,7 @@ val KNOWN_EXTRACTOR_KEYS: Set<String> = setOf(
     // step (shared)
     "url", "data", "jsonBody", "store", "filter", "universal",
     "startMarker", "endMarker", "template", "source", "path",
+    "decodeUnicode", "base",
     // step type selector
     "step",
 )
@@ -101,18 +102,27 @@ private fun parseStep(json: JSONObject): ExtractorStep? {
             source = json.optString("source", "response"),
             filter = json.optString("filter", ""),
             universal = json.optBoolean("universal", false),
+            decodeUnicode = json.optBoolean("decodeUnicode", false),
+            store = json.optString("store", ""),
         )
         "jsonPath" -> ExtractorStep.JsonPath(
             path = json.optString("path", ""),
             source = json.optString("source", "response"),
+            store = json.optString("store", ""),
         )
         "constructUrl" -> ExtractorStep.ConstructUrl(
             template = json.optString("template", ""),
+            store = json.optString("store", ""),
         )
         "substring" -> ExtractorStep.Substring(
             startMarker = json.optString("startMarker", ""),
             endMarker = json.optString("endMarker", ""),
             source = json.optString("source", "response"),
+            store = json.optString("store", ""),
+        )
+        "resolveUrl" -> ExtractorStep.ResolveUrl(
+            base = json.optString("base", "{url}"),
+            source = json.optString("source", ""),
         )
         else -> {
             Log.w(PARSER_TAG, "Unknown step type: $step")

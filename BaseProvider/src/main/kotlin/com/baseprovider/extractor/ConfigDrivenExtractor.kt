@@ -4,6 +4,7 @@ import com.baseprovider.config.ExtractorConfig
 import com.baseprovider.config.ExtractorStep
 import com.baseprovider.config.ExtractorVariant
 import com.baseprovider.log.*
+import com.baseprovider.model.fixUrlSmart
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.extractors.*
@@ -93,8 +94,7 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
         }
     }
 
-    private suspend fun extractId(url: String): String? {
-        val source = config.idSource ?: return null
+    internal suspend fun extractId(url: String): String? {        val source = config.idSource ?: return null
         return when (source.type) {
             "query" -> runCatching {
                 Regex("""[?&]${source.param}=([^&]+)""").find(url)?.groupValues?.get(1)
@@ -159,17 +159,37 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
                             .toSet()
                     }.getOrDefault(emptySet())
                 }
-                urls.filter { step.filter.isBlank() || it.contains(step.filter) }
-                    .forEach { state.videoUrls.add(it.replace("\\/", "/")) }
+                val decoded = urls.map { url ->
+                    val u = url.replace("\\/", "/")
+                    if (step.decodeUnicode) MasterLinkGenerator.decodeUnicodeEscapes(u) else u
+                }
+                val filtered = decoded.filter { step.filter.isBlank() || it.contains(step.filter) }
+                if (step.store.isNotBlank()) {
+                    filtered.firstOrNull()?.let { state.variables[step.store] = it }
+                } else {
+                    filtered.forEach { state.videoUrls.add(it) }
+                }
             }
             is ExtractorStep.JsonPath -> {
                 val text = state.variables[step.source].orEmpty()
                 when (val resolved = resolveJsonPath(text, step.path)) {
-                    is String -> if (resolved.isNotBlank()) state.videoUrls.add(resolved)
+                    is String -> {
+                        if (resolved.isNotBlank()) {
+                            if (step.store.isNotBlank()) state.variables[step.store] = resolved
+                            else state.videoUrls.add(resolved)
+                        }
+                    }
                     is JSONArray -> {
-                        for (i in 0 until resolved.length()) {
-                            val value = resolved.optString(i, "")
-                            if (value.isNotBlank()) state.videoUrls.add(value)
+                        if (step.store.isNotBlank()) {
+                            for (i in 0 until resolved.length()) {
+                                val value = resolved.optString(i, "")
+                                if (value.isNotBlank()) { state.variables[step.store] = value; break }
+                            }
+                        } else {
+                            for (i in 0 until resolved.length()) {
+                                val value = resolved.optString(i, "")
+                                if (value.isNotBlank()) state.videoUrls.add(value)
+                            }
                         }
                     }
                     else -> Unit
@@ -177,7 +197,10 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
             }
             is ExtractorStep.ConstructUrl -> {
                 val built = state.resolveTemplate(step.template)
-                if (built.isNotBlank()) state.videoUrls.add(built)
+                if (built.isNotBlank()) {
+                    if (step.store.isNotBlank()) state.variables[step.store] = built
+                    else state.videoUrls.add(built)
+                }
             }
             is ExtractorStep.Substring -> {
                 val text = state.variables[step.source].orEmpty()
@@ -187,42 +210,106 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
                     val end = text.indexOf(step.endMarker, from)
                     if (end >= 0) {
                         val value = text.substring(from, end)
-                        if (value.isNotBlank()) state.videoUrls.add(value)
+                        if (value.isNotBlank()) {
+                            if (step.store.isNotBlank()) state.variables[step.store] = value
+                            else state.videoUrls.add(value)
+                        }
                     }
+                }
+            }
+            is ExtractorStep.ResolveUrl -> {
+                val base = state.resolveTemplate(step.base)
+                val targets = if (step.source.isNotBlank()) {
+                    state.variables[step.source]?.takeIf { it.isNotBlank() }?.let { listOf(it) }
+                        ?: emptyList()
+                } else {
+                    state.videoUrls.toList()
+                }
+                val resolved = targets.map { fixUrlSmart(it, base).ifBlank { it } }
+                if (step.source.isNotBlank()) {
+                    resolved.firstOrNull()?.let { state.variables[step.source] = it }
+                } else {
+                    state.videoUrls.clear()
+                    resolved.filter { it.isNotBlank() }.forEach { state.videoUrls.add(it) }
                 }
             }
         }
     }
 
-    /** Ambil nilai dari JSON: "file", "sources[0].file", "videoSource". */
-    private fun resolveJsonPath(text: String, path: String): Any? {
+    /** Ambil nilai dari JSON: "file", "sources[0].file", "qualities.auto[].url". */
+    internal fun resolveJsonPath(text: String, path: String): Any? {
         if (path.isBlank() || text.isBlank()) return null
         return try {
-            val root = JSONObject(text)
-            var current: Any = root
-            for (segment in path.split(".")) {
-                val arrayIdx = Regex("""^(\w+)\[(\d+)\]$""").find(segment)
-                if (arrayIdx != null) {
-                    val name = arrayIdx.groupValues[1]
-                    val idx = arrayIdx.groupValues[2].toInt()
-                    current = when (current) {
-                        is JSONObject -> current.optJSONArray(name)
-                        else -> null
-                    } ?: return null
-                    current = (current as JSONArray).opt(idx) ?: return null
-                } else {
-                    current = when (current) {
-                        is JSONObject -> {
-                            val v = current.opt(segment)
-                            if (v is JSONArray && v.length() == 1) v.opt(0) else v
-                        }
-                        else -> null
-                    } ?: return null
-                }
-            }
-            current
+            resolveJsonPathRecursive(JSONObject(text), path.split(".").toMutableList())
         } catch (_: Exception) {
             null
+        }
+    }
+
+    /**
+     * Traversal JSON mendukung:
+     *  - "a.b.c"          → objek bertingkat
+     *  - "arr[0].file"    → indeks array
+     *  - "qualities.auto[].url" → wildcard: kumpulkan `.url` dari SEMUA elemen
+     *    (array) atau semua nilai (object). Hasil akhir berupa JSONArray of String.
+     *    Jika wildcard menghasilkan objek bernilai tunggal (JSONArray len 1),
+     *    di-unwrap jadi String langsung.
+     */
+    private fun resolveJsonPathRecursive(current: Any, segments: MutableList<String>): Any? {
+        if (segments.isEmpty()) {
+            return when (current) {
+                is String -> current
+                is JSONArray -> if (current.length() == 1) current.opt(0) else current
+                else -> current
+            }
+        }
+        val segment = segments.removeAt(0)
+        val wildcard = Regex("""^(\w+)\[\]$""").find(segment)
+        if (wildcard != null) {
+            val name = wildcard.groupValues[1]
+            val children = when (current) {
+                is JSONObject -> {
+                    val v = current.opt(name)
+                    when (v) {
+                        is JSONArray -> v
+                        is JSONObject -> JSONArray().apply { keys().forEach { put(it) } }
+                        else -> null
+                    }
+                }
+                else -> null
+            } ?: return null
+            val results = JSONArray()
+            for (i in 0 until children.length()) {
+                val child = children.opt(i) ?: continue
+                val childSegments = ArrayList(segments)
+                val value = resolveJsonPathRecursive(child, childSegments)
+                if (value != null) {
+                    if (value is JSONArray) for (j in 0 until value.length()) results.put(value.opt(j))
+                    else results.put(value)
+                }
+            }
+            return if (results.length() == 0) null
+            else if (results.length() == 1 && results.opt(0) is String) results.opt(0)
+            else results
+        }
+        val arrayIdx = Regex("""^(\w+)\[(\d+)\]$""").find(segment)
+        return if (arrayIdx != null) {
+            val name = arrayIdx.groupValues[1]
+            val idx = arrayIdx.groupValues[2].toInt()
+            val child = when (current) {
+                is JSONObject -> current.optJSONArray(name)?.opt(idx)
+                else -> null
+            } ?: return null
+            resolveJsonPathRecursive(child, segments)
+        } else {
+            val child = when (current) {
+                is JSONObject -> {
+                    val v = current.opt(segment)
+                    if (v is JSONArray && v.length() == 1) v.opt(0) else v
+                }
+                else -> null
+            } ?: return null
+            resolveJsonPathRecursive(child, segments)
         }
     }
 
