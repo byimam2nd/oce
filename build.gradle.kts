@@ -63,7 +63,8 @@ subprojects {
         apply(plugin = "io.gitlab.arturbosch.detekt")
 
         cloudstream {
-            val repo = System.getenv("GITHUB_REPOSITORY") 
+            val repo = System.getenv("OCE_REPO_URL")
+                ?: System.getenv("GITHUB_REPOSITORY")
                 ?: localProperties.getProperty("REPO_URL")
                 ?: "https://github.com/imam2nd/cloudstream-extensions-phisher"
             setRepo(repo)

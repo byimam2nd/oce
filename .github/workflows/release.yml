@@ -1,4 +1,4 @@
-name: CI/CD - Release
+name: CI/CD - Release (Stable)
 
 on:
   push:
@@ -8,25 +8,20 @@ on:
 
 jobs:
   # ========================================
-  # BUILD ALL PROVIDERS FOR RELEASE
+  # BUILD + TEST (always runs)
   # ========================================
-  release:
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     timeout-minutes: 15
 
     steps:
-      - name: Checkout source
+      - name: Checkout source (private)
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Pre-populate JitPack artifact in local Maven repo
         run: |
-          # Submodule artifact: com.github.recloudstream.gradle:gradle:master-SNAPSHOT
-          # JitPack root artifact is an empty wrapper; the actual plugin class files
-          # are in the "gradle" submodule at the /gradle/gradle/ Maven path.
           BASE="$GITHUB_WORKSPACE/../jitpack-local/com/github/recloudstream/gradle"
           LOCAL_REPO="$BASE/gradle/master-SNAPSHOT"
           mkdir -p "$LOCAL_REPO"
@@ -59,40 +54,82 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Set Build Environment
+        env:
+          OCE_TG_TOKEN: ${{ secrets.OCE_TG_TOKEN }}
+          OCE_TG_GROUP_ID: ${{ secrets.OCE_TG_GROUP_ID }}
+          OCE_TG_THREAD_ID: ${{ secrets.OCE_TG_THREAD_ID }}
         run: |
           TAG_NAME=${GITHUB_REF_NAME#v}
           echo "BUILD_TIMESTAMP=$(TZ='Asia/Jakarta' date +'%Y-%m-%d %H:%M')" >> $GITHUB_ENV
           echo "OCE_VERSION=${TAG_NAME}" >> $GITHUB_ENV
           echo "✅ Build environment set for tag: $TAG_NAME"
 
-      - name: Build Plugins
+      - name: Validate provider configs
+        run: |
+          python3 scripts/validate_providers.py
+
+      - name: Build Plugins (public repo URL)
+        env:
+          # Force plugins.json .cs3 URLs to point at the PUBLIC repo,
+          # even though this workflow runs in the private source repo.
+          OCE_REPO_URL: https://github.com/byimam2nd/oce
         run: |
           chmod +x ./gradlew
           ./gradlew make makePluginsJson --stacktrace
-          
-      - name: Patch plugins.json for Release
-        run: |
+
           TAG_NAME=${GITHUB_REF#refs/tags/}
-          # If triggered manually and no tag, use 'latest' or a dummy tag
           if [[ $TAG_NAME == refs/heads/* ]]; then
             TAG_NAME="latest"
           fi
           echo "Using Tag: $TAG_NAME"
-          
+
           # Replace raw.githubusercontent.com URLs with release download URLs
           # Original: https://raw.githubusercontent.com/byimam2nd/oce/builds/ProviderName.cs3
           # Target: https://github.com/byimam2nd/oce/releases/download/$TAG_NAME/ProviderName.cs3
           sed -i "s|https://raw.githubusercontent.com/byimam2nd/oce/builds/|https://github.com/byimam2nd/oce/releases/download/$TAG_NAME/|g" build/plugins.json
-          
+
           # Move artifacts to a staging directory
           mkdir -p release-artifacts
           cp **/build/*.cs3 release-artifacts/ 2>/dev/null || true
           cp build/plugins.json release-artifacts/ 2>/dev/null || true
           rm -f release-artifacts/BaseProvider.cs3
 
-      - name: Create GitHub Release
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: release-artifacts/
+
+  # ========================================
+  # CREATE GITHUB RELEASE on PUBLIC repo
+  # (only when GitHub App secret is configured)
+  # ========================================
+  release:
+    needs: build
+    if: ${{ secrets.OCE_DISTRIBUTOR_APP_ID != '' && secrets.OCE_DISTRIBUTOR_APP_PEM != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.OCE_DISTRIBUTOR_APP_ID }}
+          private-key: ${{ secrets.OCE_DISTRIBUTOR_APP_PEM }}
+          owner: byimam2nd
+          repositories: oce
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+          path: release-artifacts
+
+      - name: Create GitHub Release (public repo)
         uses: softprops/action-gh-release@v2
         with:
+          repository: byimam2nd/oce
           files: |
             release-artifacts/*.cs3
             release-artifacts/plugins.json
@@ -100,4 +137,4 @@ jobs:
           draft: false
           prerelease: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
