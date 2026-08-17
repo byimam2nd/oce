@@ -1,0 +1,43 @@
+{
+  "id": "Dailymotion",
+  "name": "Dailymotion",
+  "mainUrl": "https://www.dailymotion.com",
+  "requiresReferer": false,
+  "cached": false,
+  "idSource": {
+    "type": "regex",
+    "pattern": "(?:[?&]video=|/(?:video|embed/video)/)([kx][a-zA-Z0-9]+)"
+  },
+  "variants": [
+    {
+      "name": "default",
+      "headers": {}
+    }
+  ],
+  "steps": [
+    {
+      "step": "constructUrl",
+      "template": "{mainUrl}/embed/video/{id}",
+      "store": "embedUrl"
+    },
+    {
+      "step": "constructUrl",
+      "template": "{mainUrl}/player/metadata/video/{id}",
+      "store": "metadataUrl"
+    },
+    {
+      "step": "fetch",
+      "url": "{metadataUrl}",
+      "referer": "{embedUrl}",
+      "headers": {},
+      "store": "meta"
+    },
+    {
+      "step": "jsonPath",
+      "path": "qualities.auto[].url",
+      "source": "meta",
+      "filter": ".m3u8",
+      "store": ""
+    }
+  ]
+}

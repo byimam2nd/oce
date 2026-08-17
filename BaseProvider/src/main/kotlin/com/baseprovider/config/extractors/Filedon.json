@@ -1,0 +1,32 @@
+{
+  "id": "Filedon",
+  "name": "Filedon",
+  "mainUrl": "https://filedon.co",
+  "requiresReferer": true,
+  "cached": false,
+  "variants": [
+    {
+      "name": "default",
+      "headers": {}
+    }
+  ],
+  "steps": [
+    {
+      "step": "fetch",
+      "url": "{url}",
+      "referer": "{url}",
+      "headers": {},
+      "store": "response"
+    },
+    {
+      "step": "regex",
+      "pattern": "",
+      "group": 1,
+      "source": "response",
+      "filter": "",
+      "universal": true,
+      "store": ""
+    }
+  ],
+  "outputFilter": "master"
+}

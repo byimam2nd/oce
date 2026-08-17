@@ -1,0 +1,81 @@
+{
+  "id": "Odnoklassniki",
+  "name": "OkRu",
+  "mainUrl": "https://ok.ru",
+  "requiresReferer": false,
+  "cached": false,
+  "variants": [
+    {
+      "name": "default",
+      "headers": {
+        "Accept": "*/*",
+        "Connection": "keep-alive",
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "cross-site",
+        "Origin": "https://ok.ru",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "step": "fetch",
+      "url": "{url}",
+      "referer": "",
+      "headers": {},
+      "urlReplace": {
+        "/videoembed/": "/video/"
+      },
+      "store": "videoPage"
+    },
+    {
+      "step": "regex",
+      "pattern": "\"hlsManifestUrl\"\\s*:\\s*\"([^\"]+)\"",
+      "group": 1,
+      "source": "videoPage",
+      "filter": "",
+      "universal": false,
+      "decodeUnicode": true,
+      "store": ""
+    },
+    {
+      "step": "regex",
+      "pattern": "",
+      "group": 1,
+      "source": "videoPage",
+      "filter": "",
+      "universal": true,
+      "store": ""
+    },
+    {
+      "step": "fetch",
+      "url": "{url}",
+      "referer": "",
+      "headers": {},
+      "urlReplace": {
+        "/video/": "/videoembed/"
+      },
+      "store": "embedPage"
+    },
+    {
+      "step": "regex",
+      "pattern": "\"hlsManifestUrl\"\\s*:\\s*\"([^\"]+)\"",
+      "group": 1,
+      "source": "embedPage",
+      "filter": "",
+      "universal": false,
+      "decodeUnicode": true,
+      "store": ""
+    },
+    {
+      "step": "regex",
+      "pattern": "",
+      "group": 1,
+      "source": "embedPage",
+      "filter": "",
+      "universal": true,
+      "store": ""
+    }
+  ]
+}

@@ -123,7 +123,10 @@ class ExtractorConfigParserTest {
     @Test
     fun `all bundled extractor configs parse without unknown keys`() {
         val bundledFiles = listOf(
-            "AnichinStream", "EmTurbovid", "Rumble", "Voe"
+            "AnichinStream", "EmTurbovid", "Rumble", "Voe",
+            "AWSStream", "Hownetwork", "Cloudhownetwork", "PlayCdn",
+            "MegaPlay", "Gdplayer", "Dailymotion", "LuluStream",
+            "Odnoklassniki", "Filedon", "Xtwap"
         )
         for (fileName in bundledFiles) {
             val stream = this::class.java.classLoader?.getResourceAsStream("extractors/$fileName.json")

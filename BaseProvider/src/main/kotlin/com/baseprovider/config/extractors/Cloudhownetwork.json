@@ -1,0 +1,38 @@
+{
+  "id": "Cloudhownetwork",
+  "name": "Cloudhownetwork",
+  "mainUrl": "https://cloud.hownetwork.xyz",
+  "requiresReferer": true,
+  "cached": true,
+  "idSource": {
+    "type": "regex",
+    "pattern": "[?&]id=([^&]+)"
+  },
+  "variants": [
+    {
+      "name": "default",
+      "headers": {}
+    }
+  ],
+  "steps": [
+    {
+      "step": "postForm",
+      "url": "{mainUrl}/api2.php?id={id}",
+      "data": {
+        "r": "",
+        "d": "{mainUrl}"
+      },
+      "referer": "{url}",
+      "headers": {
+        "X-Requested-With": "XMLHttpRequest"
+      },
+      "store": "response"
+    },
+    {
+      "step": "jsonPath",
+      "path": "file",
+      "source": "response",
+      "store": ""
+    }
+  ]
+}

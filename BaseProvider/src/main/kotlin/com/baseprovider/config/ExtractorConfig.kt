@@ -88,6 +88,9 @@ sealed class ExtractorStep {
         val referer: String = "",
         val headers: Map<String, String> = emptyMap(),
         val store: String = "response",
+        // Transformasi URL (replace substring) sebelum request. Dipakai untuk
+        // pola OkRu: /videoembed/ -> /video/ atau sebaliknya.
+        val urlReplace: Map<String, String> = emptyMap(),
     ) : ExtractorStep()
 
     /** POST form-encoded. Hasil disimpan ke variabel [store]. */
@@ -129,6 +132,8 @@ sealed class ExtractorStep {
     data class JsonPath(
         val path: String,
         val source: String = "response",
+        // Filter: hasil harus mengandung substring ini. Kosong = semua.
+        val filter: String = "",
         // Jika diisi: simpan nilai pertama (String) ke variabel, bukan emit.
         val store: String = "",
     ) : ExtractorStep()

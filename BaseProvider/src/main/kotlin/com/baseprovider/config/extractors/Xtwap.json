@@ -1,0 +1,36 @@
+{
+  "id": "Xtwap",
+  "name": "Xtwap",
+  "mainUrl": "https://xtwap.top",
+  "requiresReferer": true,
+  "cached": false,
+  "variants": [
+    {
+      "name": "default",
+      "headers": {}
+    }
+  ],
+  "steps": [
+    {
+      "step": "fetch",
+      "url": "{url}",
+      "referer": "{url}",
+      "headers": {},
+      "store": "response"
+    },
+    {
+      "step": "regex",
+      "pattern": "\"file\":\"([^\"]+)\"",
+      "group": 1,
+      "source": "response",
+      "filter": "",
+      "universal": false,
+      "store": "filePath"
+    },
+    {
+      "step": "resolveUrl",
+      "base": "{url}",
+      "source": "filePath"
+    }
+  ]
+}

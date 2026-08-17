@@ -20,7 +20,7 @@ val KNOWN_EXTRACTOR_KEYS: Set<String> = setOf(
     // step (shared)
     "url", "data", "jsonBody", "store", "filter", "universal",
     "startMarker", "endMarker", "template", "source", "path",
-    "decodeUnicode", "base",
+    "decodeUnicode", "base", "urlReplace",
     // step type selector
     "step",
 )
@@ -81,6 +81,7 @@ private fun parseStep(json: JSONObject): ExtractorStep? {
             referer = json.optString("referer", ""),
             headers = jsonObjectToMap(json.optJSONObject("headers")),
             store = json.optString("store", "response"),
+            urlReplace = jsonObjectToMap(json.optJSONObject("urlReplace")),
         )
         "postForm" -> ExtractorStep.PostForm(
             url = json.optString("url", ""),
@@ -108,6 +109,7 @@ private fun parseStep(json: JSONObject): ExtractorStep? {
         "jsonPath" -> ExtractorStep.JsonPath(
             path = json.optString("path", ""),
             source = json.optString("source", "response"),
+            filter = json.optString("filter", ""),
             store = json.optString("store", ""),
         )
         "constructUrl" -> ExtractorStep.ConstructUrl(

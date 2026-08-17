@@ -29,7 +29,12 @@ object ProviderExtractors {
      * Id di luar set ini memakai class legacy — non-breaking & bisa rollback:
      * jika config gagal load, extractor fallback ke class legacy.
      */
-    private val configDrivenIds = setOf<String>()
+    private val configDrivenIds = setOf(
+        "AnichinStream", "EmTurbovid", "Rumble", "Voe",
+        "AWSStream", "Hownetwork", "Cloudhownetwork", "PlayCdn",
+        "MegaPlay", "Gdplayer", "Dailymotion", "LuluStream",
+        "Odnoklassniki", "Filedon", "Xtwap"
+    )
 
     private fun buildList(): List<ExtractorApi> {
         val result = mutableListOf<ExtractorApi>()

@@ -1,0 +1,42 @@
+{
+  "id": "PlayCdn",
+  "name": "PlayCdn",
+  "mainUrl": "https://playcdn.de",
+  "requiresReferer": true,
+  "cached": true,
+  "idSource": {
+    "type": "regex",
+    "pattern": "video\\.php\\?id=([a-zA-Z0-9]+)"
+  },
+  "videoReferer": "{mainUrl}/",
+  "variants": [
+    {
+      "name": "default",
+      "headers": {}
+    }
+  ],
+  "steps": [
+    {
+      "step": "postForm",
+      "url": "{mainUrl}/api2.php?id={id}",
+      "data": {
+        "r": "",
+        "d": "playcdn.de"
+      },
+      "referer": "{url}",
+      "headers": {},
+      "store": "response"
+    },
+    {
+      "step": "jsonPath",
+      "path": "file",
+      "source": "response",
+      "store": "file"
+    },
+    {
+      "step": "resolveUrl",
+      "base": "{mainUrl}",
+      "source": "file"
+    }
+  ]
+}

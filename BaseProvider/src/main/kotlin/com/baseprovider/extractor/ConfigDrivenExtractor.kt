@@ -43,12 +43,18 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
         val variables = mutableMapOf<String, String>()
         val videoUrls = mutableSetOf<String>()
 
-        fun resolveTemplate(template: String): String =
-            template
+        fun resolveTemplate(template: String): String {
+            var out = template
                 .replace("{mainUrl}", config.mainUrl)
                 .replace("{url}", url)
                 .replace("{id}", id.orEmpty())
                 .replace("{referer}", referer.orEmpty())
+                .replace("{ts}", System.currentTimeMillis().toString())
+            variables.forEach { (key, value) ->
+                out = out.replace("{$key}", value)
+            }
+            return out
+        }
 
         fun resolveHeaders(stepHeaders: Map<String, String>): Map<String, String> {
             val merged = HashMap(variant.headers)
@@ -94,7 +100,7 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
         }
     }
 
-    internal suspend fun extractId(url: String): String? {        val source = config.idSource ?: return null
+    internal fun extractId(url: String): String? {        val source = config.idSource ?: return null
         return when (source.type) {
             "query" -> runCatching {
                 Regex("""[?&]${source.param}=([^&]+)""").find(url)?.groupValues?.get(1)
@@ -111,7 +117,8 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
     private suspend fun executeStep(step: ExtractorStep, state: RunState) {
         when (step) {
             is ExtractorStep.Fetch -> {
-                val target = state.resolveTemplate(step.url)
+                var target = state.resolveTemplate(step.url)
+                step.urlReplace.forEach { (from, to) -> target = target.replace(from, to) }
                 val text = if (config.cached) {
                     cachedGetText(target, referer = state.resolveReferer(step.referer),
                         headers = state.resolveHeaders(step.headers))
@@ -172,23 +179,20 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
             }
             is ExtractorStep.JsonPath -> {
                 val text = state.variables[step.source].orEmpty()
-                when (val resolved = resolveJsonPath(text, step.path)) {
-                    is String -> {
-                        if (resolved.isNotBlank()) {
-                            if (step.store.isNotBlank()) state.variables[step.store] = resolved
-                            else state.videoUrls.add(resolved)
-                        }
+                val emit = { value: String ->
+                    if (step.filter.isBlank() || value.contains(step.filter)) {
+                        if (step.store.isNotBlank()) state.variables[step.store] = value
+                        else state.videoUrls.add(value)
                     }
+                }
+                when (val resolved = resolveJsonPath(text, step.path)) {
+                    is String -> if (resolved.isNotBlank()) emit(resolved)
                     is JSONArray -> {
-                        if (step.store.isNotBlank()) {
-                            for (i in 0 until resolved.length()) {
-                                val value = resolved.optString(i, "")
-                                if (value.isNotBlank()) { state.variables[step.store] = value; break }
-                            }
-                        } else {
-                            for (i in 0 until resolved.length()) {
-                                val value = resolved.optString(i, "")
-                                if (value.isNotBlank()) state.videoUrls.add(value)
+                        for (i in 0 until resolved.length()) {
+                            val value = resolved.optString(i, "")
+                            if (value.isNotBlank()) {
+                                emit(value)
+                                if (step.store.isNotBlank() && state.variables.containsKey(step.store)) break
                             }
                         }
                     }
@@ -219,16 +223,12 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
             }
             is ExtractorStep.ResolveUrl -> {
                 val base = state.resolveTemplate(step.base)
-                val targets = if (step.source.isNotBlank()) {
-                    state.variables[step.source]?.takeIf { it.isNotBlank() }?.let { listOf(it) }
-                        ?: emptyList()
-                } else {
-                    state.videoUrls.toList()
-                }
-                val resolved = targets.map { fixUrlSmart(it, base).ifBlank { it } }
                 if (step.source.isNotBlank()) {
-                    resolved.firstOrNull()?.let { state.variables[step.source] = it }
+                    val raw = state.variables[step.source].orEmpty()
+                    val resolved = fixUrlSmart(raw, base).ifBlank { raw }
+                    if (resolved.isNotBlank()) state.videoUrls.add(resolved)
                 } else {
+                    val resolved = state.videoUrls.map { fixUrlSmart(it, base).ifBlank { it } }
                     state.videoUrls.clear()
                     resolved.filter { it.isNotBlank() }.forEach { state.videoUrls.add(it) }
                 }

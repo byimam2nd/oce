@@ -1,0 +1,49 @@
+{
+  "id": "Gdplayer",
+  "name": "Gdplayer",
+  "mainUrl": "https://gdplayer.to",
+  "requiresReferer": true,
+  "cached": false,
+  "variants": [
+    {
+      "name": "default",
+      "headers": {}
+    }
+  ],
+  "steps": [
+    {
+      "step": "fetch",
+      "url": "{url}",
+      "referer": "{url}",
+      "headers": {},
+      "store": "page"
+    },
+    {
+      "step": "substring",
+      "startMarker": "kaken = \"",
+      "endMarker": "\"",
+      "source": "page",
+      "store": "kaken"
+    },
+    {
+      "step": "constructUrl",
+      "template": "{mainUrl}/api/?{kaken}=&_={ts}",
+      "store": "apiUrl"
+    },
+    {
+      "step": "fetch",
+      "url": "{apiUrl}",
+      "referer": "{url}",
+      "headers": {
+        "X-Requested-With": "XMLHttpRequest"
+      },
+      "store": "apiResponse"
+    },
+    {
+      "step": "jsonPath",
+      "path": "sources[].file",
+      "source": "apiResponse",
+      "store": ""
+    }
+  ]
+}

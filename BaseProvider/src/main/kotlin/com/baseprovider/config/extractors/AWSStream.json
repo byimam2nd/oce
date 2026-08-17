@@ -1,0 +1,37 @@
+{
+  "id": "AWSStream",
+  "name": "AWSStream",
+  "mainUrl": "https://z.awstream.net",
+  "requiresReferer": true,
+  "cached": true,
+  "idSource": {
+    "type": "path"
+  },
+  "variants": [
+    {
+      "name": "default",
+      "headers": {}
+    }
+  ],
+  "steps": [
+    {
+      "step": "postForm",
+      "url": "{mainUrl}/player/index.php?data={id}&do=getVideo",
+      "data": {
+        "hash": "{id}",
+        "r": "{mainUrl}"
+      },
+      "referer": "",
+      "headers": {
+        "x-requested-with": "XMLHttpRequest"
+      },
+      "store": "response"
+    },
+    {
+      "step": "jsonPath",
+      "path": "videoSource",
+      "source": "response",
+      "store": ""
+    }
+  ]
+}
