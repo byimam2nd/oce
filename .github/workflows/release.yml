@@ -138,7 +138,6 @@ jobs:
           files: |
             release-artifacts/*.cs3
             release-artifacts/plugins.json
-          generate_release_notes: true
           draft: false
           prerelease: false
         env:
