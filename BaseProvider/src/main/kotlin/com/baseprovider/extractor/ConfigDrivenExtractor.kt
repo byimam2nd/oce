@@ -272,7 +272,12 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
                     val v = current.opt(name)
                     when (v) {
                         is JSONArray -> v
-                        is JSONObject -> JSONArray().apply { keys().forEach { put(it) } }
+                        is JSONObject -> {
+                            val arr = JSONArray()
+                            val it = v.keys()
+                            while (it.hasNext()) arr.put(it.next())
+                            arr
+                        }
                         else -> null
                     }
                 }
