@@ -19,9 +19,10 @@ import java.util.concurrent.ConcurrentHashMap
  *  - BROWSER_LIKE : header browser penuh (Accept-Language, Sec-Fetch-*, Origin)
  *  - EXPLICIT     : headers asli yang diset extractor (jika bukan minimal)
  * Combo valid pertama (2xx/3xx) yang selesai langsung MENANG — sisanya
- * di-cancel (uji berjalan serentak, tidak menunggu yang lambat). Hasil
- * di-cache per-host sehingga host berikutnya tidak di-probe ulang dalam satu
- * sesi.
+ * di-cancel (uji berjalan serentak, tidak menunggu yang lambat). Probe
+ * membaca body sungguhan (Range 1MB) sehingga pemenang = combo dengan
+ * throughput terbaik untuk streaming, bukan sekadar latency. Hasil di-cache
+ * per-host sehingga host berikutnya tidak di-probe ulang dalam satu sesi.
  *
  * Probe BLOCKING: link TIDAK dikirim ke player sebelum lolos test. Jika semua
  * combo ditolak server via HTTP non-2xx/3xx, Decision.valid=false dan caller
@@ -69,6 +70,12 @@ object AdaptiveHeaderProbe {
     private const val TTL_MS = 60 * 60_000L
     // NiceHttp timeout dalam DETIK (callTimeout/connectTimeout TimeUnit.SECONDS).
     private const val PROBE_TIMEOUT = 5L
+    // Probe baca body sungguhan hingga batas ini agar pemenang = combo dengan
+    // throughput terbaik (bukan sekadar latency). Playlist kecil tetap selesai
+    // cepat; direct video mengukur throughput nyata. Server yang tidak support
+    // Range dan mengirim file penuh tetap berhenti di batas ini (stream ditutup).
+    private const val PROBE_READ_BYTES = 1024 * 1024L
+    private const val PROBE_RANGE_END = PROBE_READ_BYTES - 1
 
     private val minimalHeaders = mapOf(
         "Accept" to "*/*",
@@ -236,11 +243,31 @@ object AdaptiveHeaderProbe {
             val r = app.get(
                 url,
                 referer = combo.referer,
-                headers = combo.headers + mapOf("Range" to "bytes=0-1023"),
+                headers = combo.headers + mapOf("Range" to "bytes=0-$PROBE_RANGE_END"),
                 timeout = PROBE_TIMEOUT
             )
-            if (r.code in 200..399) ProbeResult.Ok(System.currentTimeMillis() - start)
-            else ProbeResult.HttpReject
+            if (r.code !in 200..399) {
+                ProbeResult.HttpReject
+            } else {
+                // Baca body sungguhan hingga batas agar pemenang = combo dengan
+                // throughput terbaik (latency + transfer), bukan latency murni.
+                // Stream ditutup setelah batas agar server yang tidak support
+                // Range (mengirim file penuh) tidak menguras bandwidth.
+                try {
+                    r.body?.byteStream()?.use { stream ->
+                        val buf = ByteArray(DEFAULT_BUFFER_SIZE)
+                        var total = 0L
+                        while (total < PROBE_READ_BYTES) {
+                            val n = stream.read(buf)
+                            if (n <= 0) break
+                            total += n
+                        }
+                    }
+                } catch (e: Exception) {
+                    // Status sudah valid (2xx/3xx); kegagalan baca body diabaikan.
+                }
+                ProbeResult.Ok(System.currentTimeMillis() - start)
+            }
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
