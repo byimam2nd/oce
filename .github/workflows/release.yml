@@ -130,15 +130,28 @@ jobs:
           name: release-artifacts
           path: release-artifacts
 
+      - name: Verify token access (debug)
+        if: ${{ env.OCE_DISTRIBUTOR_APP_ID != '' && env.OCE_DISTRIBUTOR_APP_PEM != '' }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          echo "== token repo access =="
+          gh api repos/byimam2nd/oce --jq '.full_name' || echo "TOKEN_NO_REPO_ACCESS"
+          echo "== can create release? (dry) =="
+          gh api -X POST repos/byimam2nd/oce/releases/generate-notes \
+            -f tag_name=v3.11.0 2>&1 | head -c 300
+
       - name: Create GitHub Release (public repo)
         if: ${{ env.OCE_DISTRIBUTOR_APP_ID != '' && env.OCE_DISTRIBUTOR_APP_PEM != '' }}
-        uses: softprops/action-gh-release@v2
-        with:
-          repository: byimam2nd/oce
-          files: |
-            release-artifacts/*.cs3
-            release-artifacts/plugins.json
-          draft: false
-          prerelease: false
         env:
-          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          TAG_NAME=${GITHUB_REF_NAME}
+          echo "Creating release ${TAG_NAME} on byimam2nd/oce"
+          gh release create "${TAG_NAME}" \
+            --repo byimam2nd/oce \
+            --title "${TAG_NAME}" \
+            --notes "OCE stable release ${TAG_NAME}" \
+            release-artifacts/*.cs3 \
+            release-artifacts/plugins.json
+          echo "✅ Release created"
