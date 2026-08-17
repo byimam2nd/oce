@@ -168,11 +168,11 @@ object ProviderLog {
             put("level", level)
             put("tag", tag)
             put("message", message)
-            if (!host.isNullOrBlank()) put("host", host)
-            if (!url.isNullOrBlank()) put("url", url)
-            if (!method.isNullOrBlank()) put("method", method)
+            put("host", host ?: org.json.JSONObject.NULL)
+            put("url", url ?: org.json.JSONObject.NULL)
+            put("method", method ?: org.json.JSONObject.NULL)
             put("failure_type", type.label)
-            if (selectors.isNotBlank()) put("selectors", selectors)
+            put("selectors", selectors.ifBlank { "" })
         }
         supabaseBuffer.add(row)
         if (supabaseBuffer.size >= SUPABASE_BATCH_SIZE) {
