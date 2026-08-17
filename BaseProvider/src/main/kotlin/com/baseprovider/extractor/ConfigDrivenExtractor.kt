@@ -393,7 +393,7 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
     private fun decryptAesGcm(keyParts: List<String>, iv: String, payload: String): String {
         if (keyParts.isEmpty() || iv.isBlank() || payload.isBlank()) return ""
         return try {
-            val key = keyParts.joinToString("") { b64UrlDecode(it) }
+            val key = keyParts.flatMap { b64UrlDecode(it).toList() }.toByteArray()
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
             cipher.init(
                 Cipher.DECRYPT_MODE,
