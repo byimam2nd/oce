@@ -22,9 +22,20 @@ open class Odnoklassniki : ExtractorApi() {
             "User-Agent" to DEFAULT_UA
         )
         val videoHeaders = MasterLinkGenerator.minimalVideoHeaders
-        val embedUrl = url.replace("/video/", "/videoembed/")
-        val videoReq = app.get(embedUrl, headers = headers).text.replace("\\&quot;", "\"")
+        // ok.ru memberi token HLS yang ditolak CDN (HTTP 400) bila diambil dari
+        // halaman embed (/videoembed/). Ambil dari halaman video normal
+        // (/video/) yang menghasilkan token valid, fallback ke embed bila
+        // halaman video tidak menyediakan data.
+        val videoPageUrl = if (url.contains("/videoembed/")) {
+            url.replace("/videoembed/", "/video/")
+        } else url
+        var videoReq = app.get(videoPageUrl, headers = headers).text.replace("\\&quot;", "\"")
             .replace("\\\\", "\\")
+        if (!videoReq.contains("hlsManifestUrl") && !videoReq.contains("\"videos\"")) {
+            val embedUrl = url.replace("/video/", "/videoembed/")
+            videoReq = app.get(embedUrl, headers = headers).text.replace("\\&quot;", "\"")
+                .replace("\\\\", "\\")
+        }
 
         val hlsUrl = Regex(""""hlsManifestUrl":\s*"([^"]+)"""")
             .find(videoReq)?.groupValues?.getOrNull(1)
