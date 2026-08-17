@@ -1,0 +1,33 @@
+{
+  "id": "VideoNodePage",
+  "name": "VideoNodePage",
+  "mainUrl": "https://videonode.de",
+  "requiresReferer": true,
+  "cached": false,
+  "variants": [
+    {
+      "name": "default",
+      "headers": {}
+    }
+  ],
+  "steps": [
+    {
+      "step": "fetch",
+      "url": "{url}",
+      "referer": "",
+      "headers": {},
+      "store": "response"
+    },
+    {
+      "step": "iframe",
+      "source": "response",
+      "selector": "iframe[src]",
+      "attribute": "src",
+      "exclude": "",
+      "include": "",
+      "base": "{url}"
+    }
+  ],
+  "videoReferer": "",
+  "outputFilter": "adaptive"
+}

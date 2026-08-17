@@ -1,0 +1,33 @@
+{
+  "id": "BloggerVideo",
+  "name": "BloggerVideo",
+  "mainUrl": "https://www.blogger.com",
+  "requiresReferer": true,
+  "cached": false,
+  "variants": [
+    {
+      "name": "default",
+      "headers": {}
+    }
+  ],
+  "steps": [
+    {
+      "step": "fetch",
+      "url": "{url}",
+      "referer": "",
+      "headers": {},
+      "store": "response"
+    },
+    {
+      "step": "iframe",
+      "source": "response",
+      "selector": "video source[src], video[src], iframe[src]",
+      "attribute": "src",
+      "exclude": "",
+      "include": "(\\.mp4|\\.m3u8|youtube)",
+      "base": "{url}"
+    }
+  ],
+  "videoReferer": "",
+  "outputFilter": "adaptive"
+}

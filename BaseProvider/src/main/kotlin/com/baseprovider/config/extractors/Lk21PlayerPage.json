@@ -1,0 +1,35 @@
+{
+  "id": "Lk21PlayerPage",
+  "name": "Lk21Player",
+  "mainUrl": "https://playeriframe.sbs",
+  "requiresReferer": true,
+  "cached": false,
+  "variants": [
+    {
+      "name": "default",
+      "headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "step": "fetch",
+      "url": "{url}",
+      "referer": "",
+      "headers": {},
+      "store": "response"
+    },
+    {
+      "step": "iframe",
+      "source": "response",
+      "selector": "iframe[src]",
+      "attribute": "src",
+      "exclude": "",
+      "include": "",
+      "base": "{url}"
+    }
+  ],
+  "videoReferer": "",
+  "outputFilter": "adaptive"
+}

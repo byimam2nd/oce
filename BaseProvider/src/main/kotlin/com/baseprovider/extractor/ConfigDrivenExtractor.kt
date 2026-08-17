@@ -101,7 +101,7 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
             val state = RunState(url, referer, id, variant)
             runCatching {
                 for (step in config.steps) {
-                    executeStep(step, state)
+                    executeStep(step, state, subtitleCallback, callback)
                     if (state.videoUrls.isNotEmpty()) break
                 }
             }.onFailure { e ->
@@ -130,19 +130,29 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
         }
     }
 
-    private suspend fun executeStep(step: ExtractorStep, state: RunState) {
+    private suspend fun executeStep(
+        step: ExtractorStep,
+        state: RunState,
+        subtitleCallback: (SubtitleFile) -> Unit,
+        callback: (ExtractorLink) -> Unit,
+    ) {
         when (step) {
             is ExtractorStep.Fetch -> {
                 var target = state.resolveTemplate(step.url)
                 step.urlReplace.forEach { (from, to) -> target = target.replace(from, to) }
-                val text = if (config.cached) {
-                    cachedGetText(target, referer = state.resolveReferer(step.referer),
+                if (config.cached) {
+                    state.variables[step.store] = cachedGetText(target,
+                        referer = state.resolveReferer(step.referer),
                         headers = state.resolveHeaders(step.headers))
                 } else {
-                    app.get(target, referer = state.resolveReferer(step.referer),
-                        headers = state.resolveHeaders(step.headers)).text
+                    val response = app.get(target,
+                        referer = state.resolveReferer(step.referer),
+                        headers = state.resolveHeaders(step.headers))
+                    state.variables[step.store] = response.text
+                    if (step.storeFinalUrl.isNotBlank()) {
+                        state.variables[step.storeFinalUrl] = response.url
+                    }
                 }
-                state.variables[step.store] = text
             }
             is ExtractorStep.PostForm -> {
                 val target = state.resolveTemplate(step.url)
@@ -284,6 +294,68 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
                 if (decoded.isNotBlank()) {
                     if (step.store.isNotBlank()) state.variables[step.store] = decoded
                     else state.videoUrls.add(decoded)
+                }
+            }
+            is ExtractorStep.Delegate -> {
+                val target = state.resolveTemplate(step.url)
+                val resolved = if (step.queryParam.isNotBlank()) {
+                    runCatching {
+                        val raw = target.substringAfter("?${step.queryParam}=").substringBefore("&")
+                        java.net.URLDecoder.decode(raw, "UTF-8")
+                    }.getOrDefault("")
+                } else target
+                if (resolved.startsWith("http")) {
+                    loadExtractorWithFallbackCustom(
+                        resolved, state.url, subtitleCallback,
+                        callback = callback,
+                        providerTag = name,
+                        callChain = name
+                    )
+                }
+            }
+            is ExtractorStep.Iframe -> {
+                val html = state.variables[step.source].orEmpty()
+                val base = state.resolveTemplate(step.base)
+                val includeRe = if (step.include.isNotBlank()) Regex(step.include) else null
+                runCatching {
+                    org.jsoup.Jsoup.parse(html).select(step.selector).forEach { el ->
+                        val src = el.attr(step.attribute)
+                        if (src.isBlank()) return@forEach
+                        if (step.exclude.isNotBlank() && src.contains(step.exclude)) return@forEach
+                        if (includeRe != null && !includeRe.containsMatchIn(src)) return@forEach
+                        val resolved = fixUrlSmart(src, base)
+                        if (resolved.isNotBlank()) {
+                            loadExtractorWithFallbackCustom(
+                                resolved, state.url, subtitleCallback,
+                                callback = callback,
+                                providerTag = name,
+                                callChain = name
+                            )
+                        }
+                    }
+                }
+            }
+            is ExtractorStep.Redirect -> {
+                val finalUrl = state.variables[step.source].orEmpty()
+                val original = state.resolveTemplate(step.url)
+                if (finalUrl.isNotBlank() && finalUrl != original) {
+                    loadExtractor(finalUrl, state.url, subtitleCallback, callback)
+                }
+            }
+            is ExtractorStep.Webview -> {
+                val target = state.resolveTemplate(step.url)
+                runCatching {
+                    val resolver = com.lagradost.cloudstream3.network.WebViewResolver(
+                        interceptUrl = Regex(step.interceptPattern),
+                        additionalUrls = listOf(Regex(step.interceptPattern)),
+                        useOkhttp = false,
+                        timeout = step.timeoutMs
+                    )
+                    val interceptedUrl = app.get(target,
+                        referer = state.resolveReferer(step.referer),
+                        headers = state.resolveHeaders(step.headers),
+                        interceptor = resolver).url
+                    if (interceptedUrl.isNotBlank()) state.videoUrls.add(interceptedUrl)
                 }
             }
         }

@@ -91,6 +91,9 @@ sealed class ExtractorStep {
         // Transformasi URL (replace substring) sebelum request. Dipakai untuk
         // pola OkRu: /videoembed/ -> /video/ atau sebaliknya.
         val urlReplace: Map<String, String> = emptyMap(),
+        // Jika diisi: simpan URL final (setelah redirect) ke variabel ini.
+        // Dipakai pola ShortIcu (redirect -> delegasi ke URL final).
+        val storeFinalUrl: String = "",
     ) : ExtractorStep()
 
     /** POST form-encoded. Hasil disimpan ke variabel [store]. */
@@ -193,5 +196,43 @@ sealed class ExtractorStep {
         val source: String = "jsonResult",    // variabel berisi URL dengan sig=
         // Simpan hasil decode ke variabel ini.
         val store: String = "watchlink",
+    ) : ExtractorStep()
+
+    /** Delegasi ke extractor lain untuk URL hasil query param (pola PlayPutarIn). */
+    data class Delegate(
+        val url: String = "{url}",
+        // Jika diisi: ambil nilai query param ini dari URL lalu URL-decode,
+        // hasilnya jadi target delegasi (bukan [url] template).
+        val queryParam: String = "",
+    ) : ExtractorStep()
+
+    /** Parse iframe/video dari HTML lalu delegasi ke extractor lain (pola PlayStreamplay). */
+    data class Iframe(
+        val source: String = "response",          // variabel berisi HTML
+        val selector: String = "iframe[src]",     // CSS selector elemen
+        val attribute: String = "src",            // atribut yang dibaca
+        // Substring yang mem-filter sumber (skip jika mengandung ini).
+        val exclude: String = "",
+        // Regex; sumber harus cocok (mis. "(\.mp4|\.m3u8|youtube)").
+        val include: String = "",
+        // Base untuk fixUrlSmart URL relatif (template).
+        val base: String = "{url}",
+    ) : ExtractorStep()
+
+    /** Delegasi ke URL final hasil redirect (pola ShortIcu). */
+    data class Redirect(
+        // Variabel berisi URL final hasil fetch (diset Fetch dengan storeFinalUrl).
+        val source: String = "finalUrl",
+        // URL awal untuk perbandingan (jika final == awal, tidak delegasi).
+        val url: String = "{url}",
+    ) : ExtractorStep()
+
+    /** Intercept URL m3u8/master.txt via WebViewResolver (pola Dhcplay/StreamHG). */
+    data class Webview(
+        val url: String = "{url}",
+        val referer: String = "",
+        val headers: Map<String, String> = emptyMap(),
+        val interceptPattern: String = "(m3u8|master\\.txt)",
+        val timeoutMs: Long = 15000L,
     ) : ExtractorStep()
 }

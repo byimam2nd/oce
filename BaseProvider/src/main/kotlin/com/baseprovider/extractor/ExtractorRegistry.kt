@@ -36,7 +36,10 @@ object ProviderExtractors {
         "Odnoklassniki", "Filedon", "Xtwap",
         "StreamRuby", "Svanila", "Svilla", "Movearnpre",
         "Minochinos", "Morencius", "Wishfast", "AbyssPlayer",
-        "ByseSX", "Vidguardto2"
+        "ByseSX", "Vidguardto2",
+        "BloggerVideo", "PlayPutarIn", "Lk21PlayerPage",
+        "VideoNodePage", "ShortIcu", "PlayStreamplay",
+        "Dhcplay", "StreamHG"
     )
 
     private fun buildList(): List<ExtractorApi> {

@@ -1,0 +1,55 @@
+{
+  "id": "StreamHG",
+  "name": "StreamHG",
+  "mainUrl": "https://hgcloud.to",
+  "requiresReferer": true,
+  "cached": false,
+  "variants": [
+    {
+      "name": "default",
+      "headers": {}
+    }
+  ],
+  "steps": [
+    {
+      "step": "fetch",
+      "url": "{url}",
+      "referer": "",
+      "headers": {},
+      "store": "response"
+    },
+    {
+      "step": "packedJs",
+      "source": "response",
+      "store": "decoded"
+    },
+    {
+      "step": "regex",
+      "pattern": "",
+      "group": 1,
+      "source": "decoded",
+      "filter": "",
+      "universal": true,
+      "store": ""
+    },
+    {
+      "step": "regex",
+      "pattern": "",
+      "group": 1,
+      "source": "response",
+      "filter": "",
+      "universal": true,
+      "store": ""
+    },
+    {
+      "step": "webview",
+      "url": "{url}",
+      "referer": "",
+      "headers": {},
+      "interceptPattern": "(m3u8|master\\.txt)",
+      "timeoutMs": 15000
+    }
+  ],
+  "videoReferer": "",
+  "outputFilter": "master"
+}

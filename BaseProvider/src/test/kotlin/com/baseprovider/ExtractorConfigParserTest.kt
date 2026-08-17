@@ -79,6 +79,11 @@ class ExtractorConfigParserTest {
         stepsArr.put(JSONObject("""{"step": "aesGcm", "source": "response", "keyPartsPath": "playback.key_parts", "ivPath": "playback.iv", "payloadPath": "playback.payload", "store": "plain"}"""))
         stepsArr.put(JSONObject("""{"step": "rhinoEval", "source": "script", "objectName": "svg", "store": "jsonResult"}"""))
         stepsArr.put(JSONObject("""{"step": "xorSig", "source": "watchlink", "store": "sig"}"""))
+        stepsArr.put(JSONObject("""{"step": "delegate", "url": "{url}", "queryParam": "url"}"""))
+        stepsArr.put(JSONObject("""{"step": "iframe", "source": "response", "selector": "iframe[src]", "attribute": "src", "exclude": "ads", "include": "(\\.mp4|\\.m3u8)", "base": "{url}"}"""))
+        stepsArr.put(JSONObject("""{"step": "redirect", "source": "finalUrl", "url": "{url}"}"""))
+        stepsArr.put(JSONObject("""{"step": "webview", "url": "{url}", "interceptPattern": "(m3u8|master\\.txt)", "timeoutMs": 10000}"""))
+        stepsArr.put(JSONObject("""{"step": "fetch", "url": "{url}", "store": "page", "storeFinalUrl": "finalUrl"}"""))
 
         val json = JSONObject()
         json.put("id", "S")
@@ -86,7 +91,7 @@ class ExtractorConfigParserTest {
         json.put("steps", stepsArr)
 
         val config = fromExtractorJson("S", json)
-        assertEquals(12, config.steps.size)
+        assertEquals(17, config.steps.size)
         assertTrue(config.steps[0] is ExtractorStep.Fetch)
         assertTrue(config.steps[1] is ExtractorStep.PostForm)
         assertTrue(config.steps[2] is ExtractorStep.PostJson)
@@ -99,6 +104,10 @@ class ExtractorConfigParserTest {
         assertTrue(config.steps[9] is ExtractorStep.AesGcm)
         assertTrue(config.steps[10] is ExtractorStep.RhinoEval)
         assertTrue(config.steps[11] is ExtractorStep.XorSig)
+        assertTrue(config.steps[12] is ExtractorStep.Delegate)
+        assertTrue(config.steps[13] is ExtractorStep.Iframe)
+        assertTrue(config.steps[14] is ExtractorStep.Redirect)
+        assertTrue(config.steps[15] is ExtractorStep.Webview)
 
         val postForm = config.steps[1] as ExtractorStep.PostForm
         assertEquals(mapOf("op" to "embed", "file_code" to "{id}"), postForm.data)
@@ -119,6 +128,19 @@ class ExtractorConfigParserTest {
         assertEquals("jsonResult", rhino.store)
         val xorSig = config.steps[11] as ExtractorStep.XorSig
         assertEquals("sig", xorSig.store)
+        val delegate = config.steps[12] as ExtractorStep.Delegate
+        assertEquals("url", delegate.queryParam)
+        val iframe = config.steps[13] as ExtractorStep.Iframe
+        assertEquals("iframe[src]", iframe.selector)
+        assertEquals("ads", iframe.exclude)
+        assertEquals("(\\.mp4|\\.m3u8)", iframe.include)
+        val redirect = config.steps[14] as ExtractorStep.Redirect
+        assertEquals("finalUrl", redirect.source)
+        val webview = config.steps[15] as ExtractorStep.Webview
+        assertEquals(10000L, webview.timeoutMs)
+        assertEquals("(m3u8|master\\.txt)", webview.interceptPattern)
+        val fetchFinal = config.steps[16] as ExtractorStep.Fetch
+        assertEquals("finalUrl", fetchFinal.storeFinalUrl)
     }
 
     @Test
@@ -152,7 +174,10 @@ class ExtractorConfigParserTest {
             "Odnoklassniki", "Filedon", "Xtwap",
             "StreamRuby", "Svanila", "Svilla", "Movearnpre",
             "Minochinos", "Morencius", "Wishfast", "AbyssPlayer",
-            "ByseSX", "Vidguardto2"
+            "ByseSX", "Vidguardto2",
+            "BloggerVideo", "PlayPutarIn", "Lk21PlayerPage",
+            "VideoNodePage", "ShortIcu", "PlayStreamplay",
+            "Dhcplay", "StreamHG"
         )
         for (fileName in bundledFiles) {
             val stream = this::class.java.classLoader?.getResourceAsStream("extractors/$fileName.json")

@@ -1,0 +1,39 @@
+{
+  "id": "ShortIcu",
+  "name": "ShortIcu",
+  "mainUrl": "https://short.icu",
+  "requiresReferer": true,
+  "cached": false,
+  "variants": [
+    {
+      "name": "default",
+      "headers": {}
+    }
+  ],
+  "steps": [
+    {
+      "step": "fetch",
+      "url": "{url}",
+      "referer": "",
+      "headers": {},
+      "store": "response",
+      "storeFinalUrl": "finalUrl"
+    },
+    {
+      "step": "redirect",
+      "source": "finalUrl",
+      "url": "{url}"
+    },
+    {
+      "step": "regex",
+      "pattern": "",
+      "group": 1,
+      "source": "response",
+      "filter": "",
+      "universal": true,
+      "store": ""
+    }
+  ],
+  "videoReferer": "",
+  "outputFilter": "master"
+}

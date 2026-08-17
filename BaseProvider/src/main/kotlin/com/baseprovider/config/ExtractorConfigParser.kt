@@ -23,6 +23,9 @@ val KNOWN_EXTRACTOR_KEYS: Set<String> = setOf(
     "decodeUnicode", "base", "urlReplace",
     // crypto steps
     "keyPartsPath", "ivPath", "payloadPath", "objectName",
+    // complex steps
+    "selector", "attribute", "exclude", "include", "queryParam",
+    "interceptPattern", "timeoutMs", "storeFinalUrl",
     // step type selector
     "step",
 )
@@ -84,6 +87,7 @@ private fun parseStep(json: JSONObject): ExtractorStep? {
             headers = jsonObjectToMap(json.optJSONObject("headers")),
             store = json.optString("store", "response"),
             urlReplace = jsonObjectToMap(json.optJSONObject("urlReplace")),
+            storeFinalUrl = json.optString("storeFinalUrl", ""),
         )
         "postForm" -> ExtractorStep.PostForm(
             url = json.optString("url", ""),
@@ -147,6 +151,29 @@ private fun parseStep(json: JSONObject): ExtractorStep? {
         "xorSig" -> ExtractorStep.XorSig(
             source = json.optString("source", "jsonResult"),
             store = json.optString("store", "watchlink"),
+        )
+        "delegate" -> ExtractorStep.Delegate(
+            url = json.optString("url", "{url}"),
+            queryParam = json.optString("queryParam", ""),
+        )
+        "iframe" -> ExtractorStep.Iframe(
+            source = json.optString("source", "response"),
+            selector = json.optString("selector", "iframe[src]"),
+            attribute = json.optString("attribute", "src"),
+            exclude = json.optString("exclude", ""),
+            include = json.optString("include", ""),
+            base = json.optString("base", "{url}"),
+        )
+        "redirect" -> ExtractorStep.Redirect(
+            source = json.optString("source", "finalUrl"),
+            url = json.optString("url", "{url}"),
+        )
+        "webview" -> ExtractorStep.Webview(
+            url = json.optString("url", "{url}"),
+            referer = json.optString("referer", ""),
+            headers = jsonObjectToMap(json.optJSONObject("headers")),
+            interceptPattern = json.optString("interceptPattern", "(m3u8|master\\.txt)"),
+            timeoutMs = json.optLong("timeoutMs", 15000L),
         )
         else -> {
             Log.w(PARSER_TAG, "Unknown step type: $step")
