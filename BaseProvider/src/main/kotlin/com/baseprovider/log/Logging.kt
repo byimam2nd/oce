@@ -19,10 +19,23 @@ object ProviderLog {
         .getenv("OCE_TG_GROUP_ID") ?: ""
     private val TG_THREAD_ID: String get() = System.getenv("OCE_TG_THREAD_ID") ?: "2"
 
+    private const val SUPABASE_BATCH_SIZE = 10
+    private const val SUPABASE_FLUSH_INTERVAL_MS = 2000L
+
+    private val SUPABASE_URL: String get() = System.getenv("SUPABASE_URL") ?: ""
+    private val SUPABASE_ANON_KEY: String get() = System
+        .getenv("SUPABASE_ANON_KEY") ?: ""
+
     private val sentMessages = java.util.concurrent
         .ConcurrentHashMap<String, Pair<Int, Int>>()
+    private val supabaseBuffer = java.util.concurrent
+        .ConcurrentLinkedQueue<org.json.JSONObject>()
     private val logScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val tgJob = Job()
+    private val sbJob = Job()
+    private val supabaseFlushLock = Any()
+    private val supabaseFlushScheduled = java.util.concurrent.atomic
+        .AtomicBoolean(false)
 
     fun log(
         level: LogLevel, tag: String, message: String,
@@ -62,6 +75,8 @@ object ProviderLog {
 
         if (level != LogLevel.DEBUG && level != LogLevel.SUCCESS) {
             sendToTelegram(level.name, tag, fullMsg, url, host, method, ft,
+                selectors)
+            sendToSupabase(level.name, tag, fullMsg, url, host, method, ft,
                 selectors)
         }
     }
@@ -139,6 +154,68 @@ object ProviderLog {
                         .getJSONObject("result").getInt("message_id")
                     sentMessages[key] = msgId to 1
                 }.onFailure { e -> Log.e("OCE", "Telegram sendMessage failed: ${e.message}") }
+            }
+        }
+    }
+
+    private fun sendToSupabase(
+        level: String, tag: String, message: String,
+        url: String?, host: String, method: String?,
+        type: FailureType, selectors: String = ""
+    ) {
+        if (SUPABASE_URL.isBlank() || SUPABASE_ANON_KEY.isBlank()) return
+        val row = org.json.JSONObject().apply {
+            put("level", level)
+            put("tag", tag)
+            put("message", message)
+            if (!host.isNullOrBlank()) put("host", host)
+            if (!url.isNullOrBlank()) put("url", url)
+            if (!method.isNullOrBlank()) put("method", method)
+            put("failure_type", type.label)
+            if (selectors.isNotBlank()) put("selectors", selectors)
+        }
+        supabaseBuffer.add(row)
+        if (supabaseBuffer.size >= SUPABASE_BATCH_SIZE) {
+            synchronized(supabaseFlushLock) { flushSupabaseBatch() }
+        } else if (supabaseFlushScheduled.compareAndSet(false, true)) {
+            logScope.launch(sbJob) {
+                kotlinx.coroutines.delay(SUPABASE_FLUSH_INTERVAL_MS)
+                synchronized(supabaseFlushLock) {
+                    supabaseFlushScheduled.set(false)
+                    flushSupabaseBatch()
+                }
+            }
+        }
+    }
+
+    private fun flushSupabaseBatch() {
+        while (supabaseBuffer.isNotEmpty()) {
+            val batch = ArrayList<org.json.JSONObject>(SUPABASE_BATCH_SIZE)
+            while (batch.size < SUPABASE_BATCH_SIZE && supabaseBuffer
+                    .isNotEmpty()) {
+                supabaseBuffer.poll()?.let { batch.add(it) }
+            }
+            if (batch.isEmpty()) return
+            logScope.launch(sbJob) {
+                runCatching {
+                    val body = org.json.JSONArray().apply {
+                        batch.forEach { put(it) }
+                    }
+                    com.lagradost.cloudstream3.app.post(
+                        "$SUPABASE_URL/rest/v1/logs",
+                        headers = mapOf(
+                            "apikey" to SUPABASE_ANON_KEY,
+                            "Authorization" to "Bearer $SUPABASE_ANON_KEY",
+                            "Content-Type" to "application/json",
+                            "Prefer" to "return=minimal"
+                        ),
+                        requestBody = body.toString().toRequestBody(
+                            "application/json".toMediaType())
+                    ).text
+                    Log.d("OCE", "Supabase log insert ok: ${batch.size} rows")
+                }.onFailure { e ->
+                    Log.e("OCE", "Supabase log insert failed: ${e.message}")
+                }
             }
         }
     }
