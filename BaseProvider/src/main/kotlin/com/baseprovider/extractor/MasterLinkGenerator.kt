@@ -66,7 +66,9 @@ object MasterLinkGenerator {
         var effectiveReferer = referer
         var effectiveHeaders = safeHeaders
         if (bareHeaders) {
-            val decision = AdaptiveHeaderProbe.resolve(url, referer)
+            // Probe otomatis (valid pertama yang selesai menang, sisanya di-cancel).
+            // Headers asli extractor ikut diuji sebagai combo EXPLICIT.
+            val decision = AdaptiveHeaderProbe.resolve(url, referer, headers)
             if (!decision.valid) {
                 // Link gagal test (non-2xx/3xx) di semua combo header.
                 // Jangan kirim link rusak ke player (avoid error 2004).

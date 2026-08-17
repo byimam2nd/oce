@@ -1,22 +1,27 @@
 package com.baseprovider.extractor
 
 import com.lagradost.cloudstream3.*
+import com.lagradost.api.Log
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.selects.select
 import java.net.URI
 import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Probe otomatis pemilihan header video per-host (konsep adaptive, tanpa
  * test manual per extractor). Untuk host pertama kali, uji beberapa combo
- * header secara paralel dan pilih yang valid (2xx/3xx) dan paling cepat:
- *  - BARE        : UA+Accept saja, tanpa referer (pola OkRu yang terbukti anti-throttle)
- *  - REFERER     : UA+Accept + referer (hint atau origin video)
- *  - ORIGIN      : UA+Accept + referer + Origin (CDN yang memvalidasi Origin)
- *  - BROWSER_LIKE: header browser penuh (Accept-Language, Sec-Fetch-*, Origin)
- * Hasil di-cache per-host sehingga host berikutnya tidak di-probe ulang
- * dalam satu sesi.
+ * header secara paralel:
+ *  - BARE         : UA+Accept saja, tanpa referer (pola OkRu anti-throttle)
+ *  - REFERER      : UA+Accept + referer (hint atau origin video)
+ *  - ORIGIN       : UA+Accept + referer + Origin (CDN yang memvalidasi Origin)
+ *  - BROWSER_LIKE : header browser penuh (Accept-Language, Sec-Fetch-*, Origin)
+ *  - EXPLICIT     : headers asli yang diset extractor (jika bukan minimal)
+ * Combo valid pertama (2xx/3xx) yang selesai langsung MENANG — sisanya
+ * di-cancel (uji berjalan serentak, tidak menunggu yang lambat). Hasil
+ * di-cache per-host sehingga host berikutnya tidak di-probe ulang dalam satu
+ * sesi.
  *
  * Probe BLOCKING: link TIDAK dikirim ke player sebelum lolos test. Jika semua
  * combo ditolak server via HTTP non-2xx/3xx, Decision.valid=false dan caller
@@ -29,7 +34,7 @@ import java.util.concurrent.ConcurrentHashMap
  * bersamaan menunggu hasil probe yang sama, bukan memulai probe ganda.
  */
 object AdaptiveHeaderProbe {
-    enum class Mode { BARE, REFERER, ORIGIN, BROWSER_LIKE }
+    enum class Mode { BARE, REFERER, ORIGIN, BROWSER_LIKE, EXPLICIT }
 
     data class Decision(
         val mode: Mode,
@@ -85,19 +90,34 @@ object AdaptiveHeaderProbe {
         "${u.scheme}://${u.host}${if (u.port > 0 && u.port != 80 && u.port != 443) ":${u.port}" else ""}"
     }.getOrNull()
 
-    private fun buildCombos(url: String, refererHint: String?): List<Combo> {
+    private fun buildCombos(
+        url: String,
+        refererHint: String?,
+        explicitHeaders: Map<String, String>?
+    ): List<Combo> {
         val origin = originOf(url)
         val referer = refererHint ?: origin
         val originHeader = origin?.let { mapOf("Origin" to it) } ?: emptyMap()
-        return listOf(
+        val combos = mutableListOf(
             Combo(Mode.BARE, null, minimalHeaders),
             Combo(Mode.REFERER, referer, minimalHeaders),
             Combo(Mode.ORIGIN, referer, minimalHeaders + originHeader),
             Combo(Mode.BROWSER_LIKE, referer, browserLikeHeaders + originHeader)
         )
+        // EXPLICIT: uji headers asli extractor (jika berbeda dari minimal).
+        // Header minimal sudah terwakili oleh combo BARE/REFERER, jadi skip
+        // jika extractor tidak menetapkan headers khusus.
+        if (explicitHeaders != null && explicitHeaders.isNotEmpty() && explicitHeaders != minimalHeaders) {
+            combos.add(Combo(Mode.EXPLICIT, referer, explicitHeaders))
+        }
+        return combos
     }
 
-    suspend fun resolve(url: String, refererHint: String?): Decision {
+    suspend fun resolve(
+        url: String,
+        refererHint: String?,
+        explicitHeaders: Map<String, String>? = null
+    ): Decision {
         val host = runCatching { URI(url).host }.getOrNull()
             ?: return Decision(Mode.BARE, null, minimalHeaders, valid = false)
         cache[host]?.let { (ts, d) ->
@@ -110,7 +130,7 @@ object AdaptiveHeaderProbe {
             if (inFlight.putIfAbsent(host, deferred) == null) {
                 try {
                     val decision = try {
-                        probe(url, refererHint)
+                        probe(url, refererHint, explicitHeaders)
                     } catch (e: kotlinx.coroutines.CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -143,7 +163,11 @@ object AdaptiveHeaderProbe {
     }
 
     /**
-     * Uji semua combo paralel; pilih yang valid (2xx/3xx) dan paling cepat.
+     * Uji semua combo PARALEL; combo valid (2xx/3xx) PERTAMA yang selesai
+     * langsung MENANG, sisanya di-cancel. Terbukti (simulasi + uji HLS nyata)
+     * bahwa karena semua combo start bersamaan, yang pertama selesai selalu
+     * yang tercepat — jadi tidak ada grace window / tunggu semua. Semua
+     * kecepatan yang sempat terukur di-log untuk observabilitas.
      * Jika tidak ada yang valid:
      *  - semua menolak via HTTP (server merespons non-2xx) -> Decision.invalid
      *    (link benar-benar rusak, harus di-skip).
@@ -152,30 +176,59 @@ object AdaptiveHeaderProbe {
      *    extractor menghasilkan 0 link saat internet bermasalah padahal link
      *    sebenarnya bagus (bug "tidak ada tautan ditemukan").
      */
-    private suspend fun probe(url: String, refererHint: String?): Decision =
-        coroutineScope {
-            val combos = buildCombos(url, refererHint)
-            val timed = combos.map { combo ->
-                async { combo to probeOnce(url, combo) }
-            }.map { it.await() }
-            val valid = timed.filter { it.second is ProbeResult.Ok }
-                .minByOrNull { (it.second as ProbeResult.Ok).ms }
-            if (valid != null) {
-                val (combo, _) = valid
-                return@coroutineScope Decision(combo.mode, combo.referer, combo.headers, valid = true)
+    private suspend fun probe(
+        url: String,
+        refererHint: String?,
+        explicitHeaders: Map<String, String>?
+    ): Decision = coroutineScope {
+        val combos = buildCombos(url, refererHint, explicitHeaders)
+        val jobs = combos.map { combo ->
+            async { combo to probeOnce(url, combo) }
+        }.toMutableList()
+        val host = runCatching { URI(url).host }.getOrNull() ?: url.take(60)
+        var anyNetworkError = false
+        while (jobs.isNotEmpty()) {
+            // Ambil hasil combo yang selesai PALING AWAL (via select).
+            val done = select {
+                jobs.forEach { job -> job.onAwait { job } }
             }
-            if (timed.any { it.second is ProbeResult.NetworkError }) {
-                // Setidaknya ada kegagalan jaringan (bukan HTTP reject): kirim
-                // BARE tetap valid, TAPI jangan di-cache (networkBlocked=true).
-                // Saat internet pulih, host di-probe ulang untuk combo terbaik.
-                return@coroutineScope Decision(
-                    Mode.BARE, null, minimalHeaders,
-                    valid = true, networkBlocked = true
-                )
+            jobs.remove(done)
+            val (combo, result) = done.await()
+            when (result) {
+                is ProbeResult.Ok -> {
+                    // Combo valid pertama menang; cancel probe yang masih jalan.
+                    Log.d(
+                        "AdaptiveProbe",
+                        "$host: WIN ${combo.mode} ${result.ms}ms"
+                    )
+                    jobs.forEach {
+                        it.cancel()
+                        Log.d("AdaptiveProbe", "$host: cancelled")
+                    }
+                    return@coroutineScope Decision(
+                        combo.mode, combo.referer, combo.headers, valid = true
+                    )
+                }
+                is ProbeResult.HttpReject ->
+                    Log.d("AdaptiveProbe", "$host: ${combo.mode} HTTP-reject")
+                ProbeResult.NetworkError -> {
+                    anyNetworkError = true
+                    Log.d("AdaptiveProbe", "$host: ${combo.mode} network-error")
+                }
             }
-            // Semua combo ditolak server via HTTP non-2xx -> link rusak.
-            Decision(Mode.BARE, null, minimalHeaders, valid = false)
         }
+        if (anyNetworkError) {
+            // Ada kegagalan jaringan (bukan HTTP reject): kirim BARE tetap
+            // valid, TAPI jangan di-cache (networkBlocked=true). Saat internet
+            // pulih, host di-probe ulang untuk combo terbaik.
+            return@coroutineScope Decision(
+                Mode.BARE, null, minimalHeaders,
+                valid = true, networkBlocked = true
+            )
+        }
+        // Semua combo ditolak server via HTTP non-2xx -> link rusak.
+        Decision(Mode.BARE, null, minimalHeaders, valid = false)
+    }
 
     private suspend fun probeOnce(url: String, combo: Combo): ProbeResult =
         try {
