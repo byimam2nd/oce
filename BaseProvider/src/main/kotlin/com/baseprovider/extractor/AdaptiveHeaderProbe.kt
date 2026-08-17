@@ -19,10 +19,14 @@ import java.util.concurrent.ConcurrentHashMap
  * dalam satu sesi.
  *
  * Probe BLOCKING: link TIDAK dikirim ke player sebelum lolos test. Jika semua
- * combo gagal (non-2xx/3xx), Decision.valid=false dan caller harus SKIP link
- * (jangan kirim link rusak yang berakhir error 2004 di player). Single-flight
- * per-host: pemanggil bersamaan menunggu hasil probe yang sama, bukan memulai
- * probe ganda.
+ * combo ditolak server via HTTP non-2xx/3xx, Decision.valid=false dan caller
+ * harus SKIP link (jangan kirim link rusak yang berakhir error 2004 di player).
+ * Jika kegagalan terjadi di level jaringan (internet mati / TLS reset /
+ * timeout), link TETAP dikirim (mode BARE, networkBlocked=true) — network
+ * error bukan bukti link rusak, dan skip hanya membuat extractor mengembalikan
+ * "0 link" saat jaringan bermasalah. Hasil networkBlocked tidak di-cache agar
+ * saat internet pulih host di-probe ulang. Single-flight per-host: pemanggil
+ * bersamaan menunggu hasil probe yang sama, bukan memulai probe ganda.
  */
 object AdaptiveHeaderProbe {
     enum class Mode { BARE, REFERER, ORIGIN, BROWSER_LIKE }
@@ -31,7 +35,11 @@ object AdaptiveHeaderProbe {
         val mode: Mode,
         val referer: String?,
         val headers: Map<String, String>,
-        val valid: Boolean = true
+        val valid: Boolean = true,
+        // true = probe gagal di level jaringan (internet mati/TLS reset/timeout),
+        // link tetap dikirim BARE tapi JANGAN di-cache — saat internet pulih,
+        // host harus di-probe ulang untuk dapat combo terbaik.
+        val networkBlocked: Boolean = false
     )
 
     private data class Combo(
@@ -39,6 +47,17 @@ object AdaptiveHeaderProbe {
         val referer: String?,
         val headers: Map<String, String>
     )
+
+    /**
+     * Hasil probe satu combo. Membedakan HTTP reject (server merespons non-2xx,
+     * bukti link benar-benar rusak) dari network error (internet mati / TLS
+     * reset / timeout — BUKAN bukti link rusak).
+     */
+    private sealed class ProbeResult {
+        data class Ok(val ms: Long) : ProbeResult()
+        data object HttpReject : ProbeResult()
+        data object NetworkError : ProbeResult()
+    }
 
     private val cache = ConcurrentHashMap<String, Pair<Long, Decision>>()
     private val inFlight = ConcurrentHashMap<String, CompletableDeferred<Decision>>()
@@ -97,10 +116,12 @@ object AdaptiveHeaderProbe {
                     } catch (e: Exception) {
                         Decision(Mode.BARE, null, minimalHeaders, valid = false)
                     }
-                    // Hanya cache hasil VALID. Hasil invalid tidak di-cache agar
-                    // link yang sempat down (transient) bisa di-probe ulang,
-                    // bukan mem-blow seluruh host selama 60 menit.
-                    if (decision.valid) {
+                    // Hanya cache hasil VALID & bukan network-blocked. Hasil
+                    // invalid tidak di-cache agar link yang sempat down
+                    // (transient) bisa di-probe ulang, bukan mem-blow seluruh
+                    // host selama 60 menit. Hasil network-blocked juga tidak
+                    // di-cache agar saat internet pulih di-probe ulang.
+                    if (decision.valid && !decision.networkBlocked) {
                         cache[host] = System.currentTimeMillis() to decision
                     }
                     deferred.complete(decision)
@@ -123,7 +144,13 @@ object AdaptiveHeaderProbe {
 
     /**
      * Uji semua combo paralel; pilih yang valid (2xx/3xx) dan paling cepat.
-     * Jika tidak ada yang valid -> Decision.invalid.
+     * Jika tidak ada yang valid:
+     *  - semua menolak via HTTP (server merespons non-2xx) -> Decision.invalid
+     *    (link benar-benar rusak, harus di-skip).
+     *  - ada network error (internet mati / TLS reset / timeout) -> kirim BARE
+     *    tetap valid. Network error BUKAN bukti link rusak; kalau di-skip,
+     *    extractor menghasilkan 0 link saat internet bermasalah padahal link
+     *    sebenarnya bagus (bug "tidak ada tautan ditemukan").
      */
     private suspend fun probe(url: String, refererHint: String?): Decision =
         coroutineScope {
@@ -131,18 +158,27 @@ object AdaptiveHeaderProbe {
             val timed = combos.map { combo ->
                 async { combo to probeOnce(url, combo) }
             }.map { it.await() }
-            val valid = timed.filter { it.second != null }
-                .minByOrNull { it.second!! }
-            if (valid == null) {
-                Decision(Mode.BARE, null, minimalHeaders, valid = false)
-            } else {
+            val valid = timed.filter { it.second is ProbeResult.Ok }
+                .minByOrNull { (it.second as ProbeResult.Ok).ms }
+            if (valid != null) {
                 val (combo, _) = valid
-                Decision(combo.mode, combo.referer, combo.headers, valid = true)
+                return@coroutineScope Decision(combo.mode, combo.referer, combo.headers, valid = true)
             }
+            if (timed.any { it.second is ProbeResult.NetworkError }) {
+                // Setidaknya ada kegagalan jaringan (bukan HTTP reject): kirim
+                // BARE tetap valid, TAPI jangan di-cache (networkBlocked=true).
+                // Saat internet pulih, host di-probe ulang untuk combo terbaik.
+                return@coroutineScope Decision(
+                    Mode.BARE, null, minimalHeaders,
+                    valid = true, networkBlocked = true
+                )
+            }
+            // Semua combo ditolak server via HTTP non-2xx -> link rusak.
+            Decision(Mode.BARE, null, minimalHeaders, valid = false)
         }
 
-    private suspend fun probeOnce(url: String, combo: Combo): Long? =
-        runCatching {
+    private suspend fun probeOnce(url: String, combo: Combo): ProbeResult =
+        try {
             val start = System.currentTimeMillis()
             val r = app.get(
                 url,
@@ -150,6 +186,11 @@ object AdaptiveHeaderProbe {
                 headers = combo.headers + mapOf("Range" to "bytes=0-1023"),
                 timeout = PROBE_TIMEOUT
             )
-            if (r.code in 200..399) System.currentTimeMillis() - start else null
-        }.getOrNull()
+            if (r.code in 200..399) ProbeResult.Ok(System.currentTimeMillis() - start)
+            else ProbeResult.HttpReject
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            ProbeResult.NetworkError
+        }
 }
