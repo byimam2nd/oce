@@ -86,7 +86,7 @@ class ExtractorConfigParserTest {
         json.put("steps", stepsArr)
 
         val config = fromExtractorJson("S", json)
-        assertEquals(13, config.steps.size)
+        assertEquals(12, config.steps.size)
         assertTrue(config.steps[0] is ExtractorStep.Fetch)
         assertTrue(config.steps[1] is ExtractorStep.PostForm)
         assertTrue(config.steps[2] is ExtractorStep.PostJson)
