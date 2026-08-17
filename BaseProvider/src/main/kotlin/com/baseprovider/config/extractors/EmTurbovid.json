@@ -1,0 +1,29 @@
+{
+  "id": "EmTurbovid",
+  "name": "EmTurbovid",
+  "mainUrl": "https://emturbovid.com",
+  "requiresReferer": true,
+  "cached": false,
+  "videoReferer": "{mainUrl}/",
+  "variants": [
+    {
+      "name": "default",
+      "headers": {}
+    }
+  ],
+  "steps": [
+    {
+      "step": "fetch",
+      "url": "{url}",
+      "referer": "{mainUrl}/",
+      "headers": {},
+      "store": "response"
+    },
+    {
+      "step": "substring",
+      "startMarker": "var urlPlay = '",
+      "endMarker": "'",
+      "source": "response"
+    }
+  ]
+}

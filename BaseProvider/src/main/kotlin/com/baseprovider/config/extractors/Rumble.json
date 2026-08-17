@@ -1,0 +1,30 @@
+{
+  "id": "Rumble",
+  "name": "Rumble",
+  "mainUrl": "https://rumble.com",
+  "requiresReferer": false,
+  "cached": false,
+  "variants": [
+    {
+      "name": "default",
+      "headers": {}
+    }
+  ],
+  "steps": [
+    {
+      "step": "fetch",
+      "url": "{url}",
+      "referer": "{mainUrl}/",
+      "headers": {},
+      "store": "response"
+    },
+    {
+      "step": "regex",
+      "pattern": "\\\"url\\\":\\\"(.*?)\\\"",
+      "group": 1,
+      "source": "response",
+      "filter": ".m3u8",
+      "universal": false
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "id": "AnichinStream",
+  "name": "AnichinStream",
+  "mainUrl": "https://anichin.stream",
+  "requiresReferer": true,
+  "cached": false,
+  "idSource": {
+    "type": "query",
+    "param": "id"
+  },
+  "variants": [
+    {
+      "name": "default",
+      "headers": {}
+    }
+  ],
+  "steps": [
+    {
+      "step": "constructUrl",
+      "template": "{mainUrl}/hls/{id}.m3u8"
+    }
+  ]
+}

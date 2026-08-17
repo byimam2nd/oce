@@ -1,11 +1,14 @@
 package com.baseprovider.extractor
+import com.baseprovider.config.ExtractorConfig
+import com.baseprovider.config.ExtractorConfigRegistry
 import com.baseprovider.network.*
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.extractors.*
 import com.lagradost.cloudstream3.utils.*
 
 object ProviderExtractors {
-    val list = listOf(
+
+    private val legacyList = listOf(
         Odnoklassniki(), Rumble(), StreamRuby(), Svanila(),
             Svilla(),
         ByseSX(), Hownetwork(), Cloudhownetwork(),
@@ -20,9 +23,34 @@ object ProviderExtractors {
         PlayCdn(), EmTurbovid()
     )
 
-    private val normalizedList: List<Pair<String, ExtractorApi>> = list
-        .map {
-        it.mainUrl.normalizeExtractorDomain() to it
+    /**
+     * Id extractor yang sudah dimigrasi ke config-driven (file JSON di
+     * `config/extractors/`). Tambahkan id ke set ini saat migrasi diuji.
+     * Id di luar set ini memakai class legacy — non-breaking & bisa rollback:
+     * jika config gagal load, extractor fallback ke class legacy.
+     */
+    private val configDrivenIds = setOf<String>()
+
+    private fun buildList(): List<ExtractorApi> {
+        val result = mutableListOf<ExtractorApi>()
+        for (extractor in legacyList) {
+            val id = extractor.javaClass.simpleName
+            if (id in configDrivenIds) {
+                val config: ExtractorConfig? = ExtractorConfigRegistry.get(id)
+                if (config != null) {
+                    result.add(ConfigDrivenExtractor(config))
+                    continue
+                }
+            }
+            result.add(extractor)
+        }
+        return result
+    }
+
+    val list: List<ExtractorApi> by lazy { buildList() }
+
+    private val normalizedList: List<Pair<String, ExtractorApi>> by lazy {
+        list.map { it.mainUrl.normalizeExtractorDomain() to it }
     }
 
     fun getMatchingExtractors(url: String): List<ExtractorApi> {

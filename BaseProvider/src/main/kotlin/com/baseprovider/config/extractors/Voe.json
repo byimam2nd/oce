@@ -1,0 +1,38 @@
+{
+  "id": "Voe",
+  "name": "Voe",
+  "mainUrl": "https://voe.sx",
+  "requiresReferer": true,
+  "cached": false,
+  "variants": [
+    {
+      "name": "default",
+      "headers": {}
+    }
+  ],
+  "steps": [
+    {
+      "step": "fetch",
+      "url": "{url}",
+      "referer": "",
+      "headers": {},
+      "store": "response"
+    },
+    {
+      "step": "regex",
+      "pattern": "https?://[^\"' ]+\\.m3u8[^\"' ]*",
+      "group": 0,
+      "source": "response",
+      "filter": "",
+      "universal": false
+    },
+    {
+      "step": "regex",
+      "pattern": "file:\\s*\"([^\"]+)\"",
+      "group": 1,
+      "source": "response",
+      "filter": "",
+      "universal": false
+    }
+  ]
+}
