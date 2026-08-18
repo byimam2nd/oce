@@ -41,11 +41,6 @@ object OceSettings {
         return raw?.split(",")?.filter { it.isNotBlank() }?.toSet()
     }
 
-    fun prefetchEnabled(providerId: String, default: Boolean): Boolean {
-        val p = prefs(providerId) ?: return default
-        return p.getBoolean(KEY_PREFETCH, default)
-    }
-
     fun cacheTtlMinutes(providerId: String, default: Long): Long {
         val p = prefs(providerId) ?: return default
         return p.getLong(KEY_CACHE_TTL, default)
@@ -54,7 +49,6 @@ object OceSettings {
     fun applyOverrides(providerId: String, base: ProviderConfig): ProviderConfig {
         val p = prefs(providerId) ?: return base
         return base.copy(
-            prefetchEnabled = p.getBoolean(KEY_PREFETCH, base.prefetchEnabled),
             cacheTtlMinutes = p.getLong(KEY_CACHE_TTL, base.cacheTtlMinutes)
         )
     }
@@ -109,7 +103,6 @@ object OceSettings {
     }
 
     internal const val KEY_CATEGORIES = "enabled_categories"
-    internal const val KEY_PREFETCH = "prefetch_enabled"
     internal const val KEY_CACHE_TTL = "cache_ttl_minutes"
     internal const val KEY_CUSTOM_CATEGORIES = "custom_categories"
 }

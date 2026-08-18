@@ -26,7 +26,6 @@ internal class SettingsDialog {
     private class Controls(
         val layout: LinearLayout,
         val categoryChecks: Map<String, CheckBox>,
-        val prefetchCheck: CheckBox,
         val ttlSpinner: Spinner,
         val customName: EditText,
         val customUrl: EditText,
@@ -132,13 +131,6 @@ internal class SettingsDialog {
             reloadHome()
         }
 
-        layout.addView(sectionLabel(context, "Prefetch"))
-        val prefetchCheck = CheckBox(context).apply {
-            text = "Enable prefetch"
-            isChecked = prefs.getBoolean(KEY_PREFETCH, config.prefetchEnabled)
-        }
-        layout.addView(prefetchCheck)
-
         val ttlSpinner = spinnerFor(
             context,
             TTL_OPTIONS.map { "$it min" },
@@ -146,7 +138,7 @@ internal class SettingsDialog {
         )
         layout.addView(labelRow(context, "Cache TTL (minutes)", ttlSpinner))
 
-        return Controls(layout, catChecks, prefetchCheck, ttlSpinner, customName, customUrl, customContainer, customChecks, statusView)
+        return Controls(layout, catChecks, ttlSpinner, customName, customUrl, customContainer, customChecks, statusView)
     }
 
     private fun validateAndAdd(
@@ -215,7 +207,6 @@ internal class SettingsDialog {
         val enabled = controls.categoryChecks.filterValues { it.isChecked }.keys
         prefs.edit()
             .putString(KEY_CATEGORIES, enabled.joinToString(","))
-            .putBoolean(KEY_PREFETCH, controls.prefetchCheck.isChecked)
             .putLong(KEY_CACHE_TTL, TTL_OPTIONS[controls.ttlSpinner.selectedItemPosition])
             .apply()
         reloadHome()
@@ -282,7 +273,6 @@ internal class SettingsDialog {
     private companion object {
         const val TAG = "OceSettings"
         const val KEY_CATEGORIES = "enabled_categories"
-        const val KEY_PREFETCH = "prefetch_enabled"
         const val KEY_CACHE_TTL = "cache_ttl_minutes"
         val TTL_OPTIONS = longArrayOf(5L, 15L, 30L, 60L, 120L)
     }

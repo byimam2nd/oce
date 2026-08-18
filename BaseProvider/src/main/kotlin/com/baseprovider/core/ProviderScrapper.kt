@@ -28,13 +28,8 @@ class ProviderScrapper(
     private val config: ProviderConfig,
     private val mapper: ProviderMapper
 ) {
-    // Semaphore untuk jalur user-play (waitForAll=false): race first-video cepat.
+    // Semaphore untuk jalur user-play: race first-video cepat.
     private val linkSemaphore = Semaphore(5)
-    // Semaphore TERPISAH untuk jalur prefetch (waitForAll=true): background warm
-    // tidak boleh memonopoli permit user-play. Jika prefetch besar (banyak
-    // episode) memakai semaphore yang sama, jobs user-play antri di belakang
-    // ratusan jobs prefetch → tombol play nge-spin / run stuck.
-    private val prefetchLinkSemaphore = Semaphore(3)
     private val htmlCache = ExpiringCache<Document>(5 * 60 * 1000L)
     private val linkCollector = LinkCollector(config)
     private val fallbackPipeline = FallbackPipeline(config)
@@ -184,8 +179,7 @@ class ProviderScrapper(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
-        callback: (ExtractorLink) -> Unit,
-        waitForAll: Boolean = false
+        callback: (ExtractorLink) -> Unit
     ): Boolean {
         val runId = SupabaseObservability.beginRun(
             sourceCode = config.id,
@@ -246,18 +240,12 @@ class ProviderScrapper(
             // First-valid race: langsung return begitu video pertama ditemukan.
             // Ekstraktor tersisa tetap berjalan di background (fire-and-forget)
             // sehingga player tidak menunggu SEMUA server dicoba.
-            // Jika waitForAll=true (jalur cache/prefetch), tunggu semua job
-            // selesai supaya cache menyimpan hasil LENGKAP.
             val firstVideo = CompletableDeferred<Boolean>()
             val allDone = CompletableDeferred<Unit>()
             val jobs = pendingLinks.map { (raw, label) ->
                 linkRaceScope.launch {
                     runCatching {
-                        // Jalur prefetch (waitForAll) memakai semaphore terpisah
-                        // supaya tidak mengantrikan jalur user-play.
-                        val semaphore = if (waitForAll) prefetchLinkSemaphore
-                            else linkSemaphore
-                        semaphore.withPermit { fallbackPipeline
+                        linkSemaphore.withPermit { fallbackPipeline
                             .processLink(raw, label, currentUrl,
                                 subtitleCallback, wrappedCallback, runId) }
                     }
@@ -271,17 +259,12 @@ class ProviderScrapper(
                     pendingLinks.size, data)
             }
 
-            if (waitForAll) {
-                allDone.await()
-                videoCount.get() > 0
-            } else {
-                // Selesai saat video pertama ditemukan (true) ATAU semua job
-                // selesai tanpa video (hasil akhir). Jika true, sisa job tetap
-                // jalan di background — jangan cancel.
-                select {
-                    firstVideo.onAwait { true }
-                    allDone.onAwait { videoCount.get() > 0 }
-                }
+            // Selesai saat video pertama ditemukan (true) ATAU semua job
+            // selesai tanpa video (hasil akhir). Jika true, sisa job tetap
+            // jalan di background — jangan cancel.
+            select {
+                firstVideo.onAwait { true }
+                allDone.onAwait { videoCount.get() > 0 }
             }
         }.getOrElse { e ->
             val ft = if (e.message?.contains("cancel", true) ==

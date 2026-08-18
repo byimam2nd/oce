@@ -38,14 +38,6 @@ data class ProviderConfig(
     val refererPlayerMode: String = "current_url",
     val iframeSelectors: String = "iframe",
 
-    // ── Prefetch (auto-warm) ──
-    val prefetchEnabled: Boolean = true,
-    val prefetchHomeLimit: Int = 12,
-    // Cap kecil: prefetch episode besar (20+) memonopoli semaphore & memicu
-    // rate-limit/breaker, yang membuat user-play ikut gagal saat klik cepat.
-    val prefetchEpisodeLimit: Int = 5,
-    val prefetchTtlMinutes: Long = 30L,
-
     // ── Poster Resize (adaptive) ──
     // Template rewrite poster/thumbnail URL ke image proxy on-the-fly.
     // Token {url} = URL asli (URL-encoded). Kosong = mati (URL asli).
