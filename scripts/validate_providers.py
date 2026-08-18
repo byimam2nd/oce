@@ -75,7 +75,14 @@ def find_root(start=None):
 
 
 def load_registry_extractors(root):
-    """Extract registered extractor names from ExtractorRegistry.kt listOf block."""
+    """Extract registered LEGACY extractor names from ExtractorRegistry.kt.
+
+    Parses only the `legacyList = listOf(...)` block (Kotlin class instances).
+    These are extractors that are still active via their legacy Kotlin class —
+    i.e. NOT migrated to config-driven. Knowing this set lets the extractor
+    config validation distinguish "dormant JSON (legacy class still active,
+    e.g. an intentional revert)" from a truly orphaned extractor.
+    """
     path = os.path.join(
         root, "BaseProvider", "src", "main", "kotlin", "com", "baseprovider",
         "extractor", "ExtractorRegistry.kt")
@@ -83,10 +90,97 @@ def load_registry_extractors(root):
         return set()
     with open(path, encoding="utf-8") as f:
         content = f.read()
-    start = content.find("val list = listOf(")
-    end = content.find("normalizedList", start)
+    start = content.find("legacyList = listOf(")
+    end = content.find("configDrivenIds", start)
     block = content[start:end] if start != -1 else content
     return set(REGISTRY_RE.findall(block))
+
+
+CONFIG_DRIVEN_SET_RE = re.compile(
+    r'configDrivenIds\s*=\s*setOf\((.*?)\)', re.DOTALL)
+
+
+def load_config_driven_ids(root):
+    """Extract config-driven extractor ids from ExtractorRegistry.kt setOf block.
+
+    The `configDrivenIds` set is the migration registry: an id there means the
+    extractor is loaded from `config/extractors/<id>.json` instead of its legacy
+    Kotlin class. Keeping this set in sync with the JSON files is what prevents
+    silent fallback to legacy (config missing) or dead config (JSON never loaded).
+    """
+    path = os.path.join(
+        root, "BaseProvider", "src", "main", "kotlin", "com", "baseprovider",
+        "extractor", "ExtractorRegistry.kt")
+    if not os.path.isfile(path):
+        return set()
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+    m = CONFIG_DRIVEN_SET_RE.search(content)
+    if not m:
+        return set()
+    return set(re.findall(r'"([A-Za-z0-9_]+)"', m.group(1)))
+
+
+def validate_extractor_configs(root):
+    """Validate `config/extractors/*.json` and their sync with configDrivenIds.
+
+    Catches the class of mistake invisible at build time:
+      * a JSON extractor config whose id is NOT in `configDrivenIds` and whose
+        legacy class is NOT registered either → orphaned JSON, never loaded.
+      * an id in `configDrivenIds` without a JSON file → silently falls back
+        to the legacy Kotlin class (migration marked done but config missing).
+    A JSON whose id is missing from `configDrivenIds` but whose legacy class IS
+    still registered (e.g. an intentional revert to legacy, like Odnoklassniki)
+    is only a WARNING — the config is dormant, not harmful.
+    """
+    errors, warnings = [], []
+    config_driven_ids = load_config_driven_ids(root)
+    legacy_ids = load_registry_extractors(root)
+    extractor_dir = os.path.join(
+        root, "BaseProvider", "src", "main", "kotlin", "com", "baseprovider",
+        "config", "extractors")
+    files = sorted(glob.glob(os.path.join(extractor_dir, "*.json")))
+
+    json_ids = set()
+    for path in files:
+        with open(path, encoding="utf-8") as f:
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError as e:
+                errors.append(f"{os.path.basename(path)}: invalid JSON: {e}")
+                continue
+        name = data.get("id") or os.path.basename(path)
+        if not isinstance(data.get("id"), str) or not data.get("id"):
+            errors.append(f"{name}: missing string 'id'")
+            continue
+        if os.path.basename(path)[:-5].lower() != data["id"].lower():
+            errors.append(
+                f"{name}: filename '{os.path.basename(path)}' does not match id='{data['id']}'")
+        json_ids.add(data["id"])
+        if data["id"] not in config_driven_ids:
+            if data["id"] in legacy_ids:
+                warnings.append(
+                    f"{name}: extractor JSON config exists but id is NOT in "
+                    "ExtractorRegistry.configDrivenIds — config is dormant, "
+                    "extractor uses its legacy Kotlin class")
+            else:
+                errors.append(
+                    f"{name}: extractor JSON config exists but id is neither in "
+                    "configDrivenIds nor registered as a legacy class — config "
+                    "is orphaned, extractor will never be loaded")
+        main_url = data.get("mainUrl", "")
+        if not isinstance(main_url, str) or not main_url.startswith("http"):
+            errors.append(f"{name}: mainUrl must be a non-empty http(s) URL, got {main_url!r}")
+        if not data.get("steps"):
+            errors.append(f"{name}: steps must be a non-empty list")
+
+    for cid in sorted(config_driven_ids - json_ids):
+        errors.append(
+            f"{cid}: listed in ExtractorRegistry.configDrivenIds but no "
+            "config/extractors/<id>.json exists — extractor silently falls back "
+            "to its legacy Kotlin class")
+
+    return errors, warnings
 
 
 def validate_config(path, extractors):
@@ -198,6 +292,14 @@ def main():
             print(f"WARN  {w}")
         for e in errors:
             print(f"ERROR {e}")
+
+    ext_errors, ext_warnings = validate_extractor_configs(root)
+    total_errors += len(ext_errors)
+    total_warnings += len(ext_warnings)
+    for w in ext_warnings:
+        print(f"WARN  {w}")
+    for e in ext_errors:
+        print(f"ERROR {e}")
 
     print(f"\n{len(files)} configs validated, "
           f"{total_errors} error(s), {total_warnings} warning(s)")

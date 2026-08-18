@@ -1,5 +1,7 @@
 package com.baseprovider.model
 
+import com.baseprovider.log.FailureType
+import com.baseprovider.log.logFail
 import com.lagradost.api.Log
 import org.jsoup.nodes.Element
 import org.jsoup.select.Elements
@@ -29,6 +31,13 @@ object SelectorResolver {
     private const val DEFAULT_THRESHOLD = 40
     private const val MAX_RELOCATE_SCAN = 3000
     private const val MAX_BROKEN_PER_KEY = 8
+
+    // Interval rate-limit log decay per key: selector yang gagal match akan
+    // dipanggil per-item (search/detail) sehingga tanpa rate-limit logcat dan
+    // Supabase ter-spam puluhan baris per halaman. Satu peringatan per key per
+    // interval sudah cukup untuk visibilitas "selector mulai rusak".
+    private const val DECAY_LOG_INTERVAL_MS = 5 * 60_000L
+    private val lastDecayLog = ConcurrentHashMap<String, Long>()
 
     private data class Fingerprint(
         val tag: String,
@@ -107,6 +116,7 @@ object SelectorResolver {
                 return el
             }
         }
+        logDecay(key, "selectFirst: all variants failed, relocate no match: '$selector'")
         return null
     }
 
@@ -131,6 +141,7 @@ object SelectorResolver {
                 return Elements(relocated)
             }
         }
+        logDecay(key, "select: all variants failed, relocate no match: '$selector'")
         return Elements()
     }
 
@@ -175,6 +186,7 @@ object SelectorResolver {
                 return el
             }
         }
+        logDecay(key, "selectValidated: all variants failed validation, relocate no match: '$selector'")
         return null
     }
 
@@ -381,6 +393,34 @@ object SelectorResolver {
 
     // ── Broken variant tracking (selector yang match tapi hasil salah) ──
 
+    /**
+     * Log decay selector (rate-limited per key, hanya bila selector pernah
+     * match sebelumnya). Sinyal "struktur situs berubah": selector yang dulu
+     * bekerja sekarang gagal. Tanpa rate-limit, pencarian/detail yang
+     * memanggil select per-item akan membanjiri log. Field yang sejak awal
+     * tidak pernah match (tanpa fingerprint) TIDAK di-log — itu normal
+     * (field opsional yang memang tidak ada di halaman).
+     */
+    private fun logDecay(key: String, message: String) {
+        if (key.isBlank()) return
+        if (!fingerprints.containsKey(key)) return
+        val now = System.currentTimeMillis()
+        val last = lastDecayLog[key] ?: 0L
+        if (now - last < DECAY_LOG_INTERVAL_MS) return
+        lastDecayLog[key] = now
+        // key = "providerId:fieldName" — tag memakai providerId (konsisten
+        // dengan log lain), key lengkap disimpan di kolom selectors untuk
+        // query korelasi "selector mana paling sering rusak".
+        val providerId = key.substringBefore(':').takeIf { it.isNotBlank() } ?: key
+        logFail(
+            tag = providerId,
+            message = message,
+            type = FailureType.SELECTOR_FAILURE,
+            selectors = key,
+            stage = "SELECT"
+        )
+    }
+
     private fun isBroken(key: String, variant: String): Boolean {
         val set = brokenVariants[key] ?: return false
         return variant in set
@@ -396,6 +436,7 @@ object SelectorResolver {
         } else {
             set.add(variant)
         }
+        logDecay(key, "variant blacklisted (match DOM tapi gagal validasi tipe): '$variant'")
     }
 
     private fun unmarkBroken(key: String, variant: String) {
