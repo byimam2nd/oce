@@ -41,7 +41,9 @@ data class ProviderConfig(
     // ── Prefetch (auto-warm) ──
     val prefetchEnabled: Boolean = true,
     val prefetchHomeLimit: Int = 12,
-    val prefetchEpisodeLimit: Int = 20,
+    // Cap kecil: prefetch episode besar (20+) memonopoli semaphore & memicu
+    // rate-limit/breaker, yang membuat user-play ikut gagal saat klik cepat.
+    val prefetchEpisodeLimit: Int = 5,
     val prefetchTtlMinutes: Long = 30L,
 
     // ── Poster Resize (adaptive) ──
@@ -66,6 +68,9 @@ data class ProviderConfig(
 
     // ── Extractor Control ──
     val allowedExtractors: Set<String> = emptySet(),
+    // Host yang dilewati total (host mati / link iklan / shortlink rusak).
+    // Cocokkan terhadap host URL final (mis. "short.icu").
+    val skipHosts: Set<String> = emptySet(),
 
     // ── UI Keywords ──
     val dubKeyword: String = "dub",

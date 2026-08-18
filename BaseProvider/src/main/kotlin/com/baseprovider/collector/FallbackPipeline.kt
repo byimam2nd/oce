@@ -9,6 +9,7 @@ import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import kotlinx.coroutines.withTimeoutOrNull
 import org.jsoup.Jsoup
+import java.net.URI
 
 class FallbackPipeline(private val config: ProviderConfig) {
 
@@ -39,6 +40,22 @@ class FallbackPipeline(private val config: ProviderConfig) {
                         runId, kind = "EXTRACT", status = "failed",
                         linkUrl = raw, errorType = FailureType
                             .INVALID_URL.label,
+                        durationMs = System.currentTimeMillis() - stepStartedAt
+                    )
+                    return@runCatching false
+                }
+
+                val host = runCatching { URI(fixedUrl).host }
+                    .getOrNull()?.lowercase() ?: ""
+                if (config.skipHosts.any { h ->
+                        h.isNotBlank() && (host == h.lowercase()
+                            || host.endsWith(".${h.lowercase()}"))
+                    }) {
+                    logDebug(config.id, "Skipping skipped host $host: $fixedUrl")
+                    SupabaseObservability.logStep(
+                        runId, kind = "EXTRACT", status = "failed",
+                        linkUrl = fixedUrl, errorType = FailureType
+                            .EXTRACTOR_FAILURE.label,
                         durationMs = System.currentTimeMillis() - stepStartedAt
                     )
                     return@runCatching false

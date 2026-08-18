@@ -28,7 +28,13 @@ class ProviderScrapper(
     private val config: ProviderConfig,
     private val mapper: ProviderMapper
 ) {
+    // Semaphore untuk jalur user-play (waitForAll=false): race first-video cepat.
     private val linkSemaphore = Semaphore(5)
+    // Semaphore TERPISAH untuk jalur prefetch (waitForAll=true): background warm
+    // tidak boleh memonopoli permit user-play. Jika prefetch besar (banyak
+    // episode) memakai semaphore yang sama, jobs user-play antri di belakang
+    // ratusan jobs prefetch → tombol play nge-spin / run stuck.
+    private val prefetchLinkSemaphore = Semaphore(3)
     private val htmlCache = ExpiringCache<Document>(5 * 60 * 1000L)
     private val linkCollector = LinkCollector(config)
     private val fallbackPipeline = FallbackPipeline(config)
@@ -247,7 +253,11 @@ class ProviderScrapper(
             val jobs = pendingLinks.map { (raw, label) ->
                 linkRaceScope.launch {
                     runCatching {
-                        linkSemaphore.withPermit { fallbackPipeline
+                        // Jalur prefetch (waitForAll) memakai semaphore terpisah
+                        // supaya tidak mengantrikan jalur user-play.
+                        val semaphore = if (waitForAll) prefetchLinkSemaphore
+                            else linkSemaphore
+                        semaphore.withPermit { fallbackPipeline
                             .processLink(raw, label, currentUrl,
                                 subtitleCallback, wrappedCallback, runId) }
                     }
