@@ -74,6 +74,8 @@ jobs:
         run: |
           echo "BUILD_TIMESTAMP=$(TZ='Asia/Jakarta' date +'%Y-%m-%d %H:%M')" >> $GITHUB_ENV
           echo "OCE_VERSION=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "SUPABASE_URL=${SUPABASE_URL}" >> $GITHUB_ENV
+          echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}" >> $GITHUB_ENV
           echo "✅ Build environment set"
 
       - name: Validate provider configs

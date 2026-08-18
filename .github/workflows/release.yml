@@ -64,6 +64,8 @@ jobs:
           TAG_NAME=${GITHUB_REF_NAME#v}
           echo "BUILD_TIMESTAMP=$(TZ='Asia/Jakarta' date +'%Y-%m-%d %H:%M')" >> $GITHUB_ENV
           echo "OCE_VERSION=${TAG_NAME}" >> $GITHUB_ENV
+          echo "SUPABASE_URL=${SUPABASE_URL}" >> $GITHUB_ENV
+          echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}" >> $GITHUB_ENV
           echo "✅ Build environment set for tag: $TAG_NAME"
 
       - name: Validate provider configs

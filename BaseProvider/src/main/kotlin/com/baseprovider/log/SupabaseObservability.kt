@@ -28,8 +28,10 @@ import java.util.concurrent.ConcurrentHashMap
  */
 object SupabaseObservability {
 
-    private val URL: String get() = System.getenv("SUPABASE_URL") ?: ""
-    private val ANON_KEY: String get() = System.getenv("SUPABASE_ANON_KEY") ?: ""
+    private val URL: String get() = System.getenv("SUPABASE_URL")
+        ?: SupabaseBakedConfig.URL
+    private val ANON_KEY: String get() = System.getenv("SUPABASE_ANON_KEY")
+        ?: SupabaseBakedConfig.ANON_KEY
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val sourceIdCache = ConcurrentHashMap<String, String>()
     private val pendingRuns =

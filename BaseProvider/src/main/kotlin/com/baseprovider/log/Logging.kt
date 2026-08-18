@@ -22,9 +22,10 @@ object ProviderLog {
     private const val SUPABASE_BATCH_SIZE = 10
     private const val SUPABASE_FLUSH_INTERVAL_MS = 2000L
 
-    private val SUPABASE_URL: String get() = System.getenv("SUPABASE_URL") ?: ""
-    private val SUPABASE_ANON_KEY: String get() = System
-        .getenv("SUPABASE_ANON_KEY") ?: ""
+    private val SUPABASE_URL: String get() = System.getenv("SUPABASE_URL")
+        ?: SupabaseBakedConfig.URL
+    private val SUPABASE_ANON_KEY: String get() = System.getenv("SUPABASE_ANON_KEY")
+        ?: SupabaseBakedConfig.ANON_KEY
 
     private val sentMessages = java.util.concurrent
         .ConcurrentHashMap<String, Pair<Int, Int>>()

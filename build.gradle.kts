@@ -213,6 +213,38 @@ gradle.projectsEvaluated {
     }
 }
 
+// Bake SUPABASE_* dari env CI secret ke SupabaseBakedConfig.kt.
+// Runtime CloudStream (device user) tidak punya System.getenv untuk custom
+// vars, jadi value harus ter-package di dalam plugin saat build. Semua modul
+// (BaseProvider + provider) compile file ini, jadi task terdaftar di root.
+val supabaseConfigFile = rootProject.file(
+    "BaseProvider/src/main/kotlin/com/baseprovider/log/SupabaseBakedConfig.kt"
+)
+val generateSupabaseConfig = tasks.register("generateSupabaseConfig") {
+    val supabaseUrl = providers.environmentVariable("SUPABASE_URL").orElse("")
+    val supabaseAnonKey = providers.environmentVariable("SUPABASE_ANON_KEY").orElse("")
+    inputs.property("supabaseUrl", supabaseUrl)
+    inputs.property("supabaseAnonKey", supabaseAnonKey)
+    outputs.file(supabaseConfigFile)
+    doLast {
+        supabaseConfigFile.writeText(
+            """
+            |package com.baseprovider.log
+            |
+            |object SupabaseBakedConfig {
+            |    const val URL: String = "${supabaseUrl.get()}"
+            |    const val ANON_KEY: String = "${supabaseAnonKey.get()}"
+            |}
+            """.trimMargin()
+        )
+    }
+}
+subprojects {
+    tasks.matching { it.name == "preBuild" }.configureEach {
+        dependsOn(rootProject.tasks.named("generateSupabaseConfig"))
+    }
+}
+
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
