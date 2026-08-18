@@ -66,9 +66,6 @@ jobs:
 
       - name: Set Build Environment
         env:
-          OCE_TG_TOKEN: ${{ secrets.OCE_TG_TOKEN }}
-          OCE_TG_GROUP_ID: ${{ secrets.OCE_TG_GROUP_ID }}
-          OCE_TG_THREAD_ID: ${{ secrets.OCE_TG_THREAD_ID }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |

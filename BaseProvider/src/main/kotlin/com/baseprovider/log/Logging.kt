@@ -12,12 +12,6 @@ import java.net.URI
 
 object ProviderLog {
     private const val GLOBAL_PREFIX = "OCE"
-    private const val SENT_MESSAGE_LIMIT = 1000
-
-    private val TG_TOKEN: String get() = System.getenv("OCE_TG_TOKEN") ?: ""
-    private val TG_GROUP_ID: String get() = System
-        .getenv("OCE_TG_GROUP_ID") ?: ""
-    private val TG_THREAD_ID: String get() = System.getenv("OCE_TG_THREAD_ID") ?: "2"
 
     private const val SUPABASE_BATCH_SIZE = 10
     private const val SUPABASE_FLUSH_INTERVAL_MS = 2000L
@@ -27,12 +21,9 @@ object ProviderLog {
     private val SUPABASE_ANON_KEY: String get() = System.getenv("SUPABASE_ANON_KEY")
         ?: SupabaseBakedConfig.ANON_KEY
 
-    private val sentMessages = java.util.concurrent
-        .ConcurrentHashMap<String, Pair<Int, Int>>()
     private val supabaseBuffer = java.util.concurrent
         .ConcurrentLinkedQueue<org.json.JSONObject>()
     private val logScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val tgJob = Job()
     private val sbJob = Job()
     private val supabaseFlushLock = Any()
     private val supabaseFlushScheduled = java.util.concurrent.atomic
@@ -97,90 +88,11 @@ object ProviderLog {
         }
 
         if (level != LogLevel.DEBUG && level != LogLevel.SUCCESS) {
-            sendToTelegram(level.name, tag, fullMsg, url, host, method, ft,
-                selectors)
             sendToSupabase(
                 level.name, tag, fullMsg, url, host, method, ft,
                 selectors, stage, extractor, attempt, durationMs, runId,
                 tracebackJson
             )
-        }
-    }
-
-    private fun trimSentMessages() {
-        if (sentMessages.size > SENT_MESSAGE_LIMIT) {
-            val keysToEvict = sentMessages.keys.take(sentMessages
-                .size - (SENT_MESSAGE_LIMIT / 2))
-            keysToEvict.forEach { sentMessages.remove(it) }
-        }
-    }
-
-    private fun sendToTelegram(
-        level: String, tag: String, message: String,
-        url: String?, host: String, method: String?,
-        type: FailureType, selectors: String = ""
-    ) {
-        if (TG_TOKEN.isBlank()) return
-        val emoji = when (level) {
-            "SUCCESS" -> "\u2705"
-            "FAIL" -> "\u274C"
-            "ERROR" -> "\u274C"
-            "CRITICAL" -> "\uD83D\uDD25"
-            else -> "\u2139\uFE0F"
-        }
-        val urlInfo = url?.let { if (it.length > 80) it
-            .take(77) + "..." else it } ?: ""
-        val methodInfo = method ?: ""
-        val selInfo = selectors.ifBlank { "-" }
-
-        val isLinkMethod = method == "loadLinks" || method == "extractLinks"
-        val rawBody = when {
-            level == "SUCCESS" -> "$emoji[Sukses]$tag/$methodInfo/$selInfo/$urlInfo/$message"
-            isLinkMethod && level == "FAIL" -> "$emoji[$level]$tag/$methodInfo/$urlInfo/$selInfo/$message\nMassagge: $message"
-            else -> "$emoji[$level]$tag/$methodInfo/$selInfo/$urlInfo/$message\nMassagge: $message"
-        }
-
-        val key = "$level|$tag|${method ?: ""}|$host"
-
-        synchronized(sentMessages) { trimSentMessages() }
-
-        logScope.launch(tgJob) {
-            val existing = sentMessages[key]
-            if (existing != null) {
-                val (msgId, count) = existing
-                val newCount = count + 1
-                val body = "[$newCount]$rawBody"
-                runCatching {
-                    com.lagradost.cloudstream3.app.post(
-                        "https://api.telegram.org/bot$TG_TOKEN/editMessageText",
-                        requestBody = org.json.JSONObject().apply {
-                            put("chat_id", TG_GROUP_ID)
-                            if (TG_THREAD_ID.isNotBlank()) put("message_thread_id", TG_THREAD_ID.toIntOrNull() ?: 0)
-                            put("message_id", msgId)
-                            put("text", body)
-                        }.toString().toRequestBody("application/json"
-                            .toMediaType())
-                    ).text
-                }.onSuccess {
-                    sentMessages[key] = msgId to newCount
-                }.onFailure { e -> Log.e("OCE", "Telegram editMessageText failed: ${e.message}") }
-            } else {
-                runCatching {
-                    val resp = com.lagradost.cloudstream3.app.post(
-                        "https://api.telegram.org/bot$TG_TOKEN/sendMessage",
-                        requestBody = org.json.JSONObject().apply {
-                            put("chat_id", TG_GROUP_ID)
-                            if (TG_THREAD_ID.isNotBlank()) put("message_thread_id", TG_THREAD_ID.toIntOrNull() ?: 0)
-                            put("text", rawBody)
-                            put("disable_web_page_preview", true)
-                        }.toString().toRequestBody("application/json"
-                            .toMediaType())
-                    ).text
-                    val msgId = org.json.JSONObject(resp)
-                        .getJSONObject("result").getInt("message_id")
-                    sentMessages[key] = msgId to 1
-                }.onFailure { e -> Log.e("OCE", "Telegram sendMessage failed: ${e.message}") }
-            }
         }
     }
 
