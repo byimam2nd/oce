@@ -217,13 +217,11 @@ gradle.projectsEvaluated {
             val configDir = rootProject.file(
                 "BaseProvider/src/main/kotlin/com/baseprovider/config"
             )
-            project.tasks.named("make").configure { task ->
-                (task as org.gradle.api.tasks.bundling.Zip).apply {
-                    from(configDir) { include("*.json") }
-                    from(file(configDir.path + "/extractors")) {
-                        include("*.json")
-                        into("extractors")
-                    }
+            project.tasks.named<org.gradle.api.tasks.bundling.Zip>("make") {
+                from(configDir) { include("*.json") }
+                from(configDir.resolve("extractors")) {
+                    include("*.json")
+                    into("extractors")
                 }
             }
         }
