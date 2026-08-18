@@ -20,14 +20,29 @@ class FallbackPipeline(private val config: ProviderConfig) {
     suspend fun processLink(
         raw: String, label: String?, currentUrl: String,
         subtitleCallback: (SubtitleFile) -> Unit,
-        wrappedCallback: (ExtractorLink) -> Unit
+        wrappedCallback: (ExtractorLink) -> Unit,
+        runId: String? = null
     ) {
-        withTimeoutOrNull(PER_LINK_TIMEOUT_MS) {
+        val stepStartedAt = System.currentTimeMillis()
+        val delivered = java.util.concurrent.atomic.AtomicInteger(0)
+        val countingCallback: (ExtractorLink) -> Unit = { link ->
+            delivered.incrementAndGet()
+            wrappedCallback(link)
+        }
+        val ok = withTimeoutOrNull(PER_LINK_TIMEOUT_MS) {
             runCatching {
                 val decodedRaw = decodeRawLink(raw)
                 val fixedUrl = fixUrlSmart(decodedRaw, currentUrl)
                     .safeHttpsify().substringBefore("#").fixKnownDomainAliases()
-                if (fixedUrl.isBlank()) return@runCatching
+                if (fixedUrl.isBlank()) {
+                    SupabaseObservability.logStep(
+                        runId, kind = "EXTRACT", status = "failed",
+                        linkUrl = raw, errorType = FailureType
+                            .INVALID_URL.label,
+                        durationMs = System.currentTimeMillis() - stepStartedAt
+                    )
+                    return@runCatching false
+                }
 
                 logDebug(config.id, "Processing link: $fixedUrl (label: $label)")
 
@@ -35,20 +50,51 @@ class FallbackPipeline(private val config: ProviderConfig) {
                     loadExtractorWithFallbackCustom(
                         fixedUrl, currentUrl, subtitleCallback,
                         headers = config.globalHeaders,
-                        callback = wrappedCallback,
+                        callback = countingCallback,
                         providerTag = config.id,
-                        qualityStripRegex = config.qualityStripRegexCompiled
+                        qualityStripRegex = config.qualityStripRegexCompiled,
+                        runId = runId
                     )
                 }.getOrDefault(false)
                 if (!okDirect) {
                     if (ProviderExtractors.hasMatchingExtractor(fixedUrl)) {
                         logDebug(config.id, "Skipping manual iframe fetch: extractor already tried for $fixedUrl")
-                        return@runCatching
+                        SupabaseObservability.logStep(
+                            runId, kind = "EXTRACT", status = "failed",
+                            linkUrl = fixedUrl, errorType = FailureType
+                                .EXTRACTOR_FAILURE.label,
+                            durationMs = System.currentTimeMillis() - stepStartedAt
+                        )
+                        return@runCatching false
                     }
                     tryManualIframeFetch(fixedUrl, label, currentUrl,
-                        subtitleCallback, wrappedCallback)
+                        subtitleCallback, countingCallback, runId)
                 }
-            }.getOrElse { e -> logDebug(config.id, "Link Processor Error on $raw: ${e.message}") }
+                delivered.get() > 0
+            }.getOrElse { e ->
+                logDebug(config.id, "Link Processor Error on $raw: ${e.message}")
+                SupabaseObservability.logStep(
+                    runId, kind = "EXTRACT", status = "failed",
+                    linkUrl = raw, errorType = FailureType
+                        .EXTRACTOR_FAILURE.label,
+                    durationMs = System.currentTimeMillis() - stepStartedAt
+                )
+                false
+            }
+        } ?: run {
+            SupabaseObservability.logStep(
+                runId, kind = "EXTRACT", status = "timeout",
+                linkUrl = raw, errorType = FailureType.TIMEOUT.label,
+                durationMs = PER_LINK_TIMEOUT_MS
+            )
+            false
+        }
+        if (ok) {
+            SupabaseObservability.logStep(
+                runId, kind = "EXTRACT", status = "success",
+                linkUrl = raw,
+                durationMs = System.currentTimeMillis() - stepStartedAt
+            )
         }
     }
 
@@ -71,7 +117,8 @@ class FallbackPipeline(private val config: ProviderConfig) {
     suspend fun tryManualIframeFetch(
         fixedUrl: String, label: String?, currentUrl: String,
         subtitleCallback: (SubtitleFile) -> Unit,
-        wrappedCallback: (ExtractorLink) -> Unit
+        wrappedCallback: (ExtractorLink) -> Unit,
+        runId: String? = null
     ) {
         val baseForReferer = config.seriesUrl ?: config.mainUrl
         val refererForPlayer = if (config.refererPlayerMode == "series_url") "${baseForReferer.trimEnd('/')}/" else currentUrl
@@ -120,7 +167,8 @@ class FallbackPipeline(private val config: ProviderConfig) {
                 finalIframe, refererForExtractor, subtitleCallback,
                 headers = config.globalHeaders,
                 callback = wrappedCallback,
-                providerTag = config.id
+                providerTag = config.id,
+                runId = runId
             )
         }.getOrDefault(false)
         if (!okRecursive && finalIframe.isDirectMediaUrl()) {
@@ -128,6 +176,8 @@ class FallbackPipeline(private val config: ProviderConfig) {
                 label ?: config.name, finalIframe, refererForExtractor,
                 headers = config.globalHeaders,
                 qualityStripRegex = config.qualityStripRegexCompiled,
+                providerTag = config.id,
+                runId = runId,
                 callback = wrappedCallback
             )
         }

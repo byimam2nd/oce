@@ -54,6 +54,8 @@ object MasterLinkGenerator {
         headers: Map<String, String>? = null,
         qualityStripRegex: Regex = DEFAULT_QUALITY_STRIP,
         bareHeaders: Boolean = false,
+        providerTag: String = "ExtractorEngine",
+        runId: String? = null,
         callback: (ExtractorLink) -> Unit
     ) {
         val isAdaptive = url.contains(".m3u8") || url.contains(".mpd")
@@ -72,6 +74,16 @@ object MasterLinkGenerator {
             if (!decision.valid) {
                 // Link gagal test (non-2xx/3xx) di semua combo header.
                 // Jangan kirim link rusak ke player (avoid error 2004).
+                com.baseprovider.log.logFail(
+                    providerTag,
+                    "AdaptiveHeaderProbe rejected link (non-2xx/3xx on all combos): $url",
+                    url = url,
+                    method = "createSmartLink",
+                    type = com.baseprovider.log.FailureType.HTTP_FAILURE,
+                    stage = "PROBE",
+                    extractor = source,
+                    runId = runId
+                )
                 return
             }
             effectiveReferer = decision.referer

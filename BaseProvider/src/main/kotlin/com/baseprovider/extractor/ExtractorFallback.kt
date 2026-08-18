@@ -48,7 +48,8 @@ suspend fun loadExtractorWithFallbackCustom(
     providerTag: String = "ExtractorEngine",
     callChain: String = "-",
     qualityStripRegex: Regex = Regex("""\d{3,4}p|HD|SD|FHD""", RegexOption
-        .IGNORE_CASE)
+        .IGNORE_CASE),
+    runId: String? = null
 ): Boolean {
     val collectedLinks = java.util.Collections
         .synchronizedList(mutableListOf<ExtractorLink>())
@@ -81,7 +82,7 @@ suspend fun loadExtractorWithFallbackCustom(
         withTimeoutOrNull(EXTRACTOR_BLOCK_TIMEOUT_MS) {
             coroutineScope {
                 val semaphore = Semaphore(3)
-                val extractorJobs = matchingExtractors.map { extractor ->
+                val extractorJobs = matchingExtractors.mapIndexed { idx, extractor ->
                     launch {
                         semaphore.withPermit {
                             runCatching {
@@ -100,7 +101,11 @@ suspend fun loadExtractorWithFallbackCustom(
                                     "Local Extractor (${extractor.name}) failed for $url: ${e.message}",
                                     url = url, method = "extractLinks",
                                     type = FailureType.EXTRACTOR_FAILURE,
-                                    selectors = extractor.name
+                                    selectors = extractor.name,
+                                    stage = "EXTRACT",
+                                    extractor = extractor.name,
+                                    attempt = idx + 1,
+                                    runId = runId
                                 )
                             }
                         }
@@ -124,7 +129,9 @@ suspend fun loadExtractorWithFallbackCustom(
                 providerId, "Global Extractor failed for $url: ${e.message}",
                 url = url, method = "extractLinks",
                 type = FailureType.EXTRACTOR_FAILURE,
-                selectors = callChain
+                selectors = callChain,
+                stage = "EXTRACT",
+                runId = runId
             )
         }
     }
@@ -135,6 +142,8 @@ suspend fun loadExtractorWithFallbackCustom(
             headers = headers,
             bareHeaders = true,
             qualityStripRegex = qualityStripRegex,
+            providerTag = providerId,
+            runId = runId,
             callback = internalCallback
         )
     }
@@ -153,6 +162,8 @@ suspend fun loadExtractorWithFallbackCustom(
                         headers = headers,
                         bareHeaders = true,
                         qualityStripRegex = qualityStripRegex,
+                        providerTag = providerId,
+                        runId = runId,
                         callback = internalCallback
                     )
                 }
@@ -161,7 +172,9 @@ suspend fun loadExtractorWithFallbackCustom(
                     providerId, "DeepScan found no video URLs in HTML source of $url",
                     url = url, method = "extractLinks",
                     type = FailureType.EMPTY_RESPONSE,
-                    selectors = callChain
+                    selectors = callChain,
+                    stage = "EXTRACT",
+                    runId = runId
                 )
             }
         }.onFailure { e ->
@@ -169,7 +182,9 @@ suspend fun loadExtractorWithFallbackCustom(
                 providerId, "DeepScan network failure for $url: ${e.message}",
                 url = url, method = "extractLinks",
                 type = FailureType.NETWORK_FAILURE,
-                selectors = callChain
+                selectors = callChain,
+                stage = "EXTRACT",
+                runId = runId
             )
         }
     }
@@ -184,11 +199,17 @@ suspend fun loadExtractorWithFallbackCustom(
         logFail(
             providerId, "All extraction methods failed to find playable links for host: $urlDomain",
             url = url, method = "extractLinks",
-            type = ft, selectors = chainInfo
+            type = ft, selectors = chainInfo,
+            stage = "EXTRACT",
+            extractor = urlDomain,
+            runId = runId
         )
     } else if (collectedLinks.isNotEmpty()) {
         logSuccess(providerId, "${collectedLinks.size} links", url = url,
-            method = "extractLinks", selectors = chainInfo)
+            method = "extractLinks", selectors = chainInfo,
+            stage = "EXTRACT",
+            extractor = urlDomain,
+            runId = runId)
     }
 
     MasterLinkGenerator.refineAndDeliver(collectedLinks, callback,

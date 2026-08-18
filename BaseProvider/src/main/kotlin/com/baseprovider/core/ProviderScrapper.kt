@@ -181,7 +181,16 @@ class ProviderScrapper(
         callback: (ExtractorLink) -> Unit,
         waitForAll: Boolean = false
     ): Boolean {
-        return runCatching {
+        val runId = SupabaseObservability.beginRun(
+            sourceCode = config.id,
+            sourceName = config.name,
+            sourceMainUrl = config.mainUrl,
+            context = "EPISODE",
+            triggeredBy = "user_play",
+            startUrl = data
+        )
+        val startedAt = System.currentTimeMillis()
+        val result = runCatching {
             val document = fetchDocument(data, config,
                 referer = config.mainUrl, skipCache = false,
                 htmlCache = htmlCache)
@@ -214,10 +223,15 @@ class ProviderScrapper(
                     url = data,
                     method = "loadLinks",
                     type = FailureType.SELECTOR_FAILURE,
-                    selectors = config.linkOptions.ifBlank { "none" }
+                    selectors = config.linkOptions.ifBlank { "none" },
+                    stage = "COLLECT",
+                    runId = runId
                 )
                 return@runCatching false
             }
+
+            SupabaseObservability.logCollectStep(runId, allPossibleLinks.size,
+                durationMs = System.currentTimeMillis() - startedAt)
 
             val pendingLinks = allPossibleLinks
                 .filter { it.first.isNotBlank() && !it.first.startsWith("#") }
@@ -235,7 +249,7 @@ class ProviderScrapper(
                     runCatching {
                         linkSemaphore.withPermit { fallbackPipeline
                             .processLink(raw, label, currentUrl,
-                                subtitleCallback, wrappedCallback) }
+                                subtitleCallback, wrappedCallback, runId) }
                     }
                     if (videoCount.get() > 0) firstVideo.complete(true)
                 }
@@ -263,8 +277,14 @@ class ProviderScrapper(
             val ft = if (e.message?.contains("cancel", true) ==
                 true) FailureType.CANCELLED else FailureType
                     .NETWORK_FAILURE
-            logCritical(config.id, "LoadLinks Critical Failure on data: $data", e, url = data, method = "loadLinks", type = ft); false
+            logCritical(config.id, "LoadLinks Critical Failure on data: $data", e, url = data, method = "loadLinks", type = ft, runId = runId); false
         }
+        SupabaseObservability.endRun(
+            runId,
+            status = if (result) "success" else "failed",
+            durationMs = System.currentTimeMillis() - startedAt
+        )
+        return result
     }
 
     /**

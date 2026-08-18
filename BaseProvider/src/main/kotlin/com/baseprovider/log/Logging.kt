@@ -41,7 +41,10 @@ object ProviderLog {
         level: LogLevel, tag: String, message: String,
         error: Throwable? = null, url: String? = null,
         method: String? = null, type: FailureType? = null,
-        selectors: String = ""
+        selectors: String = "",
+        stage: String? = null, extractor: String? = null,
+        attempt: Int? = null, durationMs: Long? = null,
+        runId: String? = null
     ) {
         val errTrace = error?.let {
             buildString {
@@ -53,6 +56,21 @@ object ProviderLog {
                 }
             }
         } ?: ""
+        val tracebackJson = error?.let { err ->
+            org.json.JSONObject().apply {
+                put("class", err.javaClass.name)
+                put("message", err.message ?: err.javaClass.simpleName)
+                put("stack", org.json.JSONArray().apply {
+                    err.stackTrace.take(10).forEach { frame ->
+                        put(org.json.JSONObject().apply {
+                            put("file", frame.fileName)
+                            put("line", frame.lineNumber)
+                            put("method", frame.methodName)
+                        })
+                    }
+                })
+            }
+        }
         val host = url?.let { runCatching { URI(it).host }
             .getOrElse { e -> Log.d("OCE", "URI parsing failed for $url: ${e.message}"); null } } ?: ""
         val ft = type ?: if (host.contains("short.")) FailureType
@@ -62,7 +80,11 @@ object ProviderLog {
         val typeInfo = " | type=${ft.label}"
         val selInfo = if (selectors
             .isNotBlank()) " | selectors=$selectors" else ""
-        val logcatMsg = "[$tag]${methodInfo}$typeInfo${selInfo}$hostInfo | $message"
+        val stageInfo = if (stage != null) " | stage=$stage" else ""
+        val extractorInfo = if (extractor != null) " | extractor=$extractor" else ""
+        val attemptInfo = if (attempt != null) " | attempt=$attempt" else ""
+        val durInfo = if (durationMs != null) " | dur=${durationMs}ms" else ""
+        val logcatMsg = "[$tag]${stageInfo}${methodInfo}$typeInfo$extractorInfo$attemptInfo$durInfo${selInfo}$hostInfo | $message"
         val fullMsg = message + errTrace
 
         when (level) {
@@ -76,8 +98,11 @@ object ProviderLog {
         if (level != LogLevel.DEBUG && level != LogLevel.SUCCESS) {
             sendToTelegram(level.name, tag, fullMsg, url, host, method, ft,
                 selectors)
-            sendToSupabase(level.name, tag, fullMsg, url, host, method, ft,
-                selectors)
+            sendToSupabase(
+                level.name, tag, fullMsg, url, host, method, ft,
+                selectors, stage, extractor, attempt, durationMs, runId,
+                tracebackJson
+            )
         }
     }
 
@@ -161,7 +186,10 @@ object ProviderLog {
     private fun sendToSupabase(
         level: String, tag: String, message: String,
         url: String?, host: String, method: String?,
-        type: FailureType, selectors: String = ""
+        type: FailureType, selectors: String = "",
+        stage: String? = null, extractor: String? = null,
+        attempt: Int? = null, durationMs: Long? = null,
+        runId: String? = null, traceback: org.json.JSONObject? = null
     ) {
         if (SUPABASE_URL.isBlank() || SUPABASE_ANON_KEY.isBlank()) return
         val row = org.json.JSONObject().apply {
@@ -173,6 +201,12 @@ object ProviderLog {
             put("method", method ?: org.json.JSONObject.NULL)
             put("failure_type", type.label)
             put("selectors", selectors.ifBlank { "" })
+            put("stage", stage ?: org.json.JSONObject.NULL)
+            put("extractor", extractor ?: org.json.JSONObject.NULL)
+            put("attempt", attempt ?: org.json.JSONObject.NULL)
+            put("duration_ms", durationMs ?: org.json.JSONObject.NULL)
+            put("run_id", runId ?: org.json.JSONObject.NULL)
+            put("traceback", traceback ?: org.json.JSONObject.NULL)
         }
         supabaseBuffer.add(row)
         if (supabaseBuffer.size >= SUPABASE_BATCH_SIZE) {
@@ -225,30 +259,50 @@ fun log(
     level: LogLevel, tag: String, message: String,
     error: Throwable? = null, url: String? = null,
     method: String? = null, type: FailureType? = null,
-    selectors: String = ""
+    selectors: String = "",
+    stage: String? = null, extractor: String? = null,
+    attempt: Int? = null, durationMs: Long? = null,
+    runId: String? = null
 ) = ProviderLog.log(level, tag, message, error, url, method, type,
-    selectors)
+    selectors, stage, extractor, attempt, durationMs, runId)
 fun logDebug(tag: String, message: String) = log(LogLevel.DEBUG, tag,
     message)
 fun logFail(
     tag: String, message: String, url: String? = null,
     method: String? = null, type: FailureType? = null,
-    selectors: String = ""
+    selectors: String = "",
+    stage: String? = null, extractor: String? = null,
+    attempt: Int? = null, durationMs: Long? = null,
+    runId: String? = null
 ) = log(LogLevel.FAIL, tag, message, url = url, method = method, type =
-    type, selectors = selectors)
+    type, selectors = selectors, stage = stage, extractor = extractor,
+    attempt = attempt, durationMs = durationMs, runId = runId)
 fun logError(
     tag: String, message: String, error: Throwable? = null,
     url: String? = null, method: String? = null,
-    type: FailureType? = null
-) = log(LogLevel.ERROR, tag, message, error, url, method, type)
+    type: FailureType? = null,
+    stage: String? = null, extractor: String? = null,
+    attempt: Int? = null, durationMs: Long? = null,
+    runId: String? = null
+) = log(LogLevel.ERROR, tag, message, error, url, method, type,
+    stage = stage, extractor = extractor, attempt = attempt,
+    durationMs = durationMs, runId = runId)
 fun logCritical(
     tag: String, message: String, error: Throwable? = null,
     url: String? = null, method: String? = null,
-    type: FailureType? = null, selectors: String = ""
+    type: FailureType? = null, selectors: String = "",
+    stage: String? = null, extractor: String? = null,
+    attempt: Int? = null, durationMs: Long? = null,
+    runId: String? = null
 ) = log(LogLevel.CRITICAL, tag, message, error, url, method, type,
-    selectors)
+    selectors, stage, extractor, attempt, durationMs, runId)
 fun logSuccess(
     tag: String, message: String, url: String? = null,
-    method: String? = null, selectors: String = ""
+    method: String? = null, selectors: String = "",
+    stage: String? = null, extractor: String? = null,
+    attempt: Int? = null, durationMs: Long? = null,
+    runId: String? = null
 ) = log(LogLevel.SUCCESS, tag, message, url = url, method = method, type =
-    FailureType.SUCCESS, selectors = selectors)
+    FailureType.SUCCESS, selectors = selectors, stage = stage,
+    extractor = extractor, attempt = attempt, durationMs = durationMs,
+    runId = runId)

@@ -11,5 +11,8 @@ enum class FailureType(val label: String) {
     EMPTY_RESPONSE("EMPTY"),
     INVALID_IFRAME("IFRAME"),
     METADATA_FAILURE("METADATA"),
-    CANCELLED("CANCELLED")
+    CANCELLED("CANCELLED"),
+    HTTP_FAILURE("HTTP"),
+    INVALID_URL("URL"),
+    TIMEOUT("TIMEOUT")
 }
