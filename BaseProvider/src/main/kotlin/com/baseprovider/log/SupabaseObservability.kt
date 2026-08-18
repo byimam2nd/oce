@@ -5,6 +5,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.MediaType.Companion.toMediaType
@@ -104,7 +105,10 @@ object SupabaseObservability {
         val ok = withTimeoutOrNull(RUN_WAIT_TIMEOUT_MS) {
             created.await()
         } ?: false
-        if (!ok) failedRuns.add(runId)
+        // NOTE: timeout != run gagal. Run bisa saja baru dibuat sesudahnya
+        // (POST lambat saat batch besar). JANGAN masukkan ke failedRuns di
+        // sini, agar endRun/logStep yang dipanggil ulang (retry) masih bisa
+        // menunggu dan berhasil menyelesaikan run row.
         return ok
     }
 
@@ -116,7 +120,17 @@ object SupabaseObservability {
     ) {
         if (!enabled() || runId.isNullOrBlank()) return
         scope.launch {
-            if (!awaitRunCreated(runId)) return@launch
+            // Retry PATCH (bounded) supaya run row tidak pernah "running"
+            // selamanya. Run row dibuat di background (beginRun); jika belum
+            // siap saat timeout pertama, tunggu ulang, lalu patch.
+            var created = awaitRunCreated(runId)
+            var attempt = 0
+            while (!created && attempt < END_RUN_MAX_RETRIES) {
+                delay(END_RUN_RETRY_DELAY_MS)
+                created = awaitRunCreated(runId)
+                attempt++
+            }
+            if (!created) return@launch
             val body = org.json.JSONObject().apply {
                 put("status", status)
                 put("returned_early", returnedEarly)
@@ -247,4 +261,6 @@ object SupabaseObservability {
 
     private const val OBS_TIMEOUT_SECONDS = 4L
     private const val RUN_WAIT_TIMEOUT_MS = 5_000L
+    private const val END_RUN_MAX_RETRIES = 4
+    private const val END_RUN_RETRY_DELAY_MS = 2_000L
 }
