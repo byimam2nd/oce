@@ -1,0 +1,55 @@
+{
+  "id": "Krakenfiles",
+  "name": "Krakenfiles",
+  "mainUrl": "https://krakenfiles.com",
+  "requiresReferer": false,
+  "cached": false,
+  "idSource": {
+    "type": "regex",
+    "pattern": "/(?:view|embed-video)/([0-9a-zA-Z]+)"
+  },
+  "variants": [
+    {
+      "name": "default",
+      "headers": {}
+    }
+  ],
+  "steps": [
+    {
+      "step": "constructUrl",
+      "template": "{mainUrl}/embed-video/{id}",
+      "store": "embedUrl"
+    },
+    {
+      "step": "fetch",
+      "url": "{embedUrl}",
+      "referer": "",
+      "headers": {},
+      "store": "response"
+    },
+    {
+      "step": "regex",
+      "pattern": "<source[^>]*\\bsrc=[\"']([^\"']+)",
+      "group": 1,
+      "source": "response",
+      "filter": "",
+      "universal": false,
+      "decodeUnicode": false,
+      "store": ""
+    },
+    {
+      "step": "regex",
+      "pattern": "",
+      "group": 1,
+      "source": "response",
+      "filter": "",
+      "universal": true,
+      "store": ""
+    },
+    {
+      "step": "resolveUrl",
+      "base": "{mainUrl}",
+      "source": ""
+    }
+  ]
+}

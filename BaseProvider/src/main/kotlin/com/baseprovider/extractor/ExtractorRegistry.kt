@@ -20,7 +20,8 @@ object ProviderExtractors {
         MegaPlay(), AWSStream(), LuluStream(), Dhcplay(), Voe(), Xtwap(),
             Gdplayer(), Vidguardto2(), Movearnpre(),
         Lk21PlayerPage(), VideoNodePage(), Dailymotion(),
-        PlayCdn(), EmTurbovid()
+        PlayCdn(), EmTurbovid(),
+        Krakenfiles()
     )
 
     /**
@@ -39,7 +40,8 @@ object ProviderExtractors {
         "ByseSX", "Vidguardto2",
         "BloggerVideo", "PlayPutarIn", "Lk21PlayerPage",
         "VideoNodePage", "ShortIcu", "PlayStreamplay",
-        "Dhcplay", "StreamHG"
+        "Dhcplay", "StreamHG",
+        "Krakenfiles"
     )
 
     private fun buildList(): List<ExtractorApi> {
