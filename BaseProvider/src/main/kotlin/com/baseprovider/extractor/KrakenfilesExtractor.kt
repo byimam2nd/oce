@@ -22,8 +22,8 @@ open class Krakenfiles : ExtractorApi() {
         val id = Regex("/(?:view|embed-video)/([0-9a-zA-Z]+)")
             .find(url)?.groupValues?.get(1) ?: return
         val doc = app.get("$mainUrl/embed-video/$id").document
-        val link = doc.selectFirst("source")?.attr("src")
-            ?.let { it.safeHttpsify() } ?: return
+        val raw = doc.selectFirst("source")?.attr("src") ?: return
+        val link = if (raw.startsWith("//")) "https:$raw" else raw
         MasterLinkGenerator.createSmartLink(
             this.name, link, null,
             headers = MasterLinkGenerator.minimalVideoHeaders,
