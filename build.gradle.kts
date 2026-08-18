@@ -209,6 +209,23 @@ gradle.projectsEvaluated {
             if (envVersion != null) {
                 project.version = envVersion
             }
+
+            // Bundle config JSON (provider + extractor) ke root .cs3 supaya
+            // ConfigRegistry/ExtractorConfigRegistry bisa load via
+            // getResourceAsStream — plugin CloudStream hanya mem-package
+            // manifest.json + classes.dex (+ src/main/res jika requiresResources).
+            val configDir = rootProject.file(
+                "BaseProvider/src/main/kotlin/com/baseprovider/config"
+            )
+            project.tasks.named("make").configure { task ->
+                (task as org.gradle.api.tasks.bundling.Zip).apply {
+                    from(configDir) { include("*.json") }
+                    from(file(configDir.path + "/extractors")) {
+                        include("*.json")
+                        into("extractors")
+                    }
+                }
+            }
         }
     }
 }
