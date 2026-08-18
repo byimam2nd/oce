@@ -95,7 +95,8 @@ object SupabaseObservability {
      * - true: run dibuat (atau sudah dibuat sebelumnya) → aman kirim FK ref.
      * - false: run gagal dibuat → caller skip (hindari FK violation).
      */
-    private suspend fun awaitRunCreated(runId: String): Boolean {
+    private suspend fun awaitRunCreated(runId: String?): Boolean {
+        if (runId == null) return false
         val created = pendingRuns[runId]
         if (created == null) return !failedRuns.contains(runId)
         val ok = withTimeoutOrNull(RUN_WAIT_TIMEOUT_MS) {
@@ -107,11 +108,11 @@ object SupabaseObservability {
 
     /** Update run lifecycle: status/returned_early/durasi/error terminal. */
     fun endRun(
-        runId: String, status: String, returnedEarly: Boolean = false,
+        runId: String?, status: String, returnedEarly: Boolean = false,
         durationMs: Long? = null, errorType: String? = null,
         errorMessage: String? = null
     ) {
-        if (!enabled() || runId.isBlank()) return
+        if (!enabled() || runId.isNullOrBlank()) return
         scope.launch {
             if (!awaitRunCreated(runId)) return@launch
             val body = org.json.JSONObject().apply {
@@ -138,12 +139,12 @@ object SupabaseObservability {
      * (percobaan extractor). Redaksi link_url otomatis di server (0003).
      */
     fun logStep(
-        runId: String, kind: String, status: String,
+        runId: String?, kind: String, status: String,
         linkUrl: String? = null, extractorChain: String? = null,
         durationMs: Long? = null, linksFound: Int? = null,
         errorType: String? = null
     ) {
-        if (!enabled() || runId.isBlank()) return
+        if (!enabled() || runId.isNullOrBlank()) return
         scope.launch {
             if (!awaitRunCreated(runId)) return@launch
             val body = org.json.JSONObject().apply {
@@ -166,7 +167,7 @@ object SupabaseObservability {
 
     /** COLLECT step: jumlah link mentah ditemukan di halaman episode. */
     fun logCollectStep(
-        runId: String, linksFound: Int, durationMs: Long? = null
+        runId: String?, linksFound: Int, durationMs: Long? = null
     ) {
         logStep(runId, "COLLECT", "success", linksFound = linksFound,
             durationMs = durationMs)
