@@ -21,7 +21,8 @@ object ProviderExtractors {
             Gdplayer(), Vidguardto2(), Movearnpre(),
         Lk21PlayerPage(), VideoNodePage(), Dailymotion(),
         PlayCdn(), EmTurbovid(),
-        Krakenfiles()
+        Krakenfiles(),
+        VideoplayerVip(), Anonmp4()
     )
 
     /**
