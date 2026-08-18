@@ -69,6 +69,8 @@ jobs:
           OCE_TG_TOKEN: ${{ secrets.OCE_TG_TOKEN }}
           OCE_TG_GROUP_ID: ${{ secrets.OCE_TG_GROUP_ID }}
           OCE_TG_THREAD_ID: ${{ secrets.OCE_TG_THREAD_ID }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
           echo "BUILD_TIMESTAMP=$(TZ='Asia/Jakarta' date +'%Y-%m-%d %H:%M')" >> $GITHUB_ENV
           echo "OCE_VERSION=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
