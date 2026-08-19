@@ -125,6 +125,7 @@ suspend fun loadExtractorWithFallbackCustom(
         runCatching {
             loadExtractor(url, referer, subtitleCallback, internalCallback)
         }.onFailure { e ->
+            if (e is kotlinx.coroutines.CancellationException) throw e
             logFail(
                 providerId, "Global Extractor failed for $url: ${e.message}",
                 url = url, method = "extractLinks",
@@ -178,6 +179,7 @@ suspend fun loadExtractorWithFallbackCustom(
                 )
             }
         }.onFailure { e ->
+            if (e is kotlinx.coroutines.CancellationException) throw e
             logFail(
                 providerId, "DeepScan network failure for $url: ${e.message}",
                 url = url, method = "extractLinks",

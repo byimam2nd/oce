@@ -77,6 +77,7 @@ class ProviderScrapper(
                 list = home, isHorizontalImages = isHorizontal), hasNext =
                     home.isNotEmpty())
         }.getOrElse { e ->
+            if (e is kotlinx.coroutines.CancellationException) throw e
             logFail(
                 config.id,
                 "MainPage Fetch Failure on ${request.name}: ${e.message}",
@@ -134,6 +135,7 @@ class ProviderScrapper(
                 }
                 results
             }.getOrElse { e ->
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 logFail(
                     config.id,
                     "JSON Search Execution Failed for '$query': ${e.message}",
@@ -163,6 +165,7 @@ class ProviderScrapper(
                 }
             } else emptyList()
         }.getOrElse { e ->
+            if (e is kotlinx.coroutines.CancellationException) throw e
             logFail(
                 config.id,
                 "Search Execution Failed for '$query': ${e.message}",
@@ -267,6 +270,14 @@ class ProviderScrapper(
                 allDone.onAwait { videoCount.get() > 0 }
             }
         }.getOrElse { e ->
+            if (e is kotlinx.coroutines.CancellationException) {
+                SupabaseObservability.endRun(
+                    runId,
+                    status = "failed",
+                    durationMs = System.currentTimeMillis() - startedAt
+                )
+                throw e
+            }
             val ft = if (e.message?.contains("cancel", true) ==
                 true) FailureType.CANCELLED else FailureType
                     .NETWORK_FAILURE

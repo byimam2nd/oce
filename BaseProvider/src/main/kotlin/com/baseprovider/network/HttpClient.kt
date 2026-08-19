@@ -106,6 +106,8 @@ suspend fun fetchDocument(
                                 SmartThrottle.reportSuccess(host)
                             }
                             return@withTimeout doc
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
                         } catch (e: Exception) {
                             lastError = e
                             hostFailed = true
@@ -263,7 +265,10 @@ object WebViewCloudflareSolver {
             capMap(failedUntil)
             capMap(solvedUserAgents)
             solved
-        }.getOrDefault(false)
+        }.getOrElse { e ->
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            false
+        }
     }
 
     private const val CF_SOLVE_BUDGET_MS = 10_000L

@@ -89,6 +89,7 @@ class FallbackPipeline(private val config: ProviderConfig) {
                 }
                 delivered.get() > 0
             }.getOrElse { e ->
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 logDebug(config.id, "Link Processor Error on $raw: ${e.message}")
                 SupabaseObservability.logStep(
                     runId, kind = "EXTRACT", status = "failed",
@@ -187,7 +188,10 @@ class FallbackPipeline(private val config: ProviderConfig) {
                 providerTag = config.id,
                 runId = runId
             )
-        }.getOrDefault(false)
+        }.getOrElse { e ->
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            false
+        }
         if (!okRecursive && finalIframe.isDirectMediaUrl()) {
             MasterLinkGenerator.createSmartLink(
                 label ?: config.name, finalIframe, refererForExtractor,

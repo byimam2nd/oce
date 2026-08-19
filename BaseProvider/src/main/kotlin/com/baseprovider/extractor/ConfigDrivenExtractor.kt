@@ -105,6 +105,7 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
                     if (state.videoUrls.isNotEmpty()) break
                 }
             }.onFailure { e ->
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 logDebug(name, "Variant '${variant.name}' failed for $url: ${e.message}")
             }
             if (state.videoUrls.isNotEmpty()) {
@@ -333,6 +334,8 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
                             )
                         }
                     }
+                }.onFailure { e ->
+                    if (e is kotlinx.coroutines.CancellationException) throw e
                 }
             }
             is ExtractorStep.Redirect -> {
@@ -356,6 +359,8 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
                         headers = state.resolveHeaders(step.headers),
                         interceptor = resolver).url
                     if (interceptedUrl.isNotBlank()) state.videoUrls.add(interceptedUrl)
+                }.onFailure { e ->
+                    if (e is kotlinx.coroutines.CancellationException) throw e
                 }
             }
         }
