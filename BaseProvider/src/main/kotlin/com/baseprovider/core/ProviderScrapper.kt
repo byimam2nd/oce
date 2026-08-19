@@ -17,7 +17,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import org.json.JSONObject
@@ -30,7 +29,8 @@ class ProviderScrapper(
     private val config: ProviderConfig,
     private val mapper: ProviderMapper
 ) {
-    // Semaphore untuk jalur user-play: race first-video cepat.
+    // Semaphore untuk ekstraksi paralel link (banyak sumber diproses
+    // bersamaan, tiap link dibatasi PER_LINK_TIMEOUT_MS oleh FallbackPipeline).
     private val linkSemaphore = Semaphore(5)
     private val htmlCache = ExpiringCache<Document>(5 * 60 * 1000L)
     private val linkCollector = LinkCollector(config)
@@ -242,20 +242,22 @@ class ProviderScrapper(
                 .filter { it.first.isNotBlank() && !it.first.startsWith("#") }
                 .sortedByDescending { priorityOf(it.first) }
 
-            // First-valid race: langsung return begitu video pertama ditemukan.
-            // Ekstraktor tersisa tetap berjalan di background (fire-and-forget)
-            // sehingga player tidak menunggu SEMUA server dicoba.
+            // Collect-all: tunggu SEMUA ekstraktor selesai, lalu semua sumber
+            // dikumpulkan sekaligus ke player. ExoPlayer hanya mengambil sumber
+            // sekali — link yang datang setelah loadLinks return tidak muncul,
+            // jadi daftar sumber harus lengkap sebelum video diputar.
+            // Tiap link dibatasi PER_LINK_TIMEOUT_MS (20s) oleh FallbackPipeline,
+            // sehingga wait-all tidak menggantung tanpa batas.
             // B4: scope dibuat per-run dan job run sebelumnya di-cancel saat
             // loadLinks baru dimulai (ekstraksi basi tidak membuang resource).
             // Deferreds run lama ikut diselesaikan agar call loadLinks yang
-            // ditinggalkan user tidak menggantung di select.
+            // ditinggalkan user tidak menggantung di await.
             activeRace.getAndSet(null)?.let { prev ->
                 prev.supervisor.cancel()
                 prev.allDone.complete(Unit)
             }
             val raceSupervisor = SupervisorJob()
             val runScope = CoroutineScope(raceSupervisor + Dispatchers.IO)
-            val firstVideo = CompletableDeferred<Boolean>()
             val allDone = CompletableDeferred<Unit>()
             val jobs = pendingLinks.map { (raw, label) ->
                 runScope.launch {
@@ -264,7 +266,6 @@ class ProviderScrapper(
                             .processLink(raw, label, currentUrl,
                                 subtitleCallback, wrappedCallback, runId) }
                     }
-                    if (videoCount.get() > 0) firstVideo.complete(true)
                 }
             }
             runScope.launch {
@@ -275,13 +276,9 @@ class ProviderScrapper(
             }
             activeRace.set(ActiveRace(raceSupervisor, allDone))
 
-            // Selesai saat video pertama ditemukan (true) ATAU semua job
-            // selesai tanpa video (hasil akhir). Jika true, sisa job tetap
-            // jalan di background — jangan cancel.
-            select {
-                firstVideo.onAwait { true }
-                allDone.onAwait { videoCount.get() > 0 }
-            }
+            // Tunggu SEMUA job selesai; hasil = ada video yang ditemukan.
+            allDone.await()
+            videoCount.get() > 0
         }.getOrElse { e ->
             if (e is kotlinx.coroutines.CancellationException) {
                 SupabaseObservability.endRun(
