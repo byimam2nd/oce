@@ -90,10 +90,10 @@ open class Odnoklassniki : ExtractorApi() {
 
     // Sampel throughput cukup untuk membedakan node cepat (>150KB/s) dari node
     // rusak (<40KB/s, mis. ok6-4.vkuser.net) dengan margin lebar.
-    private const val OKRU_PROBE_BYTES = 300L * 1024
-    private const val OKRU_PROBE_BUDGET_MS = 4_000L
-    private const val OKRU_PROBE_TOTAL_MS = 6_000L
-    private const val OKRU_SLOW_DELAY_MS = 6_000L
+    private val OKRU_PROBE_BYTES = 300L * 1024
+    private val OKRU_PROBE_BUDGET_MS = 4_000L
+    private val OKRU_PROBE_TOTAL_MS = 6_000L
+    private val OKRU_SLOW_DELAY_MS = 6_000L
 
     /**
      * true = node CDN terbukti cepat (segmen terbaca >= OKRU_PROBE_BYTES dalam
@@ -108,15 +108,15 @@ open class Odnoklassniki : ExtractorApi() {
             withTimeoutOrNull(OKRU_PROBE_TOTAL_MS) {
                 val start = System.currentTimeMillis()
                 val master = app.get(hlsUrl, headers = headers, timeout = 5).text
-                val variant = pickProbeVariant(master, hlsUrl) ?: return false
+                val variant = pickProbeVariant(master, hlsUrl) ?: return@withTimeoutOrNull false
                 val playlist = app.get(variant, headers = headers, timeout = 5).text
                 val segment = playlist.lineSequence()
                     .firstOrNull { it.isNotBlank() && !it.startsWith("#") }
-                    ?: return false
+                    ?: return@withTimeoutOrNull false
                 val segmentUrl = if (segment.startsWith("http")) segment
                     else variant.substringBeforeLast('/') + '/' + segment
                 val r = app.get(segmentUrl, headers = headers, timeout = 5)
-                if (r.code !in 200..399) return false
+                if (r.code !in 200..399) return@withTimeoutOrNull false
                 var got = 0L
                 var eof = false
                 r.body?.byteStream()?.use { stream ->
