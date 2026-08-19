@@ -1,6 +1,5 @@
 package com.baseprovider.extractor
 
-import com.baseprovider.cache.ExpiringCache
 import com.lagradost.cloudstream3.app
 
 /**
@@ -23,8 +22,11 @@ import com.lagradost.cloudstream3.app
  *    → caller TIDAK mengirim apa pun (link rusak tidak sampai ke player).
  *  - Fetch master gagal → Verdict.Clean (fallback aman ke perilaku lama).
  *
- * Hasil di-cache per master URL (TTL 30 menit) sehingga link episode yang
- * sama / pengulangan load tidak memicu fetch master ulang.
+ * HASIL TIDAK DI-CACHE: setiap kali extractor dijalankan, master selalu
+ * di-fetch dan diverifikasi ulang dari website. Tidak ada cache di sisi
+ * plugin agar tidak ada verdict basi yang dikirim ulang ke player (mis.
+ * verdict Clean dari fetch yang sempat gagal membuat master malformed
+ * dikirim as-is → 3002 berulang sampai cache expire).
  */
 object M3u8MasterVerifier {
 
@@ -48,9 +50,6 @@ object M3u8MasterVerifier {
     private val BANDWIDTH_RE = Regex("""BANDWIDTH=(\d+)""")
     private val RESOLUTION_RE = Regex("""RESOLUTION=\d+x(\d+)""")
     private const val FETCH_TIMEOUT_MS = 8000L
-    private const val CACHE_TTL_MS = 30 * 60_000L
-
-    private val cache = ExpiringCache<Verdict>(CACHE_TTL_MS, maxSize = 200)
 
     /**
      * Parse baris #EXT-X-STREAM-INF + URI baris berikutnya. Variant dianggap
@@ -111,30 +110,25 @@ object M3u8MasterVerifier {
     }
 
     /**
-     * Verifikasi master lalu kembalikan Verdict. Dipanggil per master URL;
-     * hasil di-cache.
+     * Verifikasi master lalu kembalikan Verdict. Selalu fetch ulang dari
+     * website — hasil tidak di-cache.
      */
     suspend fun verify(
         masterUrl: String,
         referer: String?,
         headers: Map<String, String>
-    ): Verdict {
-        cache.get(masterUrl)?.let { return it }
-        val verdict = try {
-            val text = app.get(
-                masterUrl,
-                referer = referer,
-                headers = headers,
-                timeout = FETCH_TIMEOUT_MS
-            ).text
-            classify(masterUrl, parseVariants(text))
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            // Gagal fetch: jangan rusakkan perilaku lama, deliver master as-is.
-            Verdict.Clean
-        }
-        cache.put(masterUrl, verdict)
-        return verdict
+    ): Verdict = try {
+        val text = app.get(
+            masterUrl,
+            referer = referer,
+            headers = headers,
+            timeout = FETCH_TIMEOUT_MS
+        ).text
+        classify(masterUrl, parseVariants(text))
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        // Gagal fetch: jangan rusakkan perilaku lama, deliver master as-is.
+        Verdict.Clean
     }
 }

@@ -21,8 +21,7 @@ import java.util.concurrent.ConcurrentHashMap
  * Combo valid pertama (2xx/3xx) yang selesai langsung MENANG — sisanya
  * di-cancel (uji berjalan serentak, tidak menunggu yang lambat). Probe
  * membaca body sungguhan (Range 1MB) sehingga pemenang = combo dengan
- * throughput terbaik untuk streaming, bukan sekadar latency. Hasil di-cache
- * per-host sehingga host berikutnya tidak di-probe ulang dalam satu sesi.
+ * throughput terbaik untuk streaming, bukan sekadar latency.
  *
  * Probe BLOCKING: link TIDAK dikirim ke player sebelum lolos test. Jika semua
  * combo ditolak server via HTTP non-2xx/3xx, Decision.valid=false dan caller
@@ -30,9 +29,13 @@ import java.util.concurrent.ConcurrentHashMap
  * Jika kegagalan terjadi di level jaringan (internet mati / TLS reset /
  * timeout), link TETAP dikirim (mode BARE, networkBlocked=true) — network
  * error bukan bukti link rusak, dan skip hanya membuat extractor mengembalikan
- * "0 link" saat jaringan bermasalah. Hasil networkBlocked tidak di-cache agar
- * saat internet pulih host di-probe ulang. Single-flight per-host: pemanggil
- * bersamaan menunggu hasil probe yang sama, bukan memulai probe ganda.
+ * "0 link" saat jaringan bermasalah.
+ *
+ * HASIL TIDAK DI-CACHE: setiap extractor dijalankan, host selalu di-probe
+ * ulang dari website. Tidak ada cache di sisi plugin agar keputusan header
+ * tidak basi (link yang sempat berubah perilaku header tetap ter-cover).
+ * Single-flight per-host tetap dipakai: pemanggil bersamaan menunggu hasil
+ * probe yang sama, bukan memulai probe ganda.
  */
 object AdaptiveHeaderProbe {
     enum class Mode { BARE, REFERER, ORIGIN, BROWSER_LIKE, EXPLICIT }
@@ -43,8 +46,7 @@ object AdaptiveHeaderProbe {
         val headers: Map<String, String>,
         val valid: Boolean = true,
         // true = probe gagal di level jaringan (internet mati/TLS reset/timeout),
-        // link tetap dikirim BARE tapi JANGAN di-cache — saat internet pulih,
-        // host harus di-probe ulang untuk dapat combo terbaik.
+        // link tetap dikirim BARE (keputusan tidak basi karena tidak di-cache).
         val networkBlocked: Boolean = false
     )
 
@@ -65,9 +67,7 @@ object AdaptiveHeaderProbe {
         data object NetworkError : ProbeResult()
     }
 
-    private val cache = ConcurrentHashMap<String, Pair<Long, Decision>>()
     private val inFlight = ConcurrentHashMap<String, CompletableDeferred<Decision>>()
-    private const val TTL_MS = 60 * 60_000L
     // NiceHttp timeout dalam DETIK (callTimeout/connectTimeout TimeUnit.SECONDS).
     private const val PROBE_TIMEOUT = 5L
     // Probe baca body sungguhan hingga batas ini agar pemenang = combo dengan
@@ -127,9 +127,6 @@ object AdaptiveHeaderProbe {
     ): Decision {
         val host = runCatching { URI(url).host }.getOrNull()
             ?: return Decision(Mode.BARE, null, minimalHeaders, valid = false)
-        cache[host]?.let { (ts, d) ->
-            if (System.currentTimeMillis() - ts < TTL_MS) return d
-        }
         // Single-flight: satu probe per host, pemanggil lain menunggu hasil yang sama.
         while (true) {
             inFlight[host]?.let { return it.await() }
@@ -142,14 +139,6 @@ object AdaptiveHeaderProbe {
                         throw e
                     } catch (e: Exception) {
                         Decision(Mode.BARE, null, minimalHeaders, valid = false)
-                    }
-                    // Hanya cache hasil VALID & bukan network-blocked. Hasil
-                    // invalid tidak di-cache agar link yang sempat down
-                    // (transient) bisa di-probe ulang, bukan mem-blow seluruh
-                    // host selama 60 menit. Hasil network-blocked juga tidak
-                    // di-cache agar saat internet pulih di-probe ulang.
-                    if (decision.valid && !decision.networkBlocked) {
-                        cache[host] = System.currentTimeMillis() to decision
                     }
                     deferred.complete(decision)
                 } catch (e: Throwable) {
@@ -165,7 +154,6 @@ object AdaptiveHeaderProbe {
     }
 
     fun reset() {
-        cache.clear()
         inFlight.clear()
     }
 
@@ -226,8 +214,7 @@ object AdaptiveHeaderProbe {
         }
         if (anyNetworkError) {
             // Ada kegagalan jaringan (bukan HTTP reject): kirim BARE tetap
-            // valid, TAPI jangan di-cache (networkBlocked=true). Saat internet
-            // pulih, host di-probe ulang untuk combo terbaik.
+            // valid. Saat internet pulih, extractor berikutnya memprobe ulang.
             return@coroutineScope Decision(
                 Mode.BARE, null, minimalHeaders,
                 valid = true, networkBlocked = true
