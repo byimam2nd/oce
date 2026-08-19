@@ -26,7 +26,7 @@ abstract class CachedExtractorApi : ExtractorApi() {
         referer: String? = null,
         headers: Map<String, String> = emptyMap()
     ): String {
-        val key = "GET:$url:${referer ?: ""}"
+        val key = "GET:$url:${referer ?: ""}:${headersKey(headers)}"
         return decryptCache.get(key) ?: run {
             val text = app.get(url, referer = referer, headers = headers).text
             decryptCache.put(key, text)
@@ -42,7 +42,7 @@ abstract class CachedExtractorApi : ExtractorApi() {
     ): String {
         val body = data?.entries?.sortedBy { it.key }
             ?.joinToString(",") { "${it.key}=${it.value}" }.orEmpty()
-        val key = "POST:$url:$body:${referer ?: ""}"
+        val key = "POST:$url:$body:${referer ?: ""}:${headersKey(headers)}"
         return decryptCache.get(key) ?: run {
             val text = app.post(url, data = data, referer = referer,
                 headers = headers).text
@@ -60,7 +60,7 @@ abstract class CachedExtractorApi : ExtractorApi() {
         // Pakai body mentah (bukan hashCode 32-bit) untuk menghindari key
         // collision antar request decrypt yang berbeda. SHA-256 mencegah key
         // jadi sangat panjang sekaligus bebas collision.
-        val key = "POST:$url:${jsonBody.sha256Hex()}:${referer ?: ""}"
+        val key = "POST:$url:${jsonBody.sha256Hex()}:${referer ?: ""}:${headersKey(headers)}"
         return decryptCache.get(key) ?: run {
             val text = app.post(url, headers = headers, requestBody = jsonBody
                 .toRequestBody("application/json".toMediaType())).text
@@ -73,5 +73,17 @@ abstract class CachedExtractorApi : ExtractorApi() {
         val digest = MessageDigest.getInstance("SHA-256")
             .digest(toByteArray())
         return digest.joinToString("") { "%02x".format(it) }
+    }
+
+    /**
+     * Fingerprint headers untuk key cache. Variant extractor bisa memakai URL
+     * sama dengan header berbeda (UA/variant.headers); tanpa fingerprint ini
+     * hasil request satu variant tertukar dengan variant lain.
+     */
+    private fun headersKey(headers: Map<String, String>): String {
+        if (headers.isEmpty()) return ""
+        return headers.entries.sortedBy { it.key }
+            .joinToString("&") { "${it.key}=${it.value}" }
+            .sha256Hex()
     }
 }
