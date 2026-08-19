@@ -11,6 +11,7 @@ import com.lagradost.cloudstream3.utils.*
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -22,6 +23,7 @@ import kotlinx.coroutines.sync.withPermit
 import org.json.JSONObject
 import org.jsoup.nodes.Document
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 class ProviderScrapper(
     private val api: MainAPI,
@@ -243,10 +245,20 @@ class ProviderScrapper(
             // First-valid race: langsung return begitu video pertama ditemukan.
             // Ekstraktor tersisa tetap berjalan di background (fire-and-forget)
             // sehingga player tidak menunggu SEMUA server dicoba.
+            // B4: scope dibuat per-run dan job run sebelumnya di-cancel saat
+            // loadLinks baru dimulai (ekstraksi basi tidak membuang resource).
+            // Deferreds run lama ikut diselesaikan agar call loadLinks yang
+            // ditinggalkan user tidak menggantung di select.
+            activeRace.getAndSet(null)?.let { prev ->
+                prev.supervisor.cancel()
+                prev.allDone.complete(Unit)
+            }
+            val raceSupervisor = SupervisorJob()
+            val runScope = CoroutineScope(raceSupervisor + Dispatchers.IO)
             val firstVideo = CompletableDeferred<Boolean>()
             val allDone = CompletableDeferred<Unit>()
             val jobs = pendingLinks.map { (raw, label) ->
-                linkRaceScope.launch {
+                runScope.launch {
                     runCatching {
                         linkSemaphore.withPermit { fallbackPipeline
                             .processLink(raw, label, currentUrl,
@@ -255,12 +267,13 @@ class ProviderScrapper(
                     if (videoCount.get() > 0) firstVideo.complete(true)
                 }
             }
-            linkRaceScope.launch {
+            runScope.launch {
                 jobs.forEach { it.join() }
                 allDone.complete(Unit)
                 fallbackPipeline.logLinkResults(videoCount.get(),
                     pendingLinks.size, data)
             }
+            activeRace.set(ActiveRace(raceSupervisor, allDone))
 
             // Selesai saat video pertama ditemukan (true) ATAU semua job
             // selesai tanpa video (hasil akhir). Jika true, sisa job tetap
@@ -312,7 +325,16 @@ class ProviderScrapper(
         }
     }
 
-    private val linkRaceScope = CoroutineScope(
-        SupervisorJob() + Dispatchers.IO
+    /**
+     * State race ekstraksi per-run (B4). Run sebelumnya di-cancel saat
+     * loadLinks baru dimulai; [allDone] diselesaikan agar call yang
+     * ditinggalkan tidak menggantung. Hanya SATU race aktif per instance
+     * pada satu waktu.
+     */
+    private class ActiveRace(
+        val supervisor: Job,
+        val allDone: CompletableDeferred<Unit>
     )
+
+    private val activeRace = AtomicReference<ActiveRace?>(null)
 }
