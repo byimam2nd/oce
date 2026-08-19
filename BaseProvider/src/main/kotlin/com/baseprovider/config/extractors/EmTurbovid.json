@@ -3,7 +3,6 @@
   "name": "EmTurbovid",
   "mainUrl": "https://emturbovid.com",
   "requiresReferer": true,
-  "cached": false,
   "videoReferer": "{mainUrl}/",
   "variants": [
     {

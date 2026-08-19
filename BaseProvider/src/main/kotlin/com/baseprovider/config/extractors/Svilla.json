@@ -3,7 +3,6 @@
   "name": "svilla",
   "mainUrl": "https://streamruby.com",
   "requiresReferer": true,
-  "cached": true,
   "idSource": {
     "type": "regex",
     "pattern": "embed-([a-zA-Z0-9]+)\\.html",

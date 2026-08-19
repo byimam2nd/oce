@@ -3,7 +3,6 @@
   "name": "LuluStream",
   "mainUrl": "https://luluvdo.com",
   "requiresReferer": true,
-  "cached": false,
   "idSource": {
     "type": "path"
   },

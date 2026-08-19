@@ -19,8 +19,6 @@ data class ExtractorConfig(
     val name: String = id,
     val mainUrl: String = "https://example.com",
     val requiresReferer: Boolean = true,
-    // true = request cache (CachedExtractorApi) untuk GET/POST form/JSON.
-    val cached: Boolean = false,
 
     // ── ID extraction dari URL masuk ──
     val idSource: IdSource? = null,

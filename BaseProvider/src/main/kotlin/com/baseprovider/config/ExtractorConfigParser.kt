@@ -11,7 +11,7 @@ private const val PARSER_TAG = "ExtractorConfigParser"
  */
 val KNOWN_EXTRACTOR_KEYS: Set<String> = setOf(
     // identity
-    "id", "name", "mainUrl", "requiresReferer", "cached",
+    "id", "name", "mainUrl", "requiresReferer",
     "idSource", "variants", "steps", "videoReferer", "outputFilter",
     // idSource
     "type", "param", "pattern", "group", "selector", "attr",
@@ -206,7 +206,6 @@ fun fromExtractorJson(id: String, json: JSONObject): ExtractorConfig {
         name = json.optString("name", id),
         mainUrl = json.optString("mainUrl", "https://example.com"),
         requiresReferer = json.optBoolean("requiresReferer", true),
-        cached = json.optBoolean("cached", false),
         idSource = parseIdSource(json.optJSONObject("idSource")),
         variants = variants.ifEmpty { listOf(ExtractorVariant()) },
         steps = steps,

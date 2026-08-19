@@ -18,7 +18,6 @@ class ExtractorConfigParserTest {
         assertEquals("Test", config.name)
         assertEquals("https://test.com", config.mainUrl)
         assertTrue(config.requiresReferer)
-        assertFalse(config.cached)
         assertNull(config.idSource)
         assertEquals(1, config.variants.size)
         assertEquals("default", config.variants[0].name)
@@ -33,7 +32,6 @@ class ExtractorConfigParserTest {
             "id": "V",
             "mainUrl": "https://v.com",
             "requiresReferer": false,
-            "cached": true,
             "variants": [
                 {"name": "bare", "headers": {"Accept": "*/*"}},
                 {"name": "origin", "headers": {"Origin": "https://v.com"}, "referer": "{mainUrl}/", "userAgent": "CustomUA"}
@@ -42,7 +40,6 @@ class ExtractorConfigParserTest {
         }""")
         val config = fromExtractorJson("V", json)
         assertFalse(config.requiresReferer)
-        assertTrue(config.cached)
         assertEquals(2, config.variants.size)
         assertEquals("bare", config.variants[0].name)
         assertEquals(mapOf("Accept" to "*/*"), config.variants[0].headers)

@@ -3,7 +3,6 @@
   "name": "MegaPlay",
   "mainUrl": "https://megaplay.buzz",
   "requiresReferer": false,
-  "cached": true,
   "variants": [
     {
       "name": "default",

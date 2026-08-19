@@ -3,7 +3,6 @@
   "name": "Dailymotion",
   "mainUrl": "https://www.dailymotion.com",
   "requiresReferer": false,
-  "cached": false,
   "idSource": {
     "type": "regex",
     "pattern": "(?:[?&]video=|/(?:video|embed/video)/)([kx][a-zA-Z0-9]+)"

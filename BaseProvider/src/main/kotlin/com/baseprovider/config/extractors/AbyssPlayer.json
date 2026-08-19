@@ -3,7 +3,6 @@
   "name": "AbyssPlayer",
   "mainUrl": "https://abyssplayer.com",
   "requiresReferer": true,
-  "cached": true,
   "variants": [
     {
       "name": "default",

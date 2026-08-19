@@ -3,7 +3,6 @@
   "name": "VideoNodePage",
   "mainUrl": "https://videonode.de",
   "requiresReferer": true,
-  "cached": false,
   "variants": [
     {
       "name": "default",

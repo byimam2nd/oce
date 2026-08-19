@@ -3,7 +3,6 @@
   "name": "Rumble",
   "mainUrl": "https://rumble.com",
   "requiresReferer": false,
-  "cached": false,
   "variants": [
     {
       "name": "default",

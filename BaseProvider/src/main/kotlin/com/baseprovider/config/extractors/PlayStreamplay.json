@@ -3,7 +3,6 @@
   "name": "PlayStreamplay",
   "mainUrl": "https://play.streamplay.co.in",
   "requiresReferer": true,
-  "cached": false,
   "variants": [
     {
       "name": "default",

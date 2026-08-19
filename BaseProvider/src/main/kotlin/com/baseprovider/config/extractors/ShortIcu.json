@@ -3,7 +3,6 @@
   "name": "ShortIcu",
   "mainUrl": "https://short.icu",
   "requiresReferer": true,
-  "cached": false,
   "variants": [
     {
       "name": "default",

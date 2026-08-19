@@ -3,7 +3,6 @@
   "name": "Lk21Player",
   "mainUrl": "https://playeriframe.sbs",
   "requiresReferer": true,
-  "cached": false,
   "variants": [
     {
       "name": "default",

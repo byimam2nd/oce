@@ -3,7 +3,6 @@
   "name": "AWSStream",
   "mainUrl": "https://z.awstream.net",
   "requiresReferer": true,
-  "cached": true,
   "idSource": {
     "type": "path"
   },

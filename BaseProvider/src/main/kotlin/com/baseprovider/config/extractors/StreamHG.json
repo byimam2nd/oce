@@ -3,7 +3,6 @@
   "name": "StreamHG",
   "mainUrl": "https://hgcloud.to",
   "requiresReferer": true,
-  "cached": false,
   "variants": [
     {
       "name": "default",

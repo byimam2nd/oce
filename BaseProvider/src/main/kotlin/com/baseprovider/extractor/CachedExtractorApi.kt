@@ -1,89 +1,41 @@
 package com.baseprovider.extractor
 
-import com.baseprovider.cache.AdaptiveDecryptCache
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.utils.ExtractorApi
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.security.MessageDigest
 
 /**
- * Extractor dengan cache decrypt adaptif built-in.
+ * Extractor dengan helper request HTTP seragam (GET / POST form / POST JSON).
  *
- * Turunkan dari class ini dan gunakan [cachedGetText] / [cachedPostText] /
- * [cachedPostJsonText] untuk request ke API decrypt/embed. TTL adaptif otomatis
- * menyesuaikan stabilitas response (stabil → 6 jam, volatile → 60 detik),
- * sehingga tidak perlu memutuskan manual apakah request layak di-cache.
+ * TANPA cache hasil fetch — selaras aturan "no-cache extractor": extractor
+ * selalu fetch ulang dari website. Hasil decrypt/embed bisa mati dalam
+ * hitungan detik–menit (mis. CDN sssrr.org AbyssPlayer), jadi menyimpan
+ * response di cache berisiko menyajikan link basi ke player.
  *
- * Key cache mencakup METHOD + URL + body + referer sehingga request berbeda
- * tidak saling menimpa — contoh: StreamRuby memakai URL /dl yang sama untuk
- * semua id, dibedakan oleh body (file_code).
+ * Nama metode [cachedGetText] / [cachedPostText] / [cachedPostJsonText]
+ * dipertahankan agar pemanggil tidak berubah; mereka kini fetch langsung.
  */
 abstract class CachedExtractorApi : ExtractorApi() {
-    private val decryptCache = AdaptiveDecryptCache()
     protected suspend fun cachedGetText(
         url: String,
         referer: String? = null,
         headers: Map<String, String> = emptyMap()
-    ): String {
-        val key = "GET:$url:${referer ?: ""}:${headersKey(headers)}"
-        return decryptCache.get(key) ?: run {
-            val text = app.get(url, referer = referer, headers = headers).text
-            decryptCache.put(key, text)
-            text
-        }
-    }
+    ): String = app.get(url, referer = referer, headers = headers).text
 
     protected suspend fun cachedPostText(
         url: String,
         data: Map<String, String>? = null,
         referer: String? = null,
         headers: Map<String, String> = emptyMap()
-    ): String {
-        val body = data?.entries?.sortedBy { it.key }
-            ?.joinToString(",") { "${it.key}=${it.value}" }.orEmpty()
-        val key = "POST:$url:$body:${referer ?: ""}:${headersKey(headers)}"
-        return decryptCache.get(key) ?: run {
-            val text = app.post(url, data = data, referer = referer,
-                headers = headers).text
-            decryptCache.put(key, text)
-            text
-        }
-    }
+    ): String = app.post(url, data = data, referer = referer,
+        headers = headers).text
 
     protected suspend fun cachedPostJsonText(
         url: String,
         jsonBody: String,
         referer: String? = null,
         headers: Map<String, String> = emptyMap()
-    ): String {
-        // Pakai body mentah (bukan hashCode 32-bit) untuk menghindari key
-        // collision antar request decrypt yang berbeda. SHA-256 mencegah key
-        // jadi sangat panjang sekaligus bebas collision.
-        val key = "POST:$url:${jsonBody.sha256Hex()}:${referer ?: ""}:${headersKey(headers)}"
-        return decryptCache.get(key) ?: run {
-            val text = app.post(url, headers = headers, requestBody = jsonBody
-                .toRequestBody("application/json".toMediaType())).text
-            decryptCache.put(key, text)
-            text
-        }
-    }
-
-    private fun String.sha256Hex(): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-            .digest(toByteArray())
-        return digest.joinToString("") { "%02x".format(it) }
-    }
-
-    /**
-     * Fingerprint headers untuk key cache. Variant extractor bisa memakai URL
-     * sama dengan header berbeda (UA/variant.headers); tanpa fingerprint ini
-     * hasil request satu variant tertukar dengan variant lain.
-     */
-    private fun headersKey(headers: Map<String, String>): String {
-        if (headers.isEmpty()) return ""
-        return headers.entries.sortedBy { it.key }
-            .joinToString("&") { "${it.key}=${it.value}" }
-            .sha256Hex()
-    }
+    ): String = app.post(url, headers = headers, requestBody = jsonBody
+        .toRequestBody("application/json".toMediaType())).text
 }

@@ -3,7 +3,6 @@
   "name": "PlayCdn",
   "mainUrl": "https://playcdn.de",
   "requiresReferer": true,
-  "cached": true,
   "idSource": {
     "type": "regex",
     "pattern": "video\\.php\\?id=([a-zA-Z0-9]+)"

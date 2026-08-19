@@ -3,7 +3,6 @@
   "name": "Gdplayer",
   "mainUrl": "https://gdplayer.to",
   "requiresReferer": true,
-  "cached": false,
   "variants": [
     {
       "name": "default",

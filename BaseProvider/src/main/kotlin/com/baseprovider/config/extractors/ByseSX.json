@@ -3,7 +3,6 @@
   "name": "Byse",
   "mainUrl": "https://byse.sx",
   "requiresReferer": true,
-  "cached": false,
   "idSource": {
     "type": "path"
   },

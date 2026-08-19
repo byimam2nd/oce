@@ -3,7 +3,6 @@
   "name": "AnichinStream",
   "mainUrl": "https://anichin.stream",
   "requiresReferer": true,
-  "cached": false,
   "idSource": {
     "type": "query",
     "param": "id"

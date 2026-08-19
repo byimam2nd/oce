@@ -3,7 +3,6 @@
   "name": "StreamRuby",
   "mainUrl": "https://rubyvidhub.com",
   "requiresReferer": true,
-  "cached": true,
   "idSource": {
     "type": "regex",
     "pattern": "embed-([a-zA-Z0-9]+)\\.html",

@@ -3,7 +3,6 @@
   "name": "Cloudhownetwork",
   "mainUrl": "https://cloud.hownetwork.xyz",
   "requiresReferer": true,
-  "cached": true,
   "idSource": {
     "type": "regex",
     "pattern": "[?&]id=([^&]+)"

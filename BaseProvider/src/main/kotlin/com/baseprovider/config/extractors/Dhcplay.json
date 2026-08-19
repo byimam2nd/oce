@@ -3,7 +3,6 @@
   "name": "Dhcplay",
   "mainUrl": "https://dhcplay.com",
   "requiresReferer": true,
-  "cached": false,
   "variants": [
     {
       "name": "default",

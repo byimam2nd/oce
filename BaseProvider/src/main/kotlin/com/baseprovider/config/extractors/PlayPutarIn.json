@@ -3,7 +3,6 @@
   "name": "PlayPutarIn",
   "mainUrl": "https://play.putar.in",
   "requiresReferer": true,
-  "cached": false,
   "variants": [
     {
       "name": "default",

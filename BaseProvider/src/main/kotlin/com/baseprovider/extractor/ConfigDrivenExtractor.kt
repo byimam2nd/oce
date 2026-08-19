@@ -141,46 +141,27 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
             is ExtractorStep.Fetch -> {
                 var target = state.resolveTemplate(step.url)
                 step.urlReplace.forEach { (from, to) -> target = target.replace(from, to) }
-                if (config.cached) {
-                    state.variables[step.store] = cachedGetText(target,
-                        referer = state.resolveReferer(step.referer),
-                        headers = state.resolveHeaders(step.headers))
-                } else {
-                    val response = app.get(target,
-                        referer = state.resolveReferer(step.referer),
-                        headers = state.resolveHeaders(step.headers))
-                    state.variables[step.store] = response.text
-                    if (step.storeFinalUrl.isNotBlank()) {
-                        state.variables[step.storeFinalUrl] = response.url
-                    }
+                val response = app.get(target,
+                    referer = state.resolveReferer(step.referer),
+                    headers = state.resolveHeaders(step.headers))
+                state.variables[step.store] = response.text
+                if (step.storeFinalUrl.isNotBlank()) {
+                    state.variables[step.storeFinalUrl] = response.url
                 }
             }
             is ExtractorStep.PostForm -> {
                 val target = state.resolveTemplate(step.url)
                 val data = step.data.mapValues { (_, v) -> state.resolveTemplate(v) }
-                val text = if (config.cached) {
-                    cachedPostText(target, data = data,
-                        referer = state.resolveReferer(step.referer),
-                        headers = state.resolveHeaders(step.headers))
-                } else {
-                    app.post(target, data = data,
-                        referer = state.resolveReferer(step.referer),
-                        headers = state.resolveHeaders(step.headers)).text
-                }
-                state.variables[step.store] = text
+                state.variables[step.store] = app.post(target, data = data,
+                    referer = state.resolveReferer(step.referer),
+                    headers = state.resolveHeaders(step.headers)).text
             }
             is ExtractorStep.PostJson -> {
                 val target = state.resolveTemplate(step.url)
                 val body = state.resolveTemplate(step.jsonBody)
-                val text = if (config.cached) {
-                    cachedPostJsonText(target, body,
-                        referer = state.resolveReferer(step.referer),
-                        headers = state.resolveHeaders(step.headers))
-                } else {
-                    app.post(target, headers = state.resolveHeaders(step.headers),
-                        requestBody = body.toRequestBody("application/json".toMediaType())).text
-                }
-                state.variables[step.store] = text
+                state.variables[step.store] = app.post(target,
+                    headers = state.resolveHeaders(step.headers),
+                    requestBody = body.toRequestBody("application/json".toMediaType())).text
             }
             is ExtractorStep.Regex -> {
                 val text = state.variables[step.source].orEmpty()

@@ -3,7 +3,6 @@
   "name": "Hownetwork",
   "mainUrl": "https://stream.hownetwork.xyz",
   "requiresReferer": true,
-  "cached": true,
   "idSource": {
     "type": "regex",
     "pattern": "[?&]id=([^&]+)"

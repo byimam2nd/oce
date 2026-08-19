@@ -3,7 +3,6 @@
   "name": "Movearnpre",
   "mainUrl": "https://movearnpre.com",
   "requiresReferer": true,
-  "cached": false,
   "variants": [
     {
       "name": "default",

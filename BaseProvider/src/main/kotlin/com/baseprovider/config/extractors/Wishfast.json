@@ -3,7 +3,6 @@
   "name": "wishfast",
   "mainUrl": "https://wishfast.to",
   "requiresReferer": true,
-  "cached": false,
   "variants": [
     {
       "name": "default",
