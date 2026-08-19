@@ -58,6 +58,20 @@ object MasterLinkGenerator {
         runId: String? = null,
         callback: (ExtractorLink) -> Unit
     ) {
+        if (url.isBlank()) {
+            // Link kosong: jangan dikirim ke player (manifest malformed).
+            com.baseprovider.log.logFail(
+                providerTag,
+                "createSmartLink rejected blank url for $source",
+                url = url,
+                method = "createSmartLink",
+                type = com.baseprovider.log.FailureType.INVALID_URL,
+                stage = "VERIFY",
+                extractor = source,
+                runId = runId
+            )
+            return
+        }
         val isAdaptive = url.contains(".m3u8") || url.contains(".mpd")
         val safeHeaders = enrichHeaders(headers, bareHeaders)
 
@@ -91,6 +105,48 @@ object MasterLinkGenerator {
         }
 
         val cleanName = source.replace(qualityStripRegex, "").trim()
+
+        // Verifikasi master m3u8: buang variant tanpa URI (mis. baris kosong
+        // setelah #EXT-X-STREAM-INF) yang bikin ExoPlayer error 3002
+        // (PARSING_MANIFEST_MALFORMED). Master bersih tetap dikirim as-is
+        // (ABR jalan); hanya saat ada variant rusak variant valid dikirim
+        // terpisah dan yang rusak TIDAK pernah sampai ke player.
+        if (isAdaptive && url.contains(".m3u8")) {
+            when (val verdict = M3u8MasterVerifier.verify(url, effectiveReferer, effectiveHeaders)) {
+                is M3u8MasterVerifier.Verdict.Valid -> {
+                    for ((variantUrl, height) in verdict.variants) {
+                        callback(newExtractorLink(
+                            source = source,
+                            name = cleanName,
+                            url = variantUrl,
+                            type = ExtractorLinkType.M3U8
+                        ) {
+                            this.quality = height ?: detectQualityFromUrl(variantUrl)
+                            this.referer = effectiveReferer ?: ""
+                            this.headers = effectiveHeaders
+                        })
+                    }
+                    return
+                }
+                is M3u8MasterVerifier.Verdict.AllMalformed -> {
+                    com.baseprovider.log.logFail(
+                        providerTag,
+                        "M3u8MasterVerifier rejected master (all variants malformed): $url",
+                        url = url,
+                        method = "createSmartLink",
+                        type = com.baseprovider.log.FailureType.INVALID_URL,
+                        stage = "VERIFY",
+                        extractor = source,
+                        runId = runId
+                    )
+                    return
+                }
+                M3u8MasterVerifier.Verdict.Clean -> {
+                    // Master bersih / bukan master / fetch gagal: deliver as-is.
+                }
+            }
+        }
+
         callback(newExtractorLink(
             source = source,
             name = cleanName,
