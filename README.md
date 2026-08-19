@@ -23,10 +23,13 @@
 | **Anichin** | anichin.cafe | Donghua Anime | ✅ Stable |
 | **Animasu** | v2.animasu.work | Anime | ✅ Stable |
 | **Donghuastream** | donghuastream.org | Donghua Streaming | ✅ Stable |
-| **Dutamovie21** | simplycufflinks.com | Movie, Series, Anime | ✅ Stable |
+| **Dutamovie21** | vikingsgab.com | Movie, Series, Anime | ✅ Stable |
 | **IndoDrama21** | indodr21.putar.in | Movie, Asian Drama | ✅ Stable |
-| **LayarKaca21** | tv10.lk21official.cc | Movie, Series | ✅ Stable |
-| **Samehadaku** | samehadaku.biz | Anime Sub Indo | ✅ Stable |
+| **LayarKaca21** | tv12.lk21official.cc | Movie, Series | ✅ Stable |
+| **Samehadaku** | v2.samehadaku.how | Anime Sub Indo | ✅ Stable |
+
+> Domain/mirror bisa berubah — source of truth: `mainUrl` di
+> `BaseProvider/.../config/<name>.json`.
 
 ---
 
@@ -35,28 +38,44 @@
 | Extractor | Host | Method |
 |---|---|---|
 | **AbyssPlayer** | abyssplayer.com | Decrypt API (hydrax) |
+| **AnichinStream** | anichin.stream | Direct `/hls/{id}.m3u8` |
+| **Anonmp4** | anonmp4.art | API extraction |
 | **AWSStream** | awstream.net | POST hash → videoSource |
 | **BloggerVideo** | blogger.com | Video element extraction |
+| **ByseSX** | byse.sx | AES decrypt API |
+| **Cloudhownetwork** | cloud.hownetwork.xyz | POST API → m3u8 |
+| **Dailymotion** | dailymotion.com | Regex video URL |
 | **Dhcplay** | dhcplay.com | WebViewResolver + packed JS |
+| **EmTurbovid** | emturbovid.com | API extraction |
 | **Filedon** | filedon.co | Direct extraction |
 | **Gdplayer** | gdplayer.to | API kaken token |
+| **Hownetwork** | stream.hownetwork.xyz | POST API → m3u8 |
+| **Krakenfiles** | krakenfiles.com | API extraction |
 | **Lk21Player** | playeriframe.sbs | AJAX + iframe fallback |
 | **LuluStream** | luluvdo.com | POST form → vplayer |
 | **MegaPlay** | megaplay.buzz | API data-id → getSources |
 | **Minochinos** | minochinos.com | Packed JS + JW Player |
+| **Morencius** | morencius.com | API extraction |
 | **Movearnpre** | movearnpre.com | Packed JS + JW Player |
+| **Odnoklassniki** | ok.ru | Regex embed JSON |
+| **PlayCdn** | playcdn.de | API extraction |
 | **PlayPutarIn** | play.putar.in | URL parameter forward |
 | **PlayStreamplay** | play.streamplay.co.in | Iframe extraction |
-| **Rumble** | rumble.com | Regex extraction |
+| **Rumble** | rumble.com | Script data extraction |
 | **ShortIcu** | short.icu | Redirect follow |
 | **StreamHG** | hgcloud.to | WebViewResolver + packed JS |
 | **StreamRuby** | rubyvidhub.com | Direct pattern |
+| **Svanila** | streamruby.net | extends StreamRuby |
+| **Svilla** | streamruby.com | extends StreamRuby |
+| **VideoNodePage** | videonode.de | Iframe extraction |
+| **VideoplayerVip** | videoplayer.vip | API extraction |
 | **Vidguardto** | listeamed.net | Rhino JS + sigDecode |
 | **Voe** | voe.sx | Regex m3u8 extraction |
 | **Wishfast** | wishfast.to | Packed JS + file: pattern |
 | **Xtwap** | xtwap.top | JW Player → play.php → m3u8 |
-| **Odnoklassniki** | ok.ru | API extraction |
 | **YouTube** | youtube.com | Trailer extraction |
+
+Daftar lengkap & status config-driven: `extractor/ExtractorRegistry.kt`.
 
 ---
 
@@ -65,21 +84,22 @@
 ```
 BaseProvider/src/main/kotlin/com/baseprovider/
 │
-├── core/           ← ProviderCloudstream (MainAPI), DetailPageScrapper, Flow
+├── core/           ← ProviderCloudstream (MainAPI), ProviderScrapper, DetailPageScrapper
 ├── config/         ← ProviderConfig + per-provider JSON (selector & options)
 ├── collector/      ← LinkCollector, FallbackPipeline
-├── cache/          ← ExpiringCache
-├── network/        ← HttpClient wrapper + CircuitBreaker
-├── extractor/      ← Video host extractors (JS Packer, API, WebView)
-├── log/            ← Telegram logging (owner tagged)
-├── model/          ← Utility: attribute extraction, text cleaning
-├── ExtractorRegistry.kt  ← Registered extractor list
+├── cache/          ← ExpiringCache, AdaptiveDecryptCache
+├── network/        ← HttpClient wrapper, CircuitBreaker, SmartThrottle
+├── extractor/      ← Video host extractors + ExtractorRegistry, MasterLinkGenerator,
+│                     M3u8MasterVerifier, AdaptiveHeaderProbe
+├── log/            ← Supabase observability, FailureType
+├── model/          ← ProviderModels, SelectorResolver (selector fallback/fingerprint)
+└── settings/       ← OceSettings, SettingsDialog
 ```
 
 Each provider is **config-driven** — a thin module (`ProviderAnichin/`) with only 2 files + a JSON config:
 - `ProviderName.kt` — extends `ProviderCloudstream()`
 - `ProviderNamePlugin.kt` — registers main API + extractors
-- `BaseProvider/.../config/<name>.json` — selectors & options (remote-first via ConfigRegistry)
+- `BaseProvider/.../config/<name>.json` — selectors & options (bundled via ConfigRegistry)
 
 See [docs/LEARNING_GUIDE.md](docs/LEARNING_GUIDE.md) for the full architecture guide.
 
@@ -87,13 +107,17 @@ See [docs/LEARNING_GUIDE.md](docs/LEARNING_GUIDE.md) for the full architecture g
 
 ## 🧪 Build & CI
 
+Build berjalan otomatis via GitHub Actions — **jangan build gradle lokal**
+(`./gradlew`) di mesin pengembangan. Commit + push ke `master` → CI
+(`ci-cd.yml`) menjalankan:
+
 ```bash
 ./gradlew make                    # Build all .cs3 plugins
 ./gradlew makePluginsJson         # Generate plugins.json
 ```
 
 **Two distribution channels:**
-- **Stable** — GitHub Releases (manually tagged)
+- **Stable** — GitHub Releases (tag `v*`, workflow `release.yml`)
 - **Beta** — Builds branch (auto-built on every push)
 
 ---
