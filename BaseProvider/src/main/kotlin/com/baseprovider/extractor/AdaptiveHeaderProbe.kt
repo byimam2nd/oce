@@ -47,7 +47,14 @@ object AdaptiveHeaderProbe {
         val valid: Boolean = true,
         // true = probe gagal di level jaringan (internet mati/TLS reset/timeout),
         // link tetap dikirim BARE (keputusan tidak basi karena tidak di-cache).
-        val networkBlocked: Boolean = false
+        val networkBlocked: Boolean = false,
+        // Body hasil fetch pemenang (hanya diisi pemanggil inisiator saat
+        // captureBody=true, mis. master m3u8). Waiter single-flight menerima
+        // null agar tidak memakai body URL milik pemanggil lain.
+        val capturedBody: String? = null,
+        // true = body terpotong di PROBE_READ_BYTES (master >1MB sangat
+        // langka) -> caller harus fetch penuh untuk verifikasi.
+        val bodyTruncated: Boolean = false
     )
 
     private data class Combo(
@@ -62,10 +69,13 @@ object AdaptiveHeaderProbe {
      * reset / timeout — BUKAN bukti link rusak).
      */
     private sealed class ProbeResult {
-        data class Ok(val ms: Long) : ProbeResult()
+        data class Ok(val ms: Long, val captured: Captured? = null) : ProbeResult()
         data object HttpReject : ProbeResult()
         data object NetworkError : ProbeResult()
     }
+
+    /** Body pemenang + penanda terpotong di batas baca probe. */
+    private data class Captured(val text: String, val truncated: Boolean)
 
     private val inFlight = ConcurrentHashMap<String, CompletableDeferred<Decision>>()
     // NiceHttp timeout dalam DETIK (callTimeout/connectTimeout TimeUnit.SECONDS).
@@ -123,18 +133,22 @@ object AdaptiveHeaderProbe {
     suspend fun resolve(
         url: String,
         refererHint: String?,
-        explicitHeaders: Map<String, String>? = null
+        explicitHeaders: Map<String, String>? = null,
+        captureBody: Boolean = false
     ): Decision {
         val host = runCatching { URI(url).host }.getOrNull()
             ?: return Decision(Mode.BARE, null, minimalHeaders, valid = false)
         // Single-flight: satu probe per host, pemanggil lain menunggu hasil yang sama.
         while (true) {
-            inFlight[host]?.let { return it.await() }
+            inFlight[host]?.let { deferred ->
+                // Waiter: hasil probe milik URL lain — body tidak ikut dipakai.
+                return deferred.await().copy(capturedBody = null, bodyTruncated = false)
+            }
             val deferred = CompletableDeferred<Decision>()
             if (inFlight.putIfAbsent(host, deferred) == null) {
                 try {
                     val decision = try {
-                        probe(url, refererHint, explicitHeaders)
+                        probe(url, refererHint, explicitHeaders, captureBody)
                     } catch (e: kotlinx.coroutines.CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -174,11 +188,12 @@ object AdaptiveHeaderProbe {
     private suspend fun probe(
         url: String,
         refererHint: String?,
-        explicitHeaders: Map<String, String>?
+        explicitHeaders: Map<String, String>?,
+        captureBody: Boolean
     ): Decision = coroutineScope {
         val combos = buildCombos(url, refererHint, explicitHeaders)
         val jobs = combos.map { combo ->
-            async { combo to probeOnce(url, combo) }
+            async { combo to probeOnce(url, combo, captureBody) }
         }.toMutableList()
         val host = runCatching { URI(url).host }.getOrNull() ?: url.take(60)
         var anyNetworkError = false
@@ -201,7 +216,9 @@ object AdaptiveHeaderProbe {
                         Log.d("AdaptiveProbe", "$host: cancelled")
                     }
                     return@coroutineScope Decision(
-                        combo.mode, combo.referer, combo.headers, valid = true
+                        combo.mode, combo.referer, combo.headers, valid = true,
+                        capturedBody = result.captured?.text,
+                        bodyTruncated = result.captured?.truncated ?: false
                     )
                 }
                 is ProbeResult.HttpReject ->
@@ -224,7 +241,7 @@ object AdaptiveHeaderProbe {
         Decision(Mode.BARE, null, minimalHeaders, valid = false)
     }
 
-    private suspend fun probeOnce(url: String, combo: Combo): ProbeResult =
+    private suspend fun probeOnce(url: String, combo: Combo, captureBody: Boolean): ProbeResult =
         try {
             val start = System.currentTimeMillis()
             val r = app.get(
@@ -243,11 +260,32 @@ object AdaptiveHeaderProbe {
                 try {
                     r.body?.byteStream()?.use { stream ->
                         val buf = ByteArray(DEFAULT_BUFFER_SIZE)
-                        var total = 0L
-                        while (total < PROBE_READ_BYTES) {
-                            val n = stream.read(buf)
-                            if (n <= 0) break
-                            total += n
+                        if (captureBody) {
+                            // Body pemenang disimpan (mis. master m3u8) agar
+                            // verifikasi variant bisa pakai fetch yang sama
+                            // (P1: probe + verifier jadi satu pass).
+                            val out = java.io.ByteArrayOutputStream()
+                            var total = 0L
+                            while (total < PROBE_READ_BYTES) {
+                                val n = stream.read(buf)
+                                if (n <= 0) break
+                                out.write(buf, 0, n)
+                                total += n
+                            }
+                            val text = out.toString(Charsets.UTF_8)
+                            if (text.isNotEmpty()) {
+                                return ProbeResult.Ok(
+                                    System.currentTimeMillis() - start,
+                                    Captured(text, total >= PROBE_READ_BYTES)
+                                )
+                            }
+                        } else {
+                            var total = 0L
+                            while (total < PROBE_READ_BYTES) {
+                                val n = stream.read(buf)
+                                if (n <= 0) break
+                                total += n
+                            }
                         }
                     }
                 } catch (e: Exception) {

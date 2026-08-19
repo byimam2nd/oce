@@ -81,10 +81,15 @@ object MasterLinkGenerator {
         // browser-like) paralel, pilih yang valid 2xx/3xx dan tercepat.
         var effectiveReferer = referer
         var effectiveHeaders = safeHeaders
+        var probeBody: String? = null
+        var probeBodyTruncated = false
         if (bareHeaders) {
             // Probe otomatis (valid pertama yang selesai menang, sisanya di-cancel).
             // Headers asli extractor ikut diuji sebagai combo EXPLICIT.
-            val decision = AdaptiveHeaderProbe.resolve(url, referer, headers)
+            // captureBody hanya untuk master m3u8: body pemenang dipakai
+            // verifikasi variant di pass yang sama (P1, hindari fetch 2x).
+            val decision = AdaptiveHeaderProbe.resolve(url, referer, headers,
+                captureBody = isAdaptive && url.contains(".m3u8"))
             if (!decision.valid) {
                 // Link gagal test (non-2xx/3xx) di semua combo header.
                 // Jangan kirim link rusak ke player (avoid error 2004).
@@ -102,6 +107,8 @@ object MasterLinkGenerator {
             }
             effectiveReferer = decision.referer
             effectiveHeaders = decision.headers
+            probeBody = decision.capturedBody
+            probeBodyTruncated = decision.bodyTruncated
         }
 
         val cleanName = source.replace(qualityStripRegex, "").trim()
@@ -112,7 +119,15 @@ object MasterLinkGenerator {
         // (ABR jalan); hanya saat ada variant rusak variant valid dikirim
         // terpisah dan yang rusak TIDAK pernah sampai ke player.
         if (isAdaptive && url.contains(".m3u8")) {
-            when (val verdict = M3u8MasterVerifier.verify(url, effectiveReferer, effectiveHeaders)) {
+            // Verifikasi master: pakai body hasil probe pemenang bila tersedia
+            // (P1, satu fetch), fallback fetch penuh bila body null/truncated
+            // (waiter single-flight, master >1MB, atau gagal baca body).
+            val verdict = if (probeBody != null && !probeBodyTruncated) {
+                M3u8MasterVerifier.classify(url, M3u8MasterVerifier.parseVariants(probeBody))
+            } else {
+                M3u8MasterVerifier.verify(url, effectiveReferer, effectiveHeaders)
+            }
+            when (verdict) {
                 is M3u8MasterVerifier.Verdict.Valid -> {
                     for ((variantUrl, height) in verdict.variants) {
                         callback(newExtractorLink(
