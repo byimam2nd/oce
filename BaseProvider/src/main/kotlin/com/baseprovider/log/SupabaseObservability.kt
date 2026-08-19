@@ -8,6 +8,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.onTimeout
 import kotlinx.coroutines.selects.select
@@ -274,10 +275,10 @@ object SupabaseObservability {
     private val flusherJob = AtomicReference<Job?>(null)
 
     private fun enqueueStep(runId: String, body: org.json.JSONObject) {
-        while (stepQueue.size() > MAX_STEP_QUEUE) stepQueue.poll()
+        while (stepQueue.size > MAX_STEP_QUEUE) stepQueue.poll()
         stepQueue.offer(runId to body)
         ensureFlusher()
-        if (stepQueue.size() >= STEP_BATCH_SIZE) flushWake.trySend(Unit)
+        if (stepQueue.size >= STEP_BATCH_SIZE) flushWake.trySend(Unit)
     }
 
     private fun ensureFlusher() {
