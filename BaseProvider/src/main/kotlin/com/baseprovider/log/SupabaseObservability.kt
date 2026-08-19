@@ -4,14 +4,20 @@ import com.lagradost.api.Log
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.onTimeout
+import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Observability Supabase: scrape_runs + scrape_steps.
@@ -148,6 +154,9 @@ object SupabaseObservability {
                 Log.w("OCE", "Observability: endRun failed: ${e.message}")
             }
         }
+        // P3: endRun = titik akhir run → flush sisa step segera, jangan
+        // menunggu interval flusher berikutnya.
+        flushWake.trySend(Unit)
     }
 
     /**
@@ -161,24 +170,17 @@ object SupabaseObservability {
         errorType: String? = null
     ) {
         if (!enabled() || runId.isNullOrBlank()) return
-        scope.launch {
-            if (!awaitRunCreated(runId)) return@launch
-            val body = org.json.JSONObject().apply {
-                put("run_id", runId)
-                put("kind", kind)
-                put("status", status)
-                linkUrl?.let { put("link_url", it) }
-                extractorChain?.let { put("extractor_chain", it) }
-                durationMs?.let { put("duration_ms", it.toInt()) }
-                linksFound?.let { put("links_found", it) }
-                errorType?.let { put("error_type", it) }
-            }
-            runCatching {
-                post("/rest/v1/scrape_steps", body)
-            }.onFailure { e ->
-                Log.w("OCE", "Observability: logStep failed: ${e.message}")
-            }
+        val body = org.json.JSONObject().apply {
+            put("run_id", runId)
+            put("kind", kind)
+            put("status", status)
+            linkUrl?.let { put("link_url", it) }
+            extractorChain?.let { put("extractor_chain", it) }
+            durationMs?.let { put("duration_ms", it.toInt()) }
+            linksFound?.let { put("links_found", it) }
+            errorType?.let { put("error_type", it) }
         }
+        enqueueStep(runId, body)
     }
 
     /** COLLECT step: jumlah link mentah ditemukan di halaman episode. */
@@ -259,8 +261,86 @@ object SupabaseObservability {
         ).text
     }
 
+    // ── P3: batch insert scrape_steps ─────────────────────────────────────
+    // Step di-queue in-memory lalu di-flush sebagai SATU bulk request (JSON
+    // array) agar tidak ada 1 request HTTP per step (ratusan POST per run).
+    // Satu flusher coroutine; flush dipicu oleh interval ATAU antrian penuh
+    // ATAU endRun. Queue bounded — bila melampaui cap, step tertua di-drop
+    // (degradasi observability, bukan block).
+
+    private val stepQueue =
+        ConcurrentLinkedQueue<Pair<String, org.json.JSONObject>>()
+    private val flushWake = Channel<Unit>(Channel.CONFLATED)
+    private val flusherJob = AtomicReference<Job?>(null)
+
+    private fun enqueueStep(runId: String, body: org.json.JSONObject) {
+        while (stepQueue.size() > MAX_STEP_QUEUE) stepQueue.poll()
+        stepQueue.offer(runId to body)
+        ensureFlusher()
+        if (stepQueue.size() >= STEP_BATCH_SIZE) flushWake.trySend(Unit)
+    }
+
+    private fun ensureFlusher() {
+        if (flusherJob.get() != null) return
+        val job = scope.launch {
+            while (isActive) {
+                runCatching {
+                    select<Unit> {
+                        flushWake.onReceive { Unit }
+                        onTimeout(STEP_FLUSH_INTERVAL_MS) { Unit }
+                    }
+                    flushSteps()
+                }.onFailure { e ->
+                    Log.w("OCE", "Observability: step flush failed: ${e.message}")
+                }
+            }
+        }
+        if (!flusherJob.compareAndSet(null, job)) job.cancel()
+    }
+
+    private suspend fun flushSteps() {
+        val batch = mutableListOf<Pair<String, org.json.JSONObject>>()
+        var drained = 0
+        while (drained < STEP_BATCH_SIZE) {
+            stepQueue.poll()?.let { batch.add(it) } ?: break
+            drained++
+        }
+        if (batch.isEmpty()) return
+
+        // Group per run, tunggu (bounded) run row dibuat, drop step milik run
+        // yang gagal dibuat (hindari FK violation — degradasi, sama seperti
+        // perilaku single-insert sebelumnya).
+        val byRun = batch.groupBy { it.first }
+        val steps = org.json.JSONArray()
+        for ((runId, entries) in byRun) {
+            if (!awaitRunCreated(runId)) continue
+            entries.forEach { (_, body) -> steps.put(body) }
+        }
+        if (steps.length() == 0) return
+        runCatching {
+            postArray("/rest/v1/scrape_steps", steps)
+        }.onFailure { e ->
+            Log.w("OCE", "Observability: batch logStep failed: ${e.message}")
+        }
+    }
+
+    private suspend fun postArray(
+        path: String, body: org.json.JSONArray
+    ) {
+        com.lagradost.cloudstream3.app.post(
+            "$URL$path",
+            headers = headers(),
+            requestBody = body.toString().toRequestBody(
+                "application/json".toMediaType()),
+            timeout = OBS_TIMEOUT_SECONDS
+        ).text
+    }
+
     private const val OBS_TIMEOUT_SECONDS = 4L
     private const val RUN_WAIT_TIMEOUT_MS = 5_000L
     private const val END_RUN_MAX_RETRIES = 4
     private const val END_RUN_RETRY_DELAY_MS = 2_000L
+    private const val STEP_BATCH_SIZE = 50
+    private const val STEP_FLUSH_INTERVAL_MS = 3_000L
+    private const val MAX_STEP_QUEUE = 200
 }
