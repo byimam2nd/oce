@@ -39,7 +39,7 @@ class AbyssPlayer : CachedExtractorApi() {
             }
         }
         CompiledRegexPatterns.prioritizeAdaptiveUrls(sourceUrls).forEach {
-            MasterLinkGenerator.createSmartLink(this.name, it, null,
+            MasterLinkGenerator.createSmartLink(this.name, it, "https://abyssplayer.com/",
                 headers = MasterLinkGenerator.minimalVideoHeaders,
                 bareHeaders = true, callback = callback)
         }
