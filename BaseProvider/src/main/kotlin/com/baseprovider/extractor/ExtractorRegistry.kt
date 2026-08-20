@@ -22,7 +22,7 @@ object ProviderExtractors {
         Lk21PlayerPage(), VideoNodePage(), Dailymotion(),
         PlayCdn(), EmTurbovid(),
         Krakenfiles(),
-        VideoplayerVip(), Anonmp4()
+        VideoplayerVip(), Anonmp4(), AnichinPlayer()
     )
 
     /**
@@ -42,7 +42,8 @@ object ProviderExtractors {
         "BloggerVideo", "PlayPutarIn", "Lk21PlayerPage",
         "VideoNodePage", "ShortIcu", "PlayStreamplay",
         "Dhcplay", "StreamHG",
-        "Krakenfiles"
+        "Krakenfiles",
+        "AnichinPlayer"
     )
 
     private fun buildList(): List<ExtractorApi> {

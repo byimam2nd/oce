@@ -1,0 +1,33 @@
+{
+  "id": "AnichinPlayer",
+  "name": "AnichinPlayer",
+  "mainUrl": "https://anichin-player.web.id",
+  "requiresReferer": true,
+  "idSource": {
+    "type": "query",
+    "param": "video"
+  },
+  "variants": [
+    {
+      "name": "default",
+      "referer": "https://anichin-player.web.id/",
+      "headers": {}
+    }
+  ],
+  "steps": [
+    {
+      "step": "fetch",
+      "url": "{url}",
+      "referer": "https://anichin-player.web.id/",
+      "headers": {},
+      "store": "page"
+    },
+    {
+      "step": "iframe",
+      "source": "page",
+      "selector": "iframe[src]",
+      "attribute": "src",
+      "base": "{url}"
+    }
+  ]
+}
