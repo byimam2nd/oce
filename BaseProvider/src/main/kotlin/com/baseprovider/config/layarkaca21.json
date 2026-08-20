@@ -53,7 +53,7 @@
   "actorName": "a[href*='/artist/'], span[itemprop=name], .cast-name, h3",
   "ajaxPlayerUrl": "https://youlike.dadadidi.de/index.php",
   "selectorJsonData": "script#watch-history-data",
-  "followLinkSelector": "a#openNow, div.links a",
+  "followLinkSelector": "a#openNow",
   "yearSelector": "div.movie-info h1",
   "yearExtractorRegex": "\\((\\d{4})\\)"
 }
