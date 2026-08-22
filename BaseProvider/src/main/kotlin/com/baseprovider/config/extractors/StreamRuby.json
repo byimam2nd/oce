@@ -23,18 +23,8 @@
         "file_code": "{id}",
         "auto": "1"
       },
-      "referer": "",
       "headers": {},
       "store": "response"
-    },
-    {
-      "step": "regex",
-      "pattern": "",
-      "group": 1,
-      "source": "response",
-      "filter": "",
-      "universal": true,
-      "store": ""
     },
     {
       "step": "packedJs",
@@ -46,18 +36,9 @@
       "pattern": "file\\s*:\\s*\"([^\"]+)\"",
       "group": 1,
       "source": "decoded",
-      "filter": "http",
-      "universal": false,
-      "store": ""
-    },
-    {
-      "step": "regex",
-      "pattern": "",
-      "group": 1,
-      "source": "decoded",
       "filter": "",
-      "universal": true,
-      "store": ""
+      "universal": false
     }
-  ]
+  ],
+  "outputFilter": "master"
 }
