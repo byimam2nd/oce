@@ -70,7 +70,11 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
           echo "BUILD_TIMESTAMP=$(TZ='Asia/Jakarta' date +'%Y-%m-%d %H:%M')" >> $GITHUB_ENV
-          echo "OCE_VERSION=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          # versionCode WAJIB monotonik. SHA-digit lama tidak monotonik:
+          # bbd063e -> 63 sedangkan ffe857c -> 857, sehingga CloudStream
+          # menolak update beta (63 < 857) dan fix tidak pernah sampai ke
+          # device. Epoch-menit selalu naik & melampaui digit-SHA manapun.
+          echo "OCE_VERSION=$(($(date +%s) / 60))" >> $GITHUB_ENV
           echo "SUPABASE_URL=${SUPABASE_URL}" >> $GITHUB_ENV
           echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}" >> $GITHUB_ENV
           echo "✅ Build environment set"
