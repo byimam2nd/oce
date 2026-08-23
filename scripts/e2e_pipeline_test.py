@@ -94,6 +94,8 @@ def is_listing(url, cfg):
 def looks_like_movie(url, cfg):
     if cfg.get("tvPathSegment") and cfg["tvPathSegment"] in url: return False
     if any(m in url.lower() for m in TV_MARKERS): return False
+    mrx = cfg.get("movieUrlRegex","")
+    if mrx and re.search(mrx, url, re.I): return True
     return cfg.get("moviePathSegment", "").startswith('/') and bool(YEAR_SUFFIX.search(url))
 
 def detect_episode_links(s, current_url):

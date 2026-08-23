@@ -8,6 +8,7 @@
   "searchPathPattern": "{baseUrl}/page/{page}/?s={query}",
   "mainPagePathPattern": "{baseUrl}/{data}/page/{page}",
   "moviePathSegment": "/movie/",
+  "movieUrlRegex": "-\\d{4}/?$",
   "tvPathSegment": "/tv/",
   "reverseEpisodes": false,
   "useDocumentLarge": true,

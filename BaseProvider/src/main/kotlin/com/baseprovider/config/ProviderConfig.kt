@@ -18,6 +18,11 @@ data class ProviderConfig(
     val searchPathPattern: String = "{baseUrl}/page/{page}/?s={query}",
     val mainPagePathPattern: String = "{baseUrl}/{data}{page}",
     val moviePathSegment: String = "/movie/",
+    // Regex URL movie alternatif (opsional). Dipakai saat migrasi domain
+    // mengubah pola slug film tanpa mengubah struktur tema — kasus
+    // Dutamovie21: vikingsgab "/movie/slug-2025/" -> cyber-junkie "/slug-2025/".
+    // Isi contoh: "-\\d{4}/?$" (slug berakhiran -YYYY).
+    val movieUrlRegex: String = "",
     val tvPathSegment: String = "/anime/",
     val episodeDataUrlPattern: String = "{url}",
 

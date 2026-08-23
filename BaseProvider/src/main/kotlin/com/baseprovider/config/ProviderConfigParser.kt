@@ -49,6 +49,7 @@ fun fromJson(id: String, json: JSONObject): ProviderConfig {
         searchPathPattern = json.optString("searchPathPattern", "{baseUrl}/page/{page}/?s={query}"),
         mainPagePathPattern = json.optString("mainPagePathPattern", "{baseUrl}/{data}{page}"),
         moviePathSegment = json.optString("moviePathSegment", "/movie/"),
+        movieUrlRegex = json.optString("movieUrlRegex", ""),
         tvPathSegment = json.optString("tvPathSegment", "/anime/"),
         episodeDataUrlPattern = json.optString("episodeDataUrlPattern", "{url}"),
         reverseEpisodes = json.optBoolean("reverseEpisodes", true),

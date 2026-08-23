@@ -74,9 +74,20 @@ class ProviderMapper(
         if (listOf("/tv/", "/series/", "/anime/", "/drama/", "/episode/", "/eps/")
                 .any { url.contains(it, true) }
         ) return false
+        // Pola regex dari config (movieUrlRegex) — sumber kebenaran per-situs,
+        // bukan hardcode. Dipakai juga DetailPageScrapper via helper ini.
+        if (config.movieUrlRegex.isNotBlank()) {
+            val compiled = movieUrlRegexCache.getOrPut(config.movieUrlRegex) {
+                runCatching { Regex(config.movieUrlRegex, RegexOption.IGNORE_CASE) }.getOrNull()
+            }
+            if (compiled != null && compiled.containsMatchIn(url)) return true
+        }
         return config.moviePathSegment.startsWith("/") &&
             YEAR_SUFFIX_REGEX.containsMatchIn(url)
     }
+
+    // L4: regex movieUrlRegex dikompilasi sekali per pola unik.
+    private val movieUrlRegexCache = java.util.concurrent.ConcurrentHashMap<String, Regex?>()
 
     // L4: regex hrefClean dikompilasi sekali per pola unik, tidak per elemen
     // (toSearchResult dipanggil untuk tiap item hasil search).
