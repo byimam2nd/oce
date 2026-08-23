@@ -59,7 +59,7 @@
   "switchVideoSelector": "button[onclick*='switchVideo'], a[onclick*='switchVideo']",
   "actorItems": "div.movie-cast div.cast-item, .movie-info .cast-item, .gmr-moviedata span[itemprop=actors]",
   "actorName": "span[itemprop=name], .cast-name, h3",
-  "followLinkSelector": "a#openNow",
+  "followLinkSelector": "a#openNow, div.links a",
   "yearSelector": "div.movie-info h1",
   "yearExtractorRegex": "\\d, (\\d+)"
 }
