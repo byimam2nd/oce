@@ -11,7 +11,9 @@ Project CloudStream extension OCE. Bacaan wajib sebelum mengerjakan task.
 3. **Jangan cache hasil fetch extractor** — `M3u8MasterVerifier` &
    `AdaptiveHeaderProbe` selalu fetch ulang (lihat skill `oce-extractor-dev`).
 4. **Jangan commit sebelum diperintah user.**
-5. `ExpiringCache` HANYA untuk HTML cache scraper — DILARANG untuk extractor.
+5. **Setelah commit & push, WAJIB cek CI** — `gh run list --repo byimam2nd/oce-source --limit 1` lalu `gh run watch <id> --exit-status`. Jangan anggap selesai sebelum CI hijau.
+6. `ExpiringCache` HANYA untuk HTML cache scraper — DILARANG untuk extractor.
+7. **Semua extractor config-driven harus adaptive** — gunakan kombinasi `substring` + `regex` sebagai fallback (lihat skill `oce-extractor-dev` bagian "ATURAN: Semua Extractor Config-Driven Harus Adaptive").
 
 ## Remote
 
@@ -39,7 +41,7 @@ Project CloudStream extension OCE. Bacaan wajib sebelum mengerjakan task.
 
 - `oce-architecture` — struktur & sourceSets
 - `oce-provider-dev` — config-driven provider
-- `oce-extractor-dev` — extractor, 3002, no-cache rule
+- `oce-extractor-dev` — extractor, 3002, no-cache rule, **adaptive config pattern**
 - `oce-build-deploy` — CI/CD, tag & release
 - `oce-logging` — Supabase observability
 - `selector-checker` — verifikasi selector 4 phase
