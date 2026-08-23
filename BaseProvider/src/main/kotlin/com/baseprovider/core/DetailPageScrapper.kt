@@ -41,6 +41,12 @@ class DetailPageScrapper(
             htmlCache = htmlCache)
         val currentUrl = url
         val key = config.id
+        // Marker TV dihitung SEKALI di atas — dipakai fallback gate sekaligus
+        // keputusan isMovie di bawah (tanpa mengubah semantik keduanya).
+        val hasTvPath = config.tvPathSegment.isNotBlank() && currentUrl
+            .contains(config.tvPathSegment)
+        val urlLooksTv = listOf("/tv/", "/series/", "/anime/", "/drama/",
+            "/episode/", "/eps/").any { currentUrl.contains(it, true) }
         // M2: cek kelengkapan page-1 DENGAN selector murah (tanpa panggil
         // extractMetadata yang ber-log METADATA_FAILURE — page-1 yang sengaja
         // stub untuk di-follow tidak boleh memunculkan failure palsu). Hanya
@@ -57,15 +63,41 @@ class DetailPageScrapper(
         // Adaptive fallback: selector episodeItems gagal (struktur situs berubah),
         // tapi halaman tetap memuat link-link episode (pola /eps/, -episode-, dll).
         // Tanpa fallback ini epItems kosong -> isMovie=true -> tampil hanya 1 video.
-        // Gate movie-URL: halaman yang jelas film (slug-root -YYYY, tanpa marker
-        // TV) TIDAK boleh fallback — anchor rekomendasi seperti
-        // "/tv/ludwig-season-2-2026/" cocok -season- dan mengubah film menjadi
-        // series palsu (kasus Dutamovie21 cyber-junkie.com).
+        //
+        // Gate movie — sinyal KONTEN dulu (selector yang sudah ada), URL sebagai
+        // lapisan cadangan. Semua lapisan bersifat TAMBAHAN:
+        //  1. hasOnPagePlayer : linkOptions selector COCOK di halaman ini =
+        //     player tab langsung ada -> halaman tonton tunggal (film). Ini
+        //     sinyal konten utama; diskriminator tema muvipro: landing series
+        //     tidak punya player tab, film punya.
+        //  2. looksLikeMovieUrl: slug-root -YYYY tanpa marker TV.
+        //  3. depthOneRoot + tvPathSegment: situs beregmen series khusus,
+        //     slug root tanpa indikator TV = film (cakup film tanpa tahun).
+        val hasOnPagePlayer = config.linkOptions.isNotBlank() && runCatching {
+            config.linkOptions.split(',').any {
+                document.selectFirst(it.trim()) != null
+            }
+        }.getOrDefault(false)
+        val depthOneRoot = runCatching {
+            java.net.URI(currentUrl).path?.trim('/')?.indexOf('/') == -1
+        }.getOrDefault(false)
+        val movieGateSkipFallback = hasOnPagePlayer ||
+            mapper.looksLikeMovieUrl(currentUrl) ||
+            (config.tvPathSegment.isNotBlank() && !hasTvPath && !urlLooksTv &&
+                depthOneRoot)
         val episodeLinks = if (epItems.isEmpty() &&
-            !mapper.looksLikeMovieUrl(currentUrl) &&
+            !movieGateSkipFallback &&
             config.supportedTypes.any { it != TvType.Movie }) {
             SelectorResolver.detectEpisodeLinks(document, currentUrl)
-        } else org.jsoup.select.Elements()
+        } else {
+            if (epItems.isEmpty() && movieGateSkipFallback) {
+                // Penanda runtime: membuktikan dari Supabase bahwa build
+               // dengan gate ini benar-benar aktif di device.
+                logSuccess(key,
+                    "MovieGateSkip: fallback episode dilewati (playerOnPage=$hasOnPagePlayer)")
+            }
+            org.jsoup.select.Elements()
+        }
         val effectiveEpItems = if (epItems.isNotEmpty()) epItems else episodeLinks
         if (depth < 2 && config.followLinkSelector.isNotBlank()) {
             val needsFollow = !titlePresent || !posterPresent
@@ -91,14 +123,10 @@ class DetailPageScrapper(
         val seasonDataScript = if (config.seasonContainer
             .isNotBlank()) SelectorResolver.selectFirst(document,
                 config.seasonContainer, "${config.id}:seasonContainer") else null
-        val hasTvPath = config.tvPathSegment.isNotBlank() && currentUrl
-            .contains(config.tvPathSegment)
-        // Heuristic isMovie tidak hanya mengandalkan epItems.isEmpty(): URL yang
+        // Heuristic isMovie tidak hanya mengandung epItems.isEmpty(): URL yang
         // jelas tv-like (/tv/, /series/, /anime/, /episode/) menandakan series
         // walaupun selector episode gagal match. Movie -> moviePathSegment atau
         // tidak ada indikator series sama sekali.
-        val urlLooksTv = listOf("/tv/", "/series/", "/anime/", "/drama/",
-            "/episode/", "/eps/").any { currentUrl.contains(it, true) }
         val isMovie = (seasonDataScript == null) && !hasTvPath && !urlLooksTv && (
             (config.moviePathSegment.isNotBlank() && currentUrl
                 .contains(config.moviePathSegment))

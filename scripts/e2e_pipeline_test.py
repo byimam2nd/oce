@@ -313,7 +313,18 @@ def pipeline(provider_id, item_url, expect_type=None, expect_ep96_dup=False, lab
 
     # Mirror PERSIS DetailPageScrapper.loadRecursive
     ep_sel = select_all(ds, cfgp["episodeItems"]) if cfgp.get("episodeItems") else []
-    gate_movie = looks_like_movie(item_url, cfgp)
+    # Gate movie — sinyal KONTEN dulu: player tab ada di halaman = film
+    has_player = False
+    if cfgp.get("linkOptions"):
+        for v in cfgp["linkOptions"].split(','):
+            try:
+                if ds.select_one(v.strip()): has_player = True; break
+            except Exception: pass
+    url_looks_tv_ = any(m in item_url.lower() for m in TV_MARKERS)
+    tv_seg = cfgp.get("tvPathSegment","")
+    depth1 = '/' not in urlparse(item_url).path.strip('/')
+    gate_movie = has_player or looks_like_movie(item_url, cfgp) or (
+        bool(tv_seg) and tv_seg not in item_url and not url_looks_tv_ and depth1)
     fallback_eps = detect_episode_links(ds, item_url) if (not ep_sel and not gate_movie) else []
     effective_ep_nonempty = bool(ep_sel) or bool(fallback_eps)
     has_tv_path = bool(cfgp.get("tvPathSegment") and cfgp["tvPathSegment"] in item_url)
@@ -326,9 +337,9 @@ def pipeline(provider_id, item_url, expect_type=None, expect_ep96_dup=False, lab
 
     if expect_type == "movie":
         ok2 = P("S2 detail: diputuskan MOVIE (tombol putar)", is_movie_final,
-                f"gate={gate_movie} sel={len(ep_sel)} fallback={len(fallback_eps)}")
+                f"player={has_player} gate={gate_movie} sel={len(ep_sel)} fallback={len(fallback_eps)}")
         ok_all &= ok2
-        return sub_pipeline_media(provider_id, cfgp, item_url, ok_all)
+        return sub_pipeline_media(provider_id, cfgp, item_url, ok_all, label)
     else:
         ok2 = P("S2 detail: diputuskan SERIES", not is_movie_final,
                 f"sel={len(ep_sel)} fallback={len(fallback_eps)}")
@@ -342,8 +353,8 @@ def pipeline(provider_id, item_url, expect_type=None, expect_ep96_dup=False, lab
         target_ep = next((e["href"] for e in eps if re.search(r'96-subtitle-indonesia/$', e["href"])),
                          eps[0]["href"] if eps else None)
         if target_ep:
-            return sub_pipeline_episode(provider_id, cfgp, target_ep, ok_all)
-        return REPORT
+            return sub_pipeline_episode(provider_id, cfgp, target_ep, ok_all, label)
+        return dict(REPORT)
 
 def sub_pipeline_episode(pid, cfgp, ep_url, ok_all, label=""):
     P = lambda n,o,d="": stage(n,o,d)
@@ -437,7 +448,7 @@ def extract_and_probe(pid, cfgp, cands, page_url, ok_all, label=""):
             f"{len(final_links)} link; combo menang: {probe_modes[:8]}")
     REPORT["verdict"] = "SUCCESS" if (ok_all and ok5) else "FAILED"
     P("VERDICT PIPELINE", ok_all and ok5, f"{pid} {label}".strip())
-    return REPORT
+    return dict(REPORT)
 
 if __name__ == "__main__":
     which = sys.argv[1] if len(sys.argv)>1 else "all"

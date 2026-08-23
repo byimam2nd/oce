@@ -350,6 +350,16 @@ class ProviderMapper(
                 }
             )
         }
+        // Penanda runtime: nomor ganda yang DISENGAJA dipertahankan (href
+        // beda) — bukti dari Supabase bahwa build dedupe-by-href aktif.
+        if (episodes.size > 1) {
+            val dupNums = episodes.groupBy { it.episode }
+                .filterValues { it.size > 1 }.keys
+            if (dupNums.isNotEmpty()) {
+                logSuccess(config.id,
+                    "EpiDupKept: episode nomor sama dipertahankan (href beda): $dupNums")
+            }
+        }
         return if (config.reverseEpisodes && seasonDataScript ==
             null) episodes.reversed() else episodes
     }
