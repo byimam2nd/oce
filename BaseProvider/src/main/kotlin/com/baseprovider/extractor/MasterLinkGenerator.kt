@@ -46,6 +46,15 @@ object MasterLinkGenerator {
         return merged
     }
 
+    /**
+     * URL non-media/tracking yang terdeteksi pernah lolos sebagai "link"
+     * (kasus Sacrifice: ping.gif JWPlayer & blank.mp4 plyr). Ditolak di pintu.
+     */
+    val JUNK_URL_REGEX = Regex(
+        "(?i)(jwpltx\\.com|plyr\\.io/static|google-analytics|googletagmanager|" +
+        "doubleclick|/ping[._]|\\.gif(\\?|\$)|/static/blank\\.)"
+    )
+
     suspend fun createSmartLink(
         source: String,
         url: String,
@@ -58,8 +67,8 @@ object MasterLinkGenerator {
         runId: String? = null,
         callback: (ExtractorLink) -> Unit
     ) {
-        if (url.isBlank()) {
-            // Link kosong: jangan dikirim ke player (manifest malformed).
+        if (url.isBlank() || JUNK_URL_REGEX.containsMatchIn(url)) {
+            // Link kosong ATAU non-media/tracking: jangan sampai ke player.
             com.baseprovider.log.logFail(
                 providerTag,
                 "createSmartLink rejected blank url for $source",

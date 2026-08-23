@@ -219,8 +219,19 @@ class ProviderScrapper(
             val allPossibleLinks = java.util.Collections
                 .synchronizedSet(mutableSetOf<Pair<String, String?>>())
             val videoCount = AtomicInteger(0)
+            // Dedup delivery per-run: kandidat berbeda kerap menghasilkan URL
+            // final identik (kasus THOG: anichin.stream muncul 4x).
+            val deliveredKeys = java.util.Collections.newKeySet<String>()
             val wrappedCallback: (ExtractorLink) -> Unit =
-                { link -> videoCount.incrementAndGet(); callback(link) }
+                { link ->
+                    val k = "${link.url}|${link.quality}"
+                    if (deliveredKeys.add(k)) {
+                        videoCount.incrementAndGet(); callback(link)
+                    } else {
+                        com.lagradost.api.Log.d("ProviderScrapper",
+                            "duplikat delivery dilewati: $k")
+                    }
+                }
 
             // M1: collectAjaxPlayers (network POST) dijalankan PARALEL dengan
             // kolektor DOM (cepat) — bukan serial. Hasil AJAX digabung saat siap.

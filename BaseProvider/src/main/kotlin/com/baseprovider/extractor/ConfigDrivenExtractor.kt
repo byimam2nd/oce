@@ -340,7 +340,16 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
                         referer = state.resolveReferer(step.referer),
                         headers = state.resolveHeaders(step.headers),
                         interceptor = resolver).url
-                    if (interceptedUrl.isNotBlank()) state.videoUrls.add(interceptedUrl)
+                    // Filter junk: hasil intersepsi bisa berupa ping analitik
+                    // (jwpltx), placeholder player (plyr blank.mp4), dsb.
+                    if (interceptedUrl.isNotBlank() &&
+                        !MasterLinkGenerator.JUNK_URL_REGEX.containsMatchIn(interceptedUrl)
+                    ) {
+                        state.videoUrls.add(interceptedUrl)
+                    } else {
+                        Log.d("ConfigDriven",
+                            "[${config.id}] webview: intersep junk dibuang: $interceptedUrl")
+                    }
                 }.onFailure { e ->
                     if (e is kotlinx.coroutines.CancellationException) throw e
                 }
