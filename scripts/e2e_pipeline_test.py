@@ -325,8 +325,12 @@ def pipeline(provider_id, item_url, expect_type=None, expect_ep96_dup=False, lab
     url_looks_tv_ = any(m in item_url.lower() for m in TV_MARKERS)
     tv_seg = cfgp.get("tvPathSegment","")
     depth1 = '/' not in urlparse(item_url).path.strip('/')
-    gate_movie = has_player or looks_like_movie(item_url, cfgp) or (
+    single_video = has_player and (tv_seg not in item_url) and not url_looks_tv_
+    gate_movie = single_video or looks_like_movie(item_url, cfgp) or (
         bool(tv_seg) and tv_seg not in item_url and not url_looks_tv_ and depth1)
+    if single_video and ep_sel:
+        print(f'  [arb] player tab mengabaikan {len(ep_sel)} elemen episode liar')
+        ep_sel = []
     fallback_eps = detect_episode_links(ds, item_url) if (not ep_sel and not gate_movie) else []
     effective_ep_nonempty = bool(ep_sel) or bool(fallback_eps)
     has_tv_path = bool(cfgp.get("tvPathSegment") and cfgp["tvPathSegment"] in item_url)
@@ -454,14 +458,19 @@ def extract_and_probe(pid, cfgp, cands, page_url, ok_all, label=""):
 
 if __name__ == "__main__":
     which = sys.argv[1] if len(sys.argv)>1 else "all"
+    cases = set((which.split() if which != "all" else ["all"]))
+    run_all = "all" in cases
     results = []
-    if which in ("all","dm_movie"):
+    if run_all or "dm_movie" in cases:
         results.append(pipeline("Dutamovie21", "https://cyber-junkie.com/unusual-deal-2025/",
                                 expect_type="movie", label="MOVIE unusual-deal"))
-    if which in ("all","dm_series"):
+    if run_all or "dm_sacrifice" in cases:
+        results.append(pipeline("Dutamovie21", "https://cyber-junkie.com/sacrifice-2026/",
+                                expect_type="movie", label="MOVIE sacrifice (kasus device)"))
+    if run_all or "dm_series" in cases:
         results.append(pipeline("Dutamovie21", "https://cyber-junkie.com/tv/ludwig-season-2-2026/",
                                 expect_type="series", label="SERIES ludwig-s2"))
-    if which in ("all","thog"):
+    if run_all or "thog" in cases:
         results.append(pipeline("Anichin", "https://anichin.cafe/seri/tales-of-herding-gods/",
                                 expect_type="series", expect_ep96_dup=True, label="THOG ep96-dobel"))
     fails = sum(1 for r in results if r["verdict"]=="FAILED")

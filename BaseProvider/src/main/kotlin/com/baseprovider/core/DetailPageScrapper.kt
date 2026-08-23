@@ -81,7 +81,13 @@ class DetailPageScrapper(
         val depthOneRoot = runCatching {
             java.net.URI(currentUrl).path?.trim('/')?.indexOf('/') == -1
         }.getOrDefault(false)
-        val movieGateSkipFallback = hasOnPagePlayer ||
+        // Arbitrase konten (lapisan 1): player tab ADA + tanpa indikator TV =
+        // halaman tonton tunggal. Elemen episodeItems yang cocok di halaman
+        // seperti ini adalah KONTAMINASI relocate/fingerprint lintas-halaman
+        // (kasus /sacrifice-2026/: selItems=2 palsu) — diabaikan, dan halaman
+        // diputuskan film terlepas dari daftar liar itu.
+        val singleVideoPage = hasOnPagePlayer && !hasTvPath && !urlLooksTv
+        val movieGateSkipFallback = singleVideoPage ||
             mapper.looksLikeMovieUrl(currentUrl) ||
             (config.tvPathSegment.isNotBlank() && !hasTvPath && !urlLooksTv &&
                 depthOneRoot)
@@ -90,15 +96,15 @@ class DetailPageScrapper(
             config.supportedTypes.any { it != TvType.Movie }) {
             SelectorResolver.detectEpisodeLinks(document, currentUrl)
         } else {
-            if (epItems.isEmpty() && movieGateSkipFallback) {
-                // Penanda runtime: membuktikan dari Supabase bahwa build
-               // dengan gate ini benar-benar aktif di device.
+            if (singleVideoPage && epItems.isNotEmpty()) {
                 logSuccess(key,
-                    "MovieGateSkip: fallback episode dilewati (playerOnPage=$hasOnPagePlayer)")
+                    "MovieGateSkip: $singleVideoPage — abaikan ${epItems.size} " +
+                        "elemen episode liar (player tab ada, tanpa marker TV)")
             }
             org.jsoup.select.Elements()
         }
-        val effectiveEpItems = if (epItems.isNotEmpty()) epItems else episodeLinks
+        val effectiveEpItems = if (singleVideoPage) org.jsoup.select.Elements()
+            else if (epItems.isNotEmpty()) epItems else episodeLinks
         if (depth < 2 && config.followLinkSelector.isNotBlank()) {
             val needsFollow = !titlePresent || !posterPresent
             val epHints = effectiveEpItems.isNotEmpty()
