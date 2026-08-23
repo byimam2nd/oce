@@ -60,6 +60,24 @@ class ProviderMapper(
         }.getOrDefault(false)
     }
 
+    /**
+     * Heuristik URL movie: tanpa indikator TV apa pun + slug root berakhiran
+     * tahun (-YYYY). Dipakai toSearchResult (tipe badge) DAN
+     * DetailPageScrapper (gate fallback detectEpisodeLinks — link
+     * rekomendasi bersaudara seperti "/tv/ludwig-season-2-2026/" di halaman
+     * film tidak boleh terhitung episode; kasus Dutamovie21 Weightless).
+     */
+    fun looksLikeMovieUrl(url: String): Boolean {
+        if (config.tvPathSegment.isNotBlank() && url.contains(config.tvPathSegment)) {
+            return false
+        }
+        if (listOf("/tv/", "/series/", "/anime/", "/drama/", "/episode/", "/eps/")
+                .any { url.contains(it, true) }
+        ) return false
+        return config.moviePathSegment.startsWith("/") &&
+            YEAR_SUFFIX_REGEX.containsMatchIn(url)
+    }
+
     // L4: regex hrefClean dikompilasi sekali per pola unik, tidak per elemen
     // (toSearchResult dipanggil untuk tiap item hasil search).
     private val compiledHrefClean = ConcurrentHashMap<String, Regex?>()
@@ -129,18 +147,11 @@ class ProviderMapper(
             // config belum di-update struktur situsnya.
             val urlLooksTv = listOf("/tv/", "/series/", "/anime/", "/drama/",
                 "/episode/", "/eps/").any { href.contains(it, true) }
-            val isMovie = !hasTvPath && !urlLooksTv && (
+            val isMovie = (!hasTvPath && !urlLooksTv && (
                 (config.moviePathSegment.isNotBlank() && href
                     .contains(config.moviePathSegment))
                     || href.contains("movie", true)
-                    // Heuristik migrasi domain 21xx: film kadang pindah ke
-                    // slug root tanpa prefix /movie/ (kasus cyber-junkie.com).
-                    // Slug berakhiran -YYYY + tanpa indikator TV = movie.
-                    // Gate startsWith("/") agar provider anime (moviePath
-                    // "-movie-" atau kosong) tidak terdampak.
-                    || (config.moviePathSegment.startsWith("/") &&
-                        YEAR_SUFFIX_REGEX.containsMatchIn(href))
-            )
+                )) || looksLikeMovieUrl(href)
             val type = if (isMovie) TvType.Movie else if (config
                 .supportedTypes.contains(TvType.Anime)) TvType
                     .Anime else TvType.TvSeries
@@ -274,7 +285,11 @@ class ProviderMapper(
             }
         }
         if (episodes.isEmpty()) {
-            val seenEpNums = mutableSetOf<Int>()
+            // Dedupe by HREF, bukan nomor episode: situs sah memuat dua entri
+            // bernomor sama dengan target berbeda (kasus Anichin Tales of
+            // Herding Gods ep96: "...-indonesia/" dan "...-indonesia-2/").
+            // Nomor sama + href beda = dua sumber resmi; keduanya wajib tampil.
+            val seenHrefs = mutableSetOf<String>()
             val key = config.id
             episodes.addAll(
                 epItems.mapNotNull { ep ->
@@ -289,6 +304,7 @@ class ProviderMapper(
                         val href = config.episodeDataUrlPattern
                             .replace("{url}", fixUrlSmart(anchor.attr("href"), currentUrl))
                         if (href.isBlank()) return@runCatching null
+                        if (!seenHrefs.add(href)) return@runCatching null
                         val titleEl = (
                             if (config.episodeTitle.isNotBlank()) SelectorResolver
                                 .selectFirst(ep, config.episodeTitle, "$key:episodeTitle")
@@ -303,9 +319,6 @@ class ProviderMapper(
                                 else null
                             ) ?: titleEl?.text()?.safeExtractEpNum()
                                 ?: ep.text().safeExtractEpNum()
-                        if (epNum != null && !seenEpNums.add(epNum)) {
-                            return@runCatching null
-                        }
                         val rawName = titleEl?.text()?.trim() ?: ""
                         val isJustNumber = rawName
                             .matches(JUST_NUMBER_REGEX)

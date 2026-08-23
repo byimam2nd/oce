@@ -57,7 +57,12 @@ class DetailPageScrapper(
         // Adaptive fallback: selector episodeItems gagal (struktur situs berubah),
         // tapi halaman tetap memuat link-link episode (pola /eps/, -episode-, dll).
         // Tanpa fallback ini epItems kosong -> isMovie=true -> tampil hanya 1 video.
+        // Gate movie-URL: halaman yang jelas film (slug-root -YYYY, tanpa marker
+        // TV) TIDAK boleh fallback — anchor rekomendasi seperti
+        // "/tv/ludwig-season-2-2026/" cocok -season- dan mengubah film menjadi
+        // series palsu (kasus Dutamovie21 cyber-junkie.com).
         val episodeLinks = if (epItems.isEmpty() &&
+            !mapper.looksLikeMovieUrl(currentUrl) &&
             config.supportedTypes.any { it != TvType.Movie }) {
             SelectorResolver.detectEpisodeLinks(document, currentUrl)
         } else org.jsoup.select.Elements()
