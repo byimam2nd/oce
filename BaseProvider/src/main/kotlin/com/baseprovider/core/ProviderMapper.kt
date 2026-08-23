@@ -23,6 +23,9 @@ private val LISTING_PATH_REGEX = Regex(
     RegexOption.IGNORE_CASE
 )
 
+/** Slug film berakhiran tahun: ...-2025/ atau ...-2026 (tanpa trailing path). */
+private val YEAR_SUFFIX_REGEX = Regex("""-\d{4}/?$""")
+
 class ProviderMapper(
     private val api: MainAPI,
     private val config: ProviderConfig,
@@ -37,6 +40,25 @@ class ProviderMapper(
         .map { it.first.trim('/').substringBefore('/') }
         .filter { it.isNotBlank() }
         .toSet()
+
+    /**
+     * True bila URL adalah halaman listing/kategori, bukan halaman konten.
+     * Layer-1: taksonomi CMS universal (category/tag/genre/country/...).
+     * Layer-2: segmen pertama terdaftar di mainPageLists provider sendiri,
+     * hanya bila bentuknya listing (depth<=1 atau mengandung /page/) supaya
+     * konten bersama-segmen tetap lolos (Anichin /seri/slug/, Animasu
+     * /anime/slug/, vs listing /seri|anime/page/N).
+     */
+    fun isListingUrl(url: String): Boolean {
+        if (LISTING_PATH_REGEX.containsMatchIn(url)) return true
+        return runCatching {
+            val rest = java.net.URI(url).path?.trim('/') ?: return false
+            if (rest.isEmpty()) return false
+            val firstSeg = rest.substringBefore('/')
+            firstSeg in listingFirstSegments &&
+                (!rest.contains('/') || rest.contains("/page/"))
+        }.getOrDefault(false)
+    }
 
     // L4: regex hrefClean dikompilasi sekali per pola unik, tidak per elemen
     // (toSearchResult dipanggil untuk tiap item hasil search).
@@ -86,21 +108,7 @@ class ProviderMapper(
                     href.replace(cleanRx, config.hrefCleanReplace)
                 } catch (_: Exception) { href }
             }
-            if (LISTING_PATH_REGEX.containsMatchIn(href)) return null
-            // Layer-2: segmen pertama milik listing provider sendiri HANYA
-            // ditolak bila bentuknya listing (depth<=1 atau mengandung /page/).
-            // Konten bersama segmen yang sama tetap lolos: Anichin /seri/slug/,
-            // Animasu/Donghua /anime/slug/ vs listing /seri|anime/page/N.
-            runCatching {
-                val uri = java.net.URI(href)
-                val rest = uri.path?.trim('/') ?: return@runCatching
-                if (rest.isEmpty()) return@runCatching
-                val firstSeg = rest.substringBefore('/')
-                if (firstSeg in listingFirstSegments &&
-                    (!rest.contains('/') || rest.contains("/page/"))) {
-                    return null
-                }
-            }
+            if (isListingUrl(href)) return null
             val poster = if (config.searchPoster.isNotBlank()) {
                 SelectorResolver.selectValidated(element, config.searchPoster, "$key:searchPoster", FieldType.POSTER) { it.safeExtractImage(config.attrImage) }
                     ?.safeExtractImage(config.attrImage)
@@ -125,6 +133,13 @@ class ProviderMapper(
                 (config.moviePathSegment.isNotBlank() && href
                     .contains(config.moviePathSegment))
                     || href.contains("movie", true)
+                    // Heuristik migrasi domain 21xx: film kadang pindah ke
+                    // slug root tanpa prefix /movie/ (kasus cyber-junkie.com).
+                    // Slug berakhiran -YYYY + tanpa indikator TV = movie.
+                    // Gate startsWith("/") agar provider anime (moviePath
+                    // "-movie-" atau kosong) tidak terdampak.
+                    || (config.moviePathSegment.startsWith("/") &&
+                        YEAR_SUFFIX_REGEX.containsMatchIn(href))
             )
             val type = if (isMovie) TvType.Movie else if (config
                 .supportedTypes.contains(TvType.Anime)) TvType

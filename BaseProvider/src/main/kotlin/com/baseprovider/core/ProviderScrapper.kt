@@ -196,6 +196,21 @@ class ProviderScrapper(
         )
         val startedAt = System.currentTimeMillis()
         val result = runCatching {
+            // Defense-in-depth: URL listing/kategori tidak pernah punya player.
+            // Blokir di sini juga menangkap item basi dari cache/riwayat yang
+            // lolos sebelum guard mapper ada (kasus /drama/, /action/).
+            if (mapper.isListingUrl(data)) {
+                logFail(
+                    config.id,
+                    "loadLinks rejected listing/category URL: $data",
+                    url = data,
+                    method = "loadLinks",
+                    type = FailureType.INVALID_URL,
+                    stage = "COLLECT",
+                    runId = runId
+                )
+                return@runCatching false
+            }
             val document = fetchDocument(data, config,
                 referer = config.mainUrl, skipCache = false,
                 htmlCache = htmlCache)
