@@ -221,7 +221,7 @@ class ProviderScrapper(
             val videoCount = AtomicInteger(0)
             // Dedup delivery per-run: kandidat berbeda kerap menghasilkan URL
             // final identik (kasus THOG: anichin.stream muncul 4x).
-            val deliveredKeys = java.util.Collections.newKeySet<String>()
+            val deliveredKeys = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
             val wrappedCallback: (ExtractorLink) -> Unit =
                 { link ->
                     val k = "${link.url}|${link.quality}"
