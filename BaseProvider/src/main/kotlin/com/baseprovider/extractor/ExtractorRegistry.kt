@@ -77,6 +77,10 @@ object ProviderExtractors {
             val config = ExtractorConfigRegistry.get(id) ?: continue
             result.add(ConfigDrivenExtractor(config))
         }
+        com.baseprovider.log.logSuccess("ExtractorRegistry",
+            "buildList: ${result.size} extractor aktif " +
+                "(legacy=${legacyList.size}, configDriven=${configDrivenIds.size}, " +
+                "pureConfig=${pureConfigIds.size})")
         return result
     }
 

@@ -30,13 +30,18 @@ object SelectorValidator {
     fun isValid(type: FieldType, value: String?): Boolean {
         val v = value?.trim() ?: return false
         if (v.isBlank()) return false
-        return when (type) {
+        val ok = when (type) {
             FieldType.TITLE -> isValidTitle(v)
             FieldType.POSTER -> isValidPoster(v)
             FieldType.URL -> isValidUrl(v)
             FieldType.EPISODE_TEXT -> isValidEpisodeText(v)
             FieldType.DESC -> v.length >= 30
         }
+        if (!ok) {
+            com.baseprovider.log.logDebug("SelectorValidator",
+                "REJECT type=$type len=${v.length}: ${v.take(40)}")
+        }
+        return ok
     }
 
     /**

@@ -119,7 +119,11 @@ class ProviderMapper(
             }
             val rawTitle = titleEl?.text()?.trim() ?: titleEl
                 ?.selectAttr(config.attrImage) ?: titleEl
-                    ?.attr("title") ?: return null
+                    ?.attr("title") ?: run {
+                    com.lagradost.api.Log.d("ProviderMapper",
+                        "[$key] skip item tanpa judul")
+                    return null
+                }
             val title = rawTitle.safeCleanBloat(rawTitle, config
                 .bloatRegex).safeDeduplicate()
             val hrefEl = if (config.searchHref.isNotBlank()) {
@@ -137,7 +141,11 @@ class ProviderMapper(
                     href.replace(cleanRx, config.hrefCleanReplace)
                 } catch (_: Exception) { href }
             }
-            if (isListingUrl(href)) return null
+            if (isListingUrl(href)) {
+                com.lagradost.api.Log.d("ProviderMapper",
+                    "[$key] skip listing-url: $href")
+                return null
+            }
             val poster = if (config.searchPoster.isNotBlank()) {
                 SelectorResolver.selectValidated(element, config.searchPoster, "$key:searchPoster", FieldType.POSTER) { it.safeExtractImage(config.attrImage) }
                     ?.safeExtractImage(config.attrImage)

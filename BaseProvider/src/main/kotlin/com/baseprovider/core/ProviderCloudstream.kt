@@ -81,14 +81,19 @@ open class ProviderCloudstream : MainAPI() {
     override suspend fun quickSearch(query: String): List<SearchResponse>? =
         engine.search(query)
 
-    override suspend fun load(url: String): LoadResponse =
-        engine.load(url)
+    override suspend fun load(url: String): LoadResponse {
+        com.lagradost.api.Log.d("ProviderCloudstream", "load(url=$url)")
+        return engine.load(url)
+    }
 
     override suspend fun loadLinks(
         data: String,
         isCasting: Boolean,
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
-    ): Boolean =
-        engine.loadLinks(data, isCasting, subtitleCallback, callback)
+    ): Boolean {
+        com.lagradost.api.Log.d("ProviderCloudstream",
+            "loadLinks(data=$data, casting=$isCasting)")
+        return engine.loadLinks(data, isCasting, subtitleCallback, callback)
+    }
 }

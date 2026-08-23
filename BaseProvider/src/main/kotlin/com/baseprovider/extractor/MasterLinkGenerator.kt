@@ -141,6 +141,9 @@ object MasterLinkGenerator {
                             this.headers = effectiveHeaders
                         })
                     }
+                    com.baseprovider.log.logSuccess(source,
+                        "M3U8 master valid -> ${verdict.variants.size} variant dikirim",
+                        url = url, extractor = source, runId = runId)
                     return
                 }
                 is M3u8MasterVerifier.Verdict.AllMalformed -> {
@@ -158,6 +161,9 @@ object MasterLinkGenerator {
                 }
                 M3u8MasterVerifier.Verdict.Clean -> {
                     // Master bersih / bukan master / fetch gagal: deliver as-is.
+                    com.baseprovider.log.logSuccess(source,
+                        "M3U8 clean/bukan-master -> dikirim as-is",
+                        url = url, extractor = source, runId = runId)
                 }
             }
         }
@@ -174,6 +180,9 @@ object MasterLinkGenerator {
             this.referer = effectiveReferer ?: ""
             this.headers = effectiveHeaders
         })
+        com.baseprovider.log.logSuccess(source,
+            "link delivered (${if (isAdaptive) "adaptive" else "direct"})",
+            url = url, extractor = source, runId = runId)
     }
 
     @Suppress("DEPRECATION_ERROR")

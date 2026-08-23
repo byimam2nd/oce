@@ -1,6 +1,7 @@
 package com.baseprovider.model
 
 import com.baseprovider.log.FailureType
+import com.baseprovider.log.logDebug
 import com.baseprovider.log.logFail
 import com.lagradost.api.Log
 import org.jsoup.nodes.Element
@@ -113,6 +114,8 @@ object SelectorResolver {
                 out.add(a)
             }
         }
+        logDebug("SelectorResolver",
+            "detectEpisodeLinks[$currentUrl] -> ${out.size} kandidat")
         return out
     }
 
@@ -130,10 +133,14 @@ object SelectorResolver {
         for (variant in v) {
             val el = runCatching { document.selectFirst(variant) }.getOrNull()
             if (el != null) {
+                logDebug("SelectorResolver",
+                    "selectFirst[$key] HIT variant='$variant'")
                 if (key.isNotBlank()) saveFingerprint(key, el)
                 return el
             }
         }
+        logDebug("SelectorResolver",
+            "selectFirst[$key] MISS semua variant: '$selector'")
         if (key.isNotBlank()) {
             relocateAll(document, key).firstOrNull()?.let { el ->
                 saveFingerprint(key, el)
@@ -154,10 +161,13 @@ object SelectorResolver {
         for (variant in v) {
             val els = runCatching { document.select(variant) }.getOrNull()
             if (els != null && !els.isEmpty()) {
+                logDebug("SelectorResolver",
+                    "select[$key] HIT variant='$variant' -> ${els.size} elemen")
                 if (key.isNotBlank()) els.firstOrNull()?.let { saveFingerprint(key, it) }
                 return els
             }
         }
+        logDebug("SelectorResolver", "select[$key] MISS semua variant: '$selector'")
         if (key.isNotBlank()) {
             val relocated = relocateAll(document, key)
             if (relocated.isNotEmpty()) {
@@ -196,12 +206,16 @@ object SelectorResolver {
             val el = runCatching { document.selectFirst(variant) }.getOrNull()
             if (el == null) continue
             if (SelectorValidator.isValid(type, extract(el))) {
+                logDebug("SelectorResolver",
+                    "selectValidated[$key] VALID variant='$variant'")
                 if (key.isNotBlank()) {
                     saveFingerprint(key, el)
                     unmarkBroken(key, variant)
                 }
                 return el
             }
+            logDebug("SelectorResolver",
+                "selectValidated[$key] INVALID variant='$variant' (tipe $type)")
             if (key.isNotBlank()) markBroken(key, variant)
         }
         if (key.isNotBlank()) {

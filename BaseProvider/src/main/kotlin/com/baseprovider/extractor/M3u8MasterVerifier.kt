@@ -88,6 +88,7 @@ object M3u8MasterVerifier {
      * Tentukan Verdict dari hasil parse (pure & testable).
      */
     internal fun classify(masterUrl: String, parsed: List<MasterVariant>): Verdict {
+        com.baseprovider.log.logDebug("M3u8Verifier", "classify($masterUrl)")
         if (parsed.isEmpty()) {
             // Bukan master playlist (media playlist langsung / bukan HLS).
             return Verdict.Clean
@@ -117,18 +118,21 @@ object M3u8MasterVerifier {
         masterUrl: String,
         referer: String?,
         headers: Map<String, String>
-    ): Verdict = try {
-        val text = app.get(
-            masterUrl,
-            referer = referer,
-            headers = headers,
-            timeout = FETCH_TIMEOUT_MS
-        ).text
-        classify(masterUrl, parseVariants(text))
-    } catch (e: kotlinx.coroutines.CancellationException) {
-        throw e
-    } catch (e: Exception) {
-        // Gagal fetch: jangan rusakkan perilaku lama, deliver master as-is.
-        Verdict.Clean
+    ): Verdict {
+        com.baseprovider.log.logDebug("M3u8Verifier", "verify($masterUrl)")
+        return try {
+            val text = app.get(
+                masterUrl,
+                referer = referer,
+                headers = headers,
+                timeout = FETCH_TIMEOUT_MS
+            ).text
+            classify(masterUrl, parseVariants(text))
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Gagal fetch: jangan rusakkan perilaku lama, deliver master as-is.
+            Verdict.Clean
+        }
     }
 }

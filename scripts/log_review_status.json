@@ -1,0 +1,461 @@
+{
+  "_description": "Status tracking untuk logging issues. Format: {log_id: {status, note, date}}",
+  "_status_values": ["fixed", "server-side", "not-replicable", "query-no-results", "reviewed"],
+  "511": {
+    "status": "server-side",
+    "note": "filedon.co embed-forbidden (403) - server blocks embed access",
+    "date": "2026-08-22"
+  },
+  "512": {
+    "status": "server-side",
+    "note": "filedon.co embed-forbidden - same root cause as #511",
+    "date": "2026-08-22"
+  },
+  "513": {
+    "status": "not-replicable",
+    "note": "acefile.co uses Google Drive API with dynamic token rotation - complex server-dependent extraction",
+    "date": "2026-08-22"
+  },
+  "514": {
+    "status": "not-replicable",
+    "note": "acefile.co - same root cause as #513",
+    "date": "2026-08-22"
+  },
+  "515": {
+    "status": "server-side",
+    "note": "animasu v2 timeout - server temporary slow, now recovered",
+    "date": "2026-08-22"
+  },
+  "516": {
+    "status": "server-side",
+    "note": "animasu v2 timeout - server temporary slow, now recovered",
+    "date": "2026-08-22"
+  },
+  "517": {
+    "status": "server-side",
+    "note": "vikingsgab.com (dutamovie21) timeout - server temporary slow, now recovered",
+    "date": "2026-08-22"
+  },
+  "518": {
+    "status": "server-side",
+    "note": "animasu v2 timeout - server temporary slow, now recovered",
+    "date": "2026-08-22"
+  },
+  "519": {
+    "status": "query-no-results",
+    "note": "donghuastream.org search 'A Beautiful Obsession' - title not found on site, not a code bug",
+    "date": "2026-08-22"
+  },
+  "520": {
+    "status": "fixed",
+    "note": "rumble.com CF block - fixed by adding substring step to Rumble.json to extract mp4 chunk before regex (matches Kotlin extractor logic)",
+    "date": "2026-08-22"
+  },
+  "521": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  },
+  "522": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  },
+  "523": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  },
+  "524": {
+    "status": "fixed",
+    "note": "rubyvidhub.com EMPTY resolved by fixing StreamRuby extractor config",
+    "commit": "5010ecc",
+    "date": "2026-08-22"
+  },
+  "525": {
+    "status": "fixed",
+    "note": "rubyvidhub.com EXTRACTOR resolved by cleaning up StreamRuby config (removed broken empty regex steps, added outputFilter master)",
+    "commit": "5010ecc",
+    "date": "2026-08-22"
+  },
+  "526": {
+    "status": "selector-variant",
+    "note": "SELECTOR no media links found - cyber-junkie.com site may have changed structure",
+    "date": "2026-08-21"
+  },
+  "527": {
+    "status": "selector-variant",
+    "note": "SELECTOR no media links found - same as #526",
+    "date": "2026-08-21"
+  },
+  "528": {
+    "status": "selector-variant",
+    "note": "SELECTOR no media links found - same as #526",
+    "date": "2026-08-21"
+  },
+  "529": {
+    "status": "selector-variant",
+    "note": "SELECTOR selectFirst failed - relocate no match for artist/link selectors",
+    "date": "2026-08-21"
+  },
+  "530": {
+    "status": "selector-variant",
+    "note": "SELECTOR selectValidated failed - relocate no match for div.content selector",
+    "date": "2026-08-21"
+  },
+  "531": {
+    "status": "selector-variant",
+    "note": "SELECTOR selectValidated failed - relocate no match for div.content selector",
+    "date": "2026-08-21"
+  },
+  "532": {
+    "status": "selector-variant",
+    "note": "SELECTOR variant blacklisted - selector matches DOM but fails type validation",
+    "date": "2026-08-21"
+  },
+  "533": {
+    "status": "not-replicable",
+    "note": "notice.playstream.video DeepScan empty - embed requires JS execution",
+    "date": "2026-08-21"
+  },
+  "534": {
+    "status": "not-replicable",
+    "note": "notice.playstream.video extractor failed - same root cause as #533",
+    "date": "2026-08-21"
+  },
+  "535": {
+    "status": "selector-variant",
+    "note": "IFRAME no iframe found - cyber-junkie.com site may have changed structure",
+    "date": "2026-08-21"
+  },
+  "536": {
+    "status": "not-replicable",
+    "note": "voe.sx DeepScan empty - embed requires JS execution",
+    "date": "2026-08-21"
+  },
+  "537": {
+    "status": "not-replicable",
+    "note": "voe.sx extractor failed - same root cause as #536",
+    "date": "2026-08-21"
+  },
+  "538": {
+    "status": "not-replicable",
+    "note": "morencius.com DeepScan empty - embed requires JS execution",
+    "date": "2026-08-21"
+  },
+  "539": {
+    "status": "not-replicable",
+    "note": "morencius.com extractor failed - same root cause as #538",
+    "date": "2026-08-21"
+  },
+  "540": {
+    "status": "not-replicable",
+    "note": "notice.playstream.video DeepScan empty - embed requires JS execution",
+    "date": "2026-08-21"
+  },
+  "541": {
+    "status": "not-replicable",
+    "note": "notice.playstream.video extractor failed - same root cause as #540",
+    "date": "2026-08-21"
+  },
+  "542": {
+    "status": "selector-variant",
+    "note": "IFRAME no iframe found - cyber-junkie.com site may have changed structure",
+    "date": "2026-08-21"
+  },
+  "543": {
+    "status": "not-replicable",
+    "note": "morencius.com DeepScan empty - embed requires JS execution",
+    "date": "2026-08-21"
+  },
+  "544": {
+    "status": "not-replicable",
+    "note": "morencius.com extractor failed - same root cause as #543",
+    "date": "2026-08-21"
+  },
+  "545": {
+    "status": "not-replicable",
+    "note": "voe.sx DeepScan empty - embed requires JS execution or auth",
+    "date": "2026-08-21"
+  },
+  "546": {
+    "status": "not-replicable",
+    "note": "voe.sx extractor failed - same root cause as #545",
+    "date": "2026-08-21"
+  },
+  "547": {
+    "status": "selector-variant",
+    "note": "SELECTOR selectValidated failed - relocate no match for div.content selector",
+    "date": "2026-08-21"
+  },
+  "548": {
+    "status": "selector-variant",
+    "note": "SELECTOR selectValidated failed - same as #547",
+    "date": "2026-08-21"
+  },
+  "549": {
+    "status": "selector-variant",
+    "note": "SELECTOR no media links found - cyber-junkie.com site may have changed structure",
+    "date": "2026-08-21"
+  },
+  "550": {
+    "status": "not-replicable",
+    "note": "ok.ru DeepScan empty - legacy extractor, embed requires auth or JS",
+    "date": "2026-08-22"
+  },
+  "551": {
+    "status": "not-replicable",
+    "note": "ok.ru extractor failed - same root cause as #550",
+    "date": "2026-08-22"
+  },
+  "552": {
+    "status": "not-replicable",
+    "note": "racaty.my.id DeepScan empty - legacy extractor, site may have changed structure",
+    "date": "2026-08-22"
+  },
+  "553": {
+    "status": "not-replicable",
+    "note": "racaty.my.id extractor failed - same root cause as #552",
+    "date": "2026-08-22"
+  },
+  "554": {
+    "status": "not-replicable",
+    "note": "dailymotion.com DeepScan empty - embed page may require JS execution",
+    "date": "2026-08-22"
+  },
+  "555": {
+    "status": "not-replicable",
+    "note": "dailymotion.com extractor failed - same root cause as #554",
+    "date": "2026-08-22"
+  },
+  "556": {
+    "status": "not-replicable",
+    "note": "ok.ru DeepScan empty - legacy extractor, embed requires auth or JS",
+    "date": "2026-08-22"
+  },
+  "557": {
+    "status": "not-replicable",
+    "note": "ok.ru extractor failed - same root cause as #556",
+    "date": "2026-08-22"
+  },
+  "558": {
+    "status": "not-replicable",
+    "note": "anichin.cafe 0/4 links produced video - all extractors failed for this source",
+    "date": "2026-08-22"
+  },
+  "559": {
+    "status": "not-replicable",
+    "note": "anichin.stream AnichinStream extractor fails - same root cause as #570",
+    "date": "2026-08-22"
+  },
+  "560": {
+    "status": "not-replicable",
+    "note": "anichin.stream Global extractor failed - same root cause as #570",
+    "date": "2026-08-22"
+  },
+  "561": {
+    "status": "not-replicable",
+    "note": "anichin.stream DeepScan empty - upstream of #570",
+    "date": "2026-08-22"
+  },
+  "562": {
+    "status": "not-replicable",
+    "note": "anichin.stream all extractors failed - same root cause as #570",
+    "date": "2026-08-22"
+  },
+  "563": {
+    "status": "not-replicable",
+    "note": "geo.dailymotion.com Dailymotion extractor failed - legacy Kotlin extractor API compatibility issue",
+    "date": "2026-08-22"
+  },
+  "564": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  },
+  "565": {
+    "status": "pre-fix",
+    "note": "rubyvidhub.com EMPTY - occurred before StreamRuby fix deployed, same root cause as #524",
+    "date": "2026-08-22"
+  },
+  "566": {
+    "status": "pre-fix",
+    "note": "rubyvidhub.com EXTRACTOR - occurred before StreamRuby fix deployed, same root cause as #525",
+    "date": "2026-08-22"
+  },
+  "567": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  },
+  "568": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  },
+  "569": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  },
+  "570": {
+    "status": "not-replicable",
+    "note": "anichin.stream AnichinStream extractor fails with 'No virtual method' - legacy Kotlin extractor API compatibility issue",
+    "date": "2026-08-22"
+  },
+  "571": {
+    "status": "not-replicable",
+    "note": "anichin.stream Global extractor failed - same root cause as #570",
+    "date": "2026-08-22"
+  },
+  "572": {
+    "status": "not-replicable",
+    "note": "anichin.stream DeepScan empty - upstream of #570, no video URLs in HTML",
+    "date": "2026-08-22"
+  },
+  "573": {
+    "status": "not-replicable",
+    "note": "anichin.stream all extractors failed - same root cause as #570",
+    "date": "2026-08-22"
+  },
+  "574": {
+    "status": "selector-variant",
+    "note": "SELECTOR variant blacklisted - selector matches DOM but fails type validation, likely site structure changed",
+    "date": "2026-08-22"
+  },
+  "575": {
+    "status": "selector-variant",
+    "note": "SELECTOR selectValidated failed - relocate no match for div.content selector",
+    "date": "2026-08-22"
+  },
+  "576": {
+    "status": "selector-variant",
+    "note": "SELECTOR selectValidated failed - same as #575",
+    "date": "2026-08-22"
+  },
+  "577": {
+    "status": "selector-variant",
+    "note": "SELECTOR selectFirst failed - relocate no match for artist/link selectors",
+    "date": "2026-08-22"
+  },
+  "578": {
+    "status": "selector-variant",
+    "note": "SELECTOR selectValidated failed - same as #575",
+    "date": "2026-08-22"
+  },
+  "579": {
+    "status": "selector-variant",
+    "note": "SELECTOR all variants failed - relocate no match for article.item selectors",
+    "date": "2026-08-22"
+  },
+  "580": {
+    "status": "selector-variant",
+    "note": "SELECTOR all variants failed - same as #579",
+    "date": "2026-08-22"
+  },
+  "360": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  },
+  "363": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  },
+  "364": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  },
+  "365": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  },
+  "366": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  },
+  "434": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  },
+  "435": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  },
+  "436": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  },
+  "437": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  },
+  "438": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  },
+  "439": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  },
+  "440": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  },
+  "441": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  },
+  "581": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  },
+  "582": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  },
+  "583": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  },
+  "584": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  },
+  "587": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  },
+  "588": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  },
+  "589": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  },
+  "590": {
+    "status": "fixed",
+    "note": "rumble.com CF block - same fix as #520",
+    "date": "2026-08-22"
+  }
+}

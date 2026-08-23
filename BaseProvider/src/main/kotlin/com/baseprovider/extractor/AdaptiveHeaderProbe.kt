@@ -228,6 +228,8 @@ object AdaptiveHeaderProbe {
             when (result) {
                 is ProbeResult.Ok -> {
                     // Combo valid pertama menang; cancel probe yang masih jalan.
+                    com.baseprovider.log.logSuccess("AdaptiveProbe",
+                        "$host: PROBE WIN mode=${combo.mode} ${result.ms}ms url=$url")
                     Log.d(
                         "AdaptiveProbe",
                         "$host: WIN ${combo.mode} ${result.ms}ms"

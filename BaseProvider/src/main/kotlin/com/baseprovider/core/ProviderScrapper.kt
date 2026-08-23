@@ -157,6 +157,7 @@ class ProviderScrapper(
             if (config.searchItems.isNotBlank()) {
                 val elements = SelectorResolver.select(document, config.searchItems,
                     "${config.id}:searchItems")
+                logDebug(config.id, "search[$query] page=$page -> ${elements.size} item mentah")
                 coroutineScope {
                     elements.map { el ->
                         async(Dispatchers.IO) {
@@ -236,6 +237,9 @@ class ProviderScrapper(
                 ajaxCollect.await()
             }
 
+            logSuccess(config.id,
+                "loadLinks candidates=${allPossibleLinks.size} " +
+                    "(linkOptions/iframes/downloads/switch/ajax)")
             if (allPossibleLinks.isEmpty()) {
                 logFail(
                     config.id,

@@ -138,6 +138,9 @@ class DetailPageScrapper(
                 .contains(config.moviePathSegment))
                 || effectiveEpItems.isEmpty()
         )
+        logDebug(key,
+            "load[$currentUrl] isMovie=$isMovie singleVideoPage=$singleVideoPage " +
+                "tvPath=$hasTvPath urlLooksTv=$urlLooksTv epEff=${effectiveEpItems.size}")
         val type = if (isMovie) TvType.Movie else if (config.supportedTypes
             .contains(TvType.Anime)) TvType.Anime else TvType.TvSeries
 

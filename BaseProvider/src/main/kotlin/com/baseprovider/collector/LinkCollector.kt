@@ -138,6 +138,8 @@ class LinkCollector(private val config: ProviderConfig) {
         val dlMatches = SelectorResolver.select(document, config
             .downloadItems, "${config.id}:downloadItems")
         logDebug(config.id, "DOWNLOAD_ITEMS selector '${config.downloadItems}' => ${dlMatches.size} match(es)")
+        com.lagradost.api.Log.d("LinkCollector",
+            "DOWNLOAD_ITEMS => ${dlMatches.size} match(es)")
         dlMatches.forEach { container ->
             container.select("a").forEach { a -> val href = a
                 .attr("href"); if (href.isNotBlank()) links.add(href to a

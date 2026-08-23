@@ -63,6 +63,8 @@ class BaseProviderEngine(
         subtitleCallback: (SubtitleFile) -> Unit,
         callback: (ExtractorLink) -> Unit
     ): Boolean {
+        com.lagradost.api.Log.d("BaseProviderEngine",
+            "loadLinks(data=$data, casting=$isCasting)")
         return scrapper.loadLinks(data, isCasting, subtitleCallback, callback)
     }
 }

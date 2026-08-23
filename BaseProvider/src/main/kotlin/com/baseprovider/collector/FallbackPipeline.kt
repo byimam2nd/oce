@@ -26,6 +26,8 @@ class FallbackPipeline(private val config: ProviderConfig) {
     ) {
         val stepStartedAt = System.currentTimeMillis()
         val delivered = java.util.concurrent.atomic.AtomicInteger(0)
+        com.lagradost.api.Log.d("FallbackPipeline",
+            "[${config.id}] processLink: $raw")
         val countingCallback: (ExtractorLink) -> Unit = { link ->
             delivered.incrementAndGet()
             wrappedCallback(link)

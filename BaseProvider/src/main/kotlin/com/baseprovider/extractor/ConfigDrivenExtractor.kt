@@ -6,6 +6,7 @@ import com.baseprovider.config.ExtractorVariant
 import com.baseprovider.log.*
 import com.baseprovider.model.fixUrlSmart
 import com.lagradost.cloudstream3.*
+import com.lagradost.api.Log
 import com.lagradost.cloudstream3.app
 import com.lagradost.cloudstream3.extractors.*
 import com.lagradost.cloudstream3.utils.*
@@ -435,6 +436,8 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
             "none" -> state.videoUrls.toList()
             else -> CompiledRegexPatterns.prioritizeAdaptiveUrls(state.videoUrls)
         }
+        Log.d("ConfigDriven",
+            "[${config.id}] deliver: ${urls.size} url (outputFilter=${config.outputFilter})")
         val videoRef = state.resolveTemplate(config.videoReferer)
             .ifBlank { null }
         urls.forEach { url ->
