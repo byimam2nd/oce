@@ -70,6 +70,18 @@ object SelectorResolver {
         """(?i)(?:\bepisode\b|\beps?\b)\s*(\d+(?:\.\d+)?)"""
     )
 
+    // Token episode KUAT (tanpa alternatif season). Dipakai sebagai lapisan
+    // validasi TAMBAHAN di [detectEpisodeLinks]: URL yang hanya cocok pola
+    // season adalah halaman detail series, bukan halaman episode.
+    private val STRONG_EPISODE_URL_REGEX = Regex(
+        """(?i)(?:/eps/|/episode/|/ep/|-episode-|/ep-)"""
+    )
+
+    // Pola season untuk deteksi "season-only" (URL cocok season TAPI tidak
+    // kuat). Regex utama EPISODE_URL_REGEX TIDAK diubah — aturan ini murni
+    // lapisan tambahan agar perilaku lama tetap utuh.
+    private val SEASON_ONLY_URL_REGEX = Regex("""(?i)(?:/season-|-season-)""")
+
     /**
      * Scan seluruh anchor halaman; ambil yang URL atau teksnya cocok pola
      * episode. Href yang sama dengan halaman saat ini (mis. tombol "Lihat
@@ -86,6 +98,18 @@ object SelectorResolver {
             val text = a.text()
             if (EPISODE_URL_REGEX.containsMatchIn(abs) ||
                 EPISODE_TEXT_REGEX.containsMatchIn(text)) {
+                // Lapisan adaptif TAMBAHAN (tidak mengubah aturan lama):
+                // URL yang hanya cocok pola season tanpa token episode kuat
+                // adalah halaman detail series — skip, KECUALI labelnya
+                // jelas episode ("Eps N") yang mempertahankan perilaku lama.
+                // Kasus nyata: rekomendasi "/tv/ludwig-season-2-2026/" di
+                // halaman film Dutamovie21 membuat film jadi series palsu.
+                val weakSeasonOnly =
+                    !STRONG_EPISODE_URL_REGEX.containsMatchIn(abs) &&
+                        SEASON_ONLY_URL_REGEX.containsMatchIn(abs)
+                if (weakSeasonOnly && !EPISODE_TEXT_REGEX.containsMatchIn(text)) {
+                    continue
+                }
                 out.add(a)
             }
         }
