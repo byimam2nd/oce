@@ -99,6 +99,29 @@ def load_registry_extractors(root):
 CONFIG_DRIVEN_SET_RE = re.compile(
     r'configDrivenIds\s*=\s*setOf\((.*?)\)', re.DOTALL)
 
+PURE_CONFIG_LIST_RE = re.compile(
+    r'pureConfigIds\s*=\s*listOf\((.*?)\)', re.DOTALL)
+
+
+def load_pure_config_ids(root):
+    """Extract pure-config extractor ids dari ExtractorRegistry.kt.
+
+    Pure-config = extractor TANPA class legacy; JSON di `config/extractors/`
+    adalah satu-satunya sumber kebenaran, didaftarkan lewat
+    `pureConfigIds = listOf(...)` lalu dimuat ConfigDrivenExtractor.
+    """
+    path = os.path.join(
+        root, "BaseProvider", "src", "main", "kotlin", "com", "baseprovider",
+        "extractor", "ExtractorRegistry.kt")
+    if not os.path.isfile(path):
+        return set()
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+    m = PURE_CONFIG_LIST_RE.search(content)
+    if not m:
+        return set()
+    return set(re.findall(r'"([A-Za-z0-9_]+)"', m.group(1)))
+
 
 def load_config_driven_ids(root):
     """Extract config-driven extractor ids from ExtractorRegistry.kt setOf block.
@@ -135,6 +158,7 @@ def validate_extractor_configs(root):
     """
     errors, warnings = [], []
     config_driven_ids = load_config_driven_ids(root)
+    pure_config_ids = load_pure_config_ids(root)
     legacy_ids = load_registry_extractors(root)
     extractor_dir = os.path.join(
         root, "BaseProvider", "src", "main", "kotlin", "com", "baseprovider",
@@ -157,7 +181,7 @@ def validate_extractor_configs(root):
             errors.append(
                 f"{name}: filename '{os.path.basename(path)}' does not match id='{data['id']}'")
         json_ids.add(data["id"])
-        if data["id"] not in config_driven_ids:
+        if data["id"] not in config_driven_ids and data["id"] not in pure_config_ids:
             if data["id"] in legacy_ids:
                 warnings.append(
                     f"{name}: extractor JSON config exists but id is NOT in "
