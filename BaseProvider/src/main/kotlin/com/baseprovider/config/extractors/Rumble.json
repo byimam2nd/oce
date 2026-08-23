@@ -18,10 +18,17 @@
       "store": "response"
     },
     {
+      "step": "substring",
+      "startMarker": "{\"mp4",
+      "endMarker": "\"evt\":{",
+      "source": "response",
+      "store": "mp4Chunk"
+    },
+    {
       "step": "regex",
       "pattern": "\\\"url\\\":\\\"(.*?)\\\"",
       "group": 1,
-      "source": "response",
+      "source": "mp4Chunk",
       "filter": ".m3u8",
       "universal": false
     }
