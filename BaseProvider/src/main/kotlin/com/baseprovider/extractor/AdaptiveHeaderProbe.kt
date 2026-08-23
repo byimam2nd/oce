@@ -17,6 +17,9 @@ import java.util.concurrent.ConcurrentHashMap
  *  - REFERER      : UA+Accept + referer (hint atau origin video)
  *  - ORIGIN       : UA+Accept + referer + Origin (CDN yang memvalidasi Origin)
  *  - BROWSER_LIKE : header browser penuh (Accept-Language, Sec-Fetch-*, Origin)
+ *  - RAW          : UA non-browser (okhttp), tanpa referer — untuk host yang
+ *                   justru MEMBLOKIR UA browser dari klien non-browser
+ *                   (kasus rumble.com/hls-vod: CF 403 Chrome/Firefox, 200 okhttp)
  *  - EXPLICIT     : headers asli yang diset extractor (jika bukan minimal)
  * Combo valid pertama (2xx/3xx) yang selesai langsung MENANG — sisanya
  * di-cancel (uji berjalan serentak, tidak menunggu yang lambat). Probe
@@ -38,7 +41,7 @@ import java.util.concurrent.ConcurrentHashMap
  * probe yang sama, bukan memulai probe ganda.
  */
 object AdaptiveHeaderProbe {
-    enum class Mode { BARE, REFERER, ORIGIN, BROWSER_LIKE, EXPLICIT }
+    enum class Mode { BARE, REFERER, ORIGIN, BROWSER_LIKE, RAW, EXPLICIT }
 
     data class Decision(
         val mode: Mode,
@@ -92,6 +95,21 @@ object AdaptiveHeaderProbe {
         "User-Agent" to DEFAULT_UA
     )
 
+    /**
+     * UA non-browser: sebagian CDN (kasus rumble.com/hls-vod, 2026-08)
+     * mem-blokir UA browser yang datang dari klien non-browser (deteksi
+     * TLS mismatch), tapi meloloskan UA generik/okhttp. Combo RAW menguji
+     * jalur ini agar probe benar-benar adaptif dua arah (A-Z): host yang
+     * MENUNTUT UA browser tetap ter-cover BARE/BROWSER_LIKE, host yang
+     * MEMBLOKIRnya tetap ter-cover RAW. Nilai eksplisit "okhttp/..." penting:
+     * kalau header UA dihapus, NiceHttp menyuntikkan default global
+     * (browser-like) sehingga combo jadi tidak berbeda dari BARE.
+     */
+    private val rawClientHeaders = mapOf(
+        "Accept" to "*/*",
+        "User-Agent" to "okhttp/4.12.0"
+    )
+
     private val browserLikeHeaders = mapOf(
         "Accept" to "*/*",
         "Accept-Language" to "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
@@ -119,7 +137,10 @@ object AdaptiveHeaderProbe {
             Combo(Mode.BARE, null, minimalHeaders),
             Combo(Mode.REFERER, referer, minimalHeaders),
             Combo(Mode.ORIGIN, referer, minimalHeaders + originHeader),
-            Combo(Mode.BROWSER_LIKE, referer, browserLikeHeaders + originHeader)
+            Combo(Mode.BROWSER_LIKE, referer, browserLikeHeaders + originHeader),
+            // RAW: tanpa referer + UA non-browser (anti CF-bot-rule untuk
+            // host yang memblokir UA browser non-browser).
+            Combo(Mode.RAW, null, rawClientHeaders)
         )
         // EXPLICIT: uji headers asli extractor (jika berbeda dari minimal).
         // Header minimal sudah terwakili oleh combo BARE/REFERER, jadi skip
