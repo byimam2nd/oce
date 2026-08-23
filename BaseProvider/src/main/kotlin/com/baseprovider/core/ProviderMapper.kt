@@ -11,10 +11,32 @@ import org.jsoup.nodes.Element
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * Adaptive guard: path taksonomi/listing CMS (WordPress dkk) bukan halaman
+ * konten. Item yang href-nya cocok pola ini DITOLAK agar halaman kategori/
+ * tag tidak pernah menjadi item clickable — mencegah loadLinks dipanggil
+ * di listing page saat selector decay/relocate salah match (bug Dutamovie21
+ * /drama/ 2026-08-23). Pola generik lintas-provider, bukan hardcode situs.
+ */
+private val LISTING_PATH_REGEX = Regex(
+    """^https?://[^/]+/(category|categories|tags?|genre|genres|country|countries|director|cast|artist|year|quality|network|production|studio|actor|actress)(/|$)""",
+    RegexOption.IGNORE_CASE
+)
+
 class ProviderMapper(
     private val api: MainAPI,
     private val config: ProviderConfig,
 ) {
+
+    // Adaptive blocklist layer-2: segmen pertama path di mainPageLists adalah
+    // halaman listing milik provider sendiri (/drama/, /action/, /country/...).
+    // Item yang segmen pertamanya cocok DITOLAK agar listing page tidak pernah
+    // menjadi item clickable (bug Dutamovie21 /drama/ 2026-08-23). Dinamis
+    // dari config — tidak ada hardcode genre per situs.
+    private val listingFirstSegments: Set<String> = config.mainPageLists
+        .map { it.first.trim('/').substringBefore('/') }
+        .filter { it.isNotBlank() }
+        .toSet()
 
     // L4: regex hrefClean dikompilasi sekali per pola unik, tidak per elemen
     // (toSearchResult dipanggil untuk tiap item hasil search).
@@ -63,6 +85,21 @@ class ProviderMapper(
                 href = try {
                     href.replace(cleanRx, config.hrefCleanReplace)
                 } catch (_: Exception) { href }
+            }
+            if (LISTING_PATH_REGEX.containsMatchIn(href)) return null
+            // Layer-2: segmen pertama milik listing provider sendiri HANYA
+            // ditolak bila bentuknya listing (depth<=1 atau mengandung /page/).
+            // Konten bersama segmen yang sama tetap lolos: Anichin /seri/slug/,
+            // Animasu/Donghua /anime/slug/ vs listing /seri|anime/page/N.
+            runCatching {
+                val uri = java.net.URI(href)
+                val rest = uri.path?.trim('/') ?: return@runCatching
+                if (rest.isEmpty()) return@runCatching
+                val firstSeg = rest.substringBefore('/')
+                if (firstSeg in listingFirstSegments &&
+                    (!rest.contains('/') || rest.contains("/page/"))) {
+                    return null
+                }
             }
             val poster = if (config.searchPoster.isNotBlank()) {
                 SelectorResolver.selectValidated(element, config.searchPoster, "$key:searchPoster", FieldType.POSTER) { it.safeExtractImage(config.attrImage) }

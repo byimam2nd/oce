@@ -1,8 +1,8 @@
 {
   "id": "Dutamovie21",
   "name": "Dutamovie21",
-  "mainUrl": "https://vikingsgab.com",
-  "mirrorUrls": ["https://simplycufflinks.com"],
+  "mainUrl": "https://cyber-junkie.com",
+  "mirrorUrls": ["https://vikingsgab.com", "https://simplycufflinks.com"],
   "lang": "id",
   "supportedTypes": ["Movie", "TvSeries", "AsianDrama", "Anime"],
   "searchPathPattern": "{baseUrl}/page/{page}/?s={query}",
