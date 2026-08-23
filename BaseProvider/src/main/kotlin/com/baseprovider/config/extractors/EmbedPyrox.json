@@ -1,7 +1,7 @@
 {
-  "id": "Morencius",
-  "name": "Morencius",
-  "mainUrl": "https://morencius.com",
+  "id": "EmbedPyrox",
+  "name": "EmbedPyrox",
+  "mainUrl": "https://embedpyrox.xyz",
   "requiresReferer": true,
   "variants": [
     {
@@ -16,20 +16,6 @@
       "referer": "",
       "headers": {},
       "store": "response"
-    },
-    {
-      "step": "packedJs",
-      "source": "response",
-      "store": "decoded"
-    },
-    {
-      "step": "regex",
-      "pattern": "",
-      "group": 1,
-      "source": "decoded",
-      "filter": "",
-      "universal": true,
-      "store": ""
     },
     {
       "step": "regex",
@@ -50,5 +36,5 @@
     }
   ],
   "videoReferer": "",
-  "outputFilter": "master"
+  "outputFilter": "none"
 }

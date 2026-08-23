@@ -46,6 +46,16 @@ object ProviderExtractors {
         "AnichinPlayer"
     )
 
+    /**
+     * Extractor TANPA class legacy — hidup murni dari file JSON di
+     * `config/extractors/`. Tambahkan id baru di sini saat membuat extractor
+     * config-driven yang belum punya stub Kotlin.
+     */
+    private val pureConfigIds = listOf(
+        "EmbedPyrox",
+        "VeevTo"
+    )
+
     private fun buildList(): List<ExtractorApi> {
         val result = mutableListOf<ExtractorApi>()
         for (extractor in legacyList) {
@@ -58,6 +68,14 @@ object ProviderExtractors {
                 }
             }
             result.add(extractor)
+        }
+        // Pure-config: tidak punya legacy fallback — JSON adalah satu-satunya
+        // sumber kebenaran. Gagal load = dilewati (jangan bikin crash registry).
+        for (id in pureConfigIds) {
+            if (result.any { it.name.equals(id, true) || it.name.equals(
+                    ExtractorConfigRegistry.get(id)?.name ?: "", true) }) continue
+            val config = ExtractorConfigRegistry.get(id) ?: continue
+            result.add(ConfigDrivenExtractor(config))
         }
         return result
     }

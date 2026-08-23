@@ -1,7 +1,7 @@
 {
-  "id": "Morencius",
-  "name": "Morencius",
-  "mainUrl": "https://morencius.com",
+  "id": "VeevTo",
+  "name": "VeevTo",
+  "mainUrl": "https://veev.to",
   "requiresReferer": true,
   "variants": [
     {
@@ -32,23 +32,14 @@
       "store": ""
     },
     {
-      "step": "regex",
-      "pattern": "",
-      "group": 1,
-      "source": "response",
-      "filter": "",
-      "universal": true,
-      "store": ""
-    },
-    {
       "step": "webview",
       "url": "{url}",
       "referer": "",
       "headers": {},
       "interceptPattern": "(m3u8|mp4)",
-      "timeoutMs": 15000
+      "timeoutMs": 20000
     }
   ],
   "videoReferer": "",
-  "outputFilter": "master"
+  "outputFilter": "none"
 }

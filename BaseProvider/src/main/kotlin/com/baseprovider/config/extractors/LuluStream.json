@@ -34,6 +34,14 @@
       "filter": "",
       "universal": true,
       "store": ""
+    },
+    {
+      "step": "webview",
+      "url": "{url}",
+      "referer": "",
+      "headers": {},
+      "interceptPattern": "(m3u8|mp4)",
+      "timeoutMs": 15000
     }
   ]
 }
