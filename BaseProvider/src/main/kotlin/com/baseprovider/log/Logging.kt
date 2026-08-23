@@ -87,7 +87,10 @@ object ProviderLog {
             LogLevel.CRITICAL -> Log.e(GLOBAL_PREFIX, logcatMsg)
         }
 
-        if (level != LogLevel.DEBUG && level != LogLevel.SUCCESS) {
+        // SUCCESS di-upload juga: dibutuhkan sebagai penanda runtime/telemetri
+        // (MovieGateSkip, EpiStats, Loaded page) agar perilaku device dapat
+        // diaudit remote. DEBUG tetap lokal (volume terlalu besar).
+        if (level != LogLevel.DEBUG) {
             sendToSupabase(
                 level.name, tag, fullMsg, url, host, method, ft,
                 selectors, stage, extractor, attempt, durationMs, runId,

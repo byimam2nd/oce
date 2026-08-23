@@ -284,6 +284,7 @@ class ProviderMapper(
                 logDebug(config.id, "Season data JSON parse failed: ${e.message}")
             }
         }
+        var uniqHrefCount = -1
         if (episodes.isEmpty()) {
             // Dedupe by HREF, bukan nomor episode: situs sah memuat dua entri
             // bernomor sama dengan target berbeda (kasus Anichin Tales of
@@ -349,16 +350,18 @@ class ProviderMapper(
                     }.getOrNull()
                 }
             )
+            uniqHrefCount = seenHrefs.size
         }
-        // Penanda runtime: nomor ganda yang DISENGAJA dipertahankan (href
-        // beda) — bukti dari Supabase bahwa build dedupe-by-href aktif.
-        if (episodes.size > 1) {
+        // Telemetri episode (ter-upload ke Supabase via SUCCESS):
+        // selItems = elemen selector, uniqHref = unik by-href, eps = hasil akhir,
+        // dupNums = nomor yang sengaja dipertahankan ganda (href beda).
+        if (episodes.isNotEmpty()) {
             val dupNums = episodes.groupBy { it.episode }
                 .filterValues { it.size > 1 }.keys
-            if (dupNums.isNotEmpty()) {
-                logSuccess(config.id,
-                    "EpiDupKept: episode nomor sama dipertahankan (href beda): $dupNums")
-            }
+            logSuccess(config.id,
+                "EpiStats: selItems=${epItems.size} uniqHref=" +
+                    (if (uniqHrefCount >= 0) uniqHrefCount else episodes.size) +
+                    " eps=${episodes.size} dupNums=$dupNums")
         }
         return if (config.reverseEpisodes && seasonDataScript ==
             null) episodes.reversed() else episodes
