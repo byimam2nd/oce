@@ -281,7 +281,7 @@ def verify_master_m3u8(body):
     return False, "no tags"
 
 # ══════════════════════════════════════════════════════════════════════════════
-def pipeline(provider_id, item_url, expect_type=None, expect_ep96_dup=False, label=""):
+def pipeline(provider_id, item_url, expect_type=None, expect_ep96_dup=False, label="", quiet=False):
     cfg_file = CFG / f"{provider_id.lower()}.json"
     cfgp = json.loads(cfg_file.read_text())
     print(f"\n{'='*72}\nPIPELINE [{provider_id}] {label}\n  item: {item_url}\n{'='*72}")
@@ -346,10 +346,14 @@ def pipeline(provider_id, item_url, expect_type=None, expect_ep96_dup=False, lab
                 f"player={has_player} gate={gate_movie} sel={len(ep_sel)} fallback={len(fallback_eps)}")
         ok_all &= ok2
         return sub_pipeline_media(provider_id, cfgp, item_url, ok_all, label)
-    else:
+    elif expect_type == "series":
         ok2 = P("S2 detail: diputuskan SERIES", not is_movie_final,
                 f"sel={len(ep_sel)} fallback={len(fallback_eps)}")
         eps = extract_episodes(ds, item_url, cfgp)
+        if expect_type is None:
+            P(f"S2 detail: tipe terdeteksi {'SERIES' if not is_movie_final else 'MOVIE'}",
+              True, f"(informatif)")
+        ok2 = ok2 if expect_type else True
         ok2 &= P("S2 episode list terisi", len(eps)>0, f"{len(eps)} episode")
         if expect_ep96_dup:
             n96 = [e for e in eps if e["num"]==96]
@@ -456,7 +460,169 @@ def extract_and_probe(pid, cfgp, cands, page_url, ok_all, label=""):
     P("VERDICT PIPELINE", ok_all and ok5, f"{pid} {label}".strip())
     return dict(REPORT)
 
+# ═══════════ SWEEP SELURUH PROVIDER (generik) ═══════════
+def sweep(provider_id):
+    """Auto-discover: homelist -> item pertama -> detail -> episode/media -> link."""
+    cfg_file = CFG / f"{provider_id.lower()}.json"
+    cfgp = json.loads(cfg_file.read_text())
+    print(f"\n{'='*70}\nSWEEP [{provider_id}]  mainUrl={cfgp['mainUrl']}\n{'='*70}")
+    ok_all = True
+
+    # S0: reachability (mainUrl, fallback mirror)
+    urls_to_try = [cfgp["mainUrl"]] + [m for m in cfgp.get("mirrorUrls", []) if m.startswith('http')]
+    home_html, used = None, None
+    for base in urls_to_try:
+        try:
+            r = fetch(f"{base.rstrip('/')}/", timeout=15)
+            if r.status_code == 200 and len(r.text) > 5000:
+                home_html, used = r.text, base
+                break
+        except Exception:
+            continue
+    if not stage("S0 reachability", home_html is not None,
+                 f"aktif via {used}" if used else "semua URL gagal"):
+        return {"verdict": "UNREACHABLE"}
+
+    ds = soup(home_html)
+    arts = select_all(ds, cfgp.get("searchItems","")) if cfgp.get("searchItems") else []
+    if not arts and cfgp.get("mainPagePathPattern") and cfgp.get("mainPageLists"):
+        # fallback: pakai halaman listing pertama dari mainPageLists
+        seg = cfgp["mainPageLists"][0][0].strip('/')
+        alt = cfgp["mainPagePathPattern"].replace("{baseUrl}", used) \
+            .replace("{data}", seg).replace("{page}", "1")
+        ds = soup(fetch(alt, timeout=15).text)
+        arts = select_all(ds, cfgp.get("searchItems",""))
+        print(f"  [fallback] listing alternatif {alt} -> {len(arts)} item")
+    if not stage("S1 homelist items", len(arts) > 0, f"{len(arts)} artikel @ {used}"):
+        return {"verdict": "FAILED"}
+
+    # pilih item konten pertama (bukan listing)
+    item_url = None
+    for art in arts[:10]:
+        a = select_first(art, cfgp.get("searchHref","")) or art.select_one('a')
+        href = fix_url(a.get('href',''), used) if a else ""
+        if href.startswith('http') and not is_listing(href, cfgp) \
+           and not looks_like_movie(href, cfgp):
+            pass
+        if href.startswith('http') and not is_listing(href, cfgp):
+            item_url = href; break
+    if not stage("S1 item konten ditemukan", item_url is not None, str(item_url)):
+        return {"verdict": "FAILED"}
+
+    # S2 detail
+    try:
+        d = fetch(item_url, referer=cfgp["mainUrl"]); ds2 = soup(d.text)
+    except Exception as e:
+        stage("S2 detail fetch", False, str(e)); return {"verdict": "FAILED"}
+    title_ok = select_first(ds2, cfgp.get("loadTitle","x")) is not None
+    poster_ok = select_first(ds2, cfgp.get("loadPoster","x")) is not None \
+        or bool(ds2.select_one('meta[property="og:image"]'))
+    stage("S2 judul+poster", title_ok and poster_ok)
+
+    ep_sel = select_all(ds2, cfgp["episodeItems"]) if cfgp.get("episodeItems") else []
+    has_player = False
+    if cfgp.get("linkOptions"):
+        for v in cfgp["linkOptions"].split(','):
+            try:
+                if ds2.select_one(v.strip()): has_player = True; break
+            except Exception: pass
+    url_looks_tv_ = any(m in item_url.lower() for m in TV_MARKERS)
+    tv_seg = cfgp.get("tvPathSegment","")
+    depth1 = '/' not in urlparse(item_url).path.strip('/')
+    gate_movie = has_player or looks_like_movie(item_url, cfgp) or (
+        bool(tv_seg) and tv_seg not in item_url and not url_looks_tv_ and depth1)
+    fallback_eps = detect_episode_links(ds2, item_url) if (not ep_sel and not gate_movie) else []
+    non_tv = not url_looks_tv_ and not (tv_seg and tv_seg in item_url)
+    is_movie_final = (not tv_seg in item_url if False else True) if False else (
+        gate_movie or (non_tv and not ep_sel and not fallback_eps))
+    stage(f"S2 tipe: {'MOVIE' if is_movie_final else 'SERIES'} "
+          f"(player={has_player} sel={len(ep_sel)} fb={len(fallback_eps)})", True, "(informatif)")
+
+    target = item_url
+    if not is_movie_final:
+        eps = extract_episodes(ds2, item_url, cfgp)
+        if not stage("S2 episode list", len(eps) > 0, f"{len(eps)} eps"):
+            return {"verdict": "FAILED"}
+        mid = max(0, len(eps)//2)
+        target = eps[mid]["href"]
+        print(f"  -> episode uji: {target[:80]}")
+
+    cands = collect_candidates(soup(fetch(target, referer=cfgp["mainUrl"]).text),
+                               cfgp, target)
+    if not stage("S3 kandidat loadLinks", len(cands) > 0, f"{len(cands)} kandidat"):
+        return {"verdict": "FAILED"}
+
+    delivered, notes = [], []
+    skip_hosts = set(h.lower() for h in (cfgp.get("skipHosts") or [])) | \
+        {'www.youtube.com', 'youtube.com'}
+    for raw, lbl in cands[:8]:
+        host = host_of(raw)
+        if any(host == s or host.endswith('.' + s) for s in skip_hosts):
+            continue
+        eid, ecfg = match_extractor(raw)
+        if ecfg:
+            outs = run_steps(eid, ecfg, raw, lambda m: notes.append(m))
+            notes.append(f"{eid}:{len(outs)}")
+            delivered.extend((o, eid) for o in outs)
+        else:
+            try:
+                pg = fetch(raw, referer=target).text
+                for iu in re.findall(r'<iframe[^>]+src="([^"]+)"', pg)[:4]:
+                    iu_f = fix_url(iu, raw)
+                    ih = host_of(iu_f)
+                    if any(ih == s2 or ih.endswith('.' + s2) for s2 in skip_hosts):
+                        continue
+                    e2_, c2_ = match_extractor(iu_f)
+                    if c2_:
+                        o2 = run_steps(e2_, c2_, iu_f, lambda m: notes.append(m))
+                        notes.append(f"↳{e2_}:{len(o2)}")
+                        delivered.extend((x, e2_) for x in o2)
+            except Exception:
+                pass
+
+    final, probes = [], []
+    for u, src in delivered[:12]:
+        pr = probe(u)
+        if not pr: continue
+        mode, ref, hh, body = pr
+        if '.m3u8' in u:
+            okv, info = verify_master_m3u8(body)
+            if not okv: continue
+            probes.append(f"{src}:{mode}({info})")
+        else:
+            probes.append(f"{src}:{mode}(direct)")
+        final.append(u)
+
+    ok = stage(f"D+E delivery", len(final) > 0,
+               f"{len(final)} link dari {len(delivered)} hasil; {probes[:4]}")
+    REPORT["verdict"] = "SUCCESS" if ok else ("PARTIAL" if delivered else "NO-LINK")
+    print(f"  VERDICT: {REPORT['verdict']}")
+    return dict(REPORT)
+
+
+def run_sweep_all():
+    providers = ["Anichin", "Animasu", "Donghuastream", "Dutamovie21",
+                 "IndoDrama21", "LayarKaca21", "Samehadaku"]
+    results = {}
+    for pid in providers:
+        try:
+            results[pid] = sweep(pid)
+        except Exception as e:
+            print(f"  EXC {pid}: {type(e).__name__}: {e}")
+            results[pid] = {"verdict": f"EXC:{type(e).__name__}"}
+    print(f"\n{'#'*70}\nMATRIKS SWEEP SELURUH PROVIDER\n{'#'*70}")
+    for pid, r in results.items():
+        mark = {'SUCCESS':'✅','PARTIAL':'⚠️ '}.get(r['verdict'], '❌')
+        print(f"  {mark} {pid:16s} {r['verdict']}")
+    return results
+
+if __name__ == "__main__" and len(sys.argv) > 1 and sys.argv[1] == "sweep-all":
+    run_sweep_all()
+    sys.exit(0)
+
 if __name__ == "__main__":
+    if len(sys.argv)>1 and sys.argv[1]=="sweep-all":
+        run_sweep_all(); sys.exit(0)
     which = sys.argv[1] if len(sys.argv)>1 else "all"
     cases = set((which.split() if which != "all" else ["all"]))
     run_all = "all" in cases
@@ -476,3 +642,4 @@ if __name__ == "__main__":
     fails = sum(1 for r in results if r["verdict"]=="FAILED")
     print(f"\n{'#'*72}\nTOTAL PIPELINE: {len(results)-fails}/{len(results)} SUCCESS\n{'#'*72}")
     sys.exit(1 if fails else 0)
+

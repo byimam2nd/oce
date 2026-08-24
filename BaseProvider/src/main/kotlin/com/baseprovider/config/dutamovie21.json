@@ -2,9 +2,17 @@
   "id": "Dutamovie21",
   "name": "Dutamovie21",
   "mainUrl": "https://cyber-junkie.com",
-  "mirrorUrls": ["https://vikingsgab.com", "https://simplycufflinks.com"],
+  "mirrorUrls": [
+    "https://vikingsgab.com",
+    "https://simplycufflinks.com"
+  ],
   "lang": "id",
-  "supportedTypes": ["Movie", "TvSeries", "AsianDrama", "Anime"],
+  "supportedTypes": [
+    "Movie",
+    "TvSeries",
+    "AsianDrama",
+    "Anime"
+  ],
   "searchPathPattern": "{baseUrl}/page/{page}/?s={query}",
   "mainPagePathPattern": "{baseUrl}/{data}/page/{page}",
   "moviePathSegment": "/movie/",
@@ -19,25 +27,82 @@
     "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"
   },
   "mainPageLists": [
-    ["category/box-office", "Box Office"],
-    ["category/serial-tv", "TV Series"],
-    ["action", "Action"],
-    ["adventure", "Adventure"],
-    ["animation", "Animation"],
-    ["comedy", "Comedy"],
-    ["crime", "Crime"],
-    ["drama", "Drama"],
-    ["fantasy", "Fantasy"],
-    ["horror", "Horror"],
-    ["mystery", "Mystery"],
-    ["romance", "Romance"],
-    ["science-fiction", "Sci-Fi"],
-    ["thriller", "Thriller"],
-    ["country/china", "China"],
-    ["country/indonesia", "Indonesia"],
-    ["country/korea", "Korea"],
-    ["country/philippines", "Philippines"],
-    ["country/thailand", "Thailand"]
+    [
+      "category/box-office",
+      "Box Office"
+    ],
+    [
+      "category/serial-tv",
+      "TV Series"
+    ],
+    [
+      "action",
+      "Action"
+    ],
+    [
+      "adventure",
+      "Adventure"
+    ],
+    [
+      "animation",
+      "Animation"
+    ],
+    [
+      "comedy",
+      "Comedy"
+    ],
+    [
+      "crime",
+      "Crime"
+    ],
+    [
+      "drama",
+      "Drama"
+    ],
+    [
+      "fantasy",
+      "Fantasy"
+    ],
+    [
+      "horror",
+      "Horror"
+    ],
+    [
+      "mystery",
+      "Mystery"
+    ],
+    [
+      "romance",
+      "Romance"
+    ],
+    [
+      "science-fiction",
+      "Sci-Fi"
+    ],
+    [
+      "thriller",
+      "Thriller"
+    ],
+    [
+      "country/china",
+      "China"
+    ],
+    [
+      "country/indonesia",
+      "Indonesia"
+    ],
+    [
+      "country/korea",
+      "Korea"
+    ],
+    [
+      "country/philippines",
+      "Philippines"
+    ],
+    [
+      "country/thailand",
+      "Thailand"
+    ]
   ],
   "searchItems": "article.item, article.item-infinite, div#gmr-main-load article",
   "searchTitle": "h2.entry-title a, .entry-title a",
@@ -61,5 +126,6 @@
   "actorName": "span[itemprop=name], .cast-name, h3",
   "followLinkSelector": "a#openNow, div.links a",
   "yearSelector": "div.movie-info h1",
-  "yearExtractorRegex": "\\d, (\\d+)"
+  "yearExtractorRegex": "\\d, (\\d+)",
+  "selfExtract": true
 }

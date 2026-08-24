@@ -23,6 +23,10 @@ data class ProviderConfig(
     // Dutamovie21: vikingsgab "/movie/slug-2025/" -> cyber-junkie "/slug-2025/".
     // Isi contoh: "-\\d{4}/?$" (slug berakhiran -YYYY).
     val movieUrlRegex: String = "",
+    // True: jika loadLinks tak menemukan kandidat apa pun, dispatch URL
+    // episode itu sendiri ke extractor yang cocok dengan hostnya (untuk
+    // situs yang menyuntik player via JS - kasus Samehadaku/wibufile).
+    val selfExtract: Boolean = false,
     val tvPathSegment: String = "/anime/",
     val episodeDataUrlPattern: String = "{url}",
 

@@ -53,7 +53,9 @@ object ProviderExtractors {
      */
     private val pureConfigIds = listOf(
         "EmbedPyrox",
-        "VeevTo"
+        "VeevTo",
+        "SamehadakuPage",
+        "CyberJunkiePage"
     )
 
     private fun buildList(): List<ExtractorApi> {

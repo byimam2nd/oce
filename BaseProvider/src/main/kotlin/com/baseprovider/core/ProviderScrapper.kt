@@ -251,6 +251,11 @@ class ProviderScrapper(
             logSuccess(config.id,
                 "loadLinks candidates=${allPossibleLinks.size} " +
                     "(linkOptions/iframes/downloads/switch/ajax)")
+            if (allPossibleLinks.isEmpty() && config.selfExtract) {
+                com.lagradost.api.Log.d("ProviderScrapper",
+                    "[${config.id}] self-extract: 0 kandidat -> dispatch URL episode sendiri")
+                allPossibleLinks.add(data to null)
+            }
             if (allPossibleLinks.isEmpty()) {
                 logFail(
                     config.id,

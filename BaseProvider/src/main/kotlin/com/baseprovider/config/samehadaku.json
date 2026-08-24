@@ -3,7 +3,11 @@
   "name": "Samehadaku",
   "mainUrl": "https://v2.samehadaku.how",
   "lang": "id",
-  "supportedTypes": ["Anime", "AnimeMovie", "OVA"],
+  "supportedTypes": [
+    "Anime",
+    "AnimeMovie",
+    "OVA"
+  ],
   "searchPathPattern": "{baseUrl}/?s={query}",
   "tvPathSegment": "/anime/",
   "reverseEpisodes": true,
@@ -13,17 +17,50 @@
     "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"
   },
   "mainPageLists": [
-    ["anime-terbaru/page/", "Anime Terbaru"],
-    ["genre/action/page/", "Action"],
-    ["genre/adventure/page/", "Adventure"],
-    ["genre/comedy/page/", "Comedy"],
-    ["genre/drama/page/", "Drama"],
-    ["genre/fantasy/page/", "Fantasy"],
-    ["genre/horror/page/", "Horror"],
-    ["genre/isekai/page/", "Isekai"],
-    ["genre/romance/page/", "Romance"],
-    ["genre/sci-fi/page/", "Sci-Fi"],
-    ["genre/slice-of-life/page/", "Slice of Life"]
+    [
+      "anime-terbaru/page/",
+      "Anime Terbaru"
+    ],
+    [
+      "genre/action/page/",
+      "Action"
+    ],
+    [
+      "genre/adventure/page/",
+      "Adventure"
+    ],
+    [
+      "genre/comedy/page/",
+      "Comedy"
+    ],
+    [
+      "genre/drama/page/",
+      "Drama"
+    ],
+    [
+      "genre/fantasy/page/",
+      "Fantasy"
+    ],
+    [
+      "genre/horror/page/",
+      "Horror"
+    ],
+    [
+      "genre/isekai/page/",
+      "Isekai"
+    ],
+    [
+      "genre/romance/page/",
+      "Romance"
+    ],
+    [
+      "genre/sci-fi/page/",
+      "Sci-Fi"
+    ],
+    [
+      "genre/slice-of-life/page/",
+      "Slice of Life"
+    ]
   ],
   "searchItems": "div.animposx, .post-show li",
   "searchTitle": "h2, .entry-title a, .title",
@@ -46,5 +83,6 @@
   "followLinkSelector": "#breadcrumbs a[href*=\"/anime/\"]",
   "ajaxPlayerUrl": "https://v2.samehadaku.how/wp-admin/admin-ajax.php",
   "selectorJsonData": ".east_player_option",
-  "downloadItems": "div#downloadb li"
+  "downloadItems": "div#downloadb li",
+  "selfExtract": true
 }
