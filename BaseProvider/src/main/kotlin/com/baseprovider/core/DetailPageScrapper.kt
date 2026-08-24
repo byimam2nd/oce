@@ -201,11 +201,11 @@ class DetailPageScrapper(
 
         logSuccess(
             config.id,
-            "Loaded page: ${metadata.title} (${if (isMovie) "Movie" else "Series"}, tags=${metadata.tags?.size ?: 0})",
+            "Loaded page: ${metadata.title} (${if (isMovie) "Movie" else "Series"}, tags=${metadata.tags?.size ?: 0}) dalam ${System.currentTimeMillis() - __t0} ms",
             url = currentUrl, method = "load",
-            selectors = "loadTitle, loadPoster, loadDesc, loadInfoBox"
-        , durationMs = System.currentTimeMillis() - __t0,
-                url = currentUrl)
+            selectors = "loadTitle, loadPoster, loadDesc, loadInfoBox",
+            durationMs = System.currentTimeMillis() - __t0
+        )
 
         if (isMovie) {
             val watchUrl = if (config.watchButtons.isNotBlank()) {
