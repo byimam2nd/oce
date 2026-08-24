@@ -38,6 +38,7 @@ class ProviderScrapper(
 
     suspend fun getMainPage(page: Int,
         request: MainPageRequest): HomePageResponse {
+        val __t0 = System.currentTimeMillis()
         val baseUrl = if (request.name.contains(config.seriesKeyword,
             true)) {
             config.seriesUrl?.takeIf { it.isNotBlank() } ?: config.mainUrl
@@ -75,6 +76,11 @@ class ProviderScrapper(
                     }.awaitAll().filterNotNull().distinctBy { it.url }
                 }
             } else emptyList()
+            com.baseprovider.log.logSuccess(config.id,
+                "MainPage '${request.name}' p$page: ${home.size} item " +
+                    "dalam ${System.currentTimeMillis() - __t0} ms",
+                url = url, method = "getMainPage",
+                durationMs = System.currentTimeMillis() - __t0)
             newHomePageResponse(list = HomePageList(name = request.name,
                 list = home, isHorizontalImages = isHorizontal), hasNext =
                     home.isNotEmpty())
@@ -149,6 +155,7 @@ class ProviderScrapper(
                 emptyList()
             }
         }
+        val __st0 = System.currentTimeMillis()
         return runCatching {
             val url = config.searchPathPattern.replace("{baseUrl}",
                 baseUrl).replace("{page}", page.toString()).replace("{query}", encodedQuery)
@@ -165,6 +172,12 @@ class ProviderScrapper(
                                 .toSearchResult(el, url) }.getOrNull()
                         }
                     }.awaitAll().filterNotNull().distinctBy { it.url }
+                }.also {
+                    com.baseprovider.log.logSuccess(config.id,
+                        "Search '$query' p$page: ${it.size} hasil dalam " +
+                            "${System.currentTimeMillis() - __st0} ms",
+                        url = url, method = "search",
+                        durationMs = System.currentTimeMillis() - __st0)
                 }
             } else emptyList()
         }.getOrElse { e ->
@@ -249,8 +262,11 @@ class ProviderScrapper(
             }
 
             logSuccess(config.id,
-                "loadLinks candidates=${allPossibleLinks.size} " +
-                    "(linkOptions/iframes/downloads/switch/ajax)")
+                "loadLinks candidates=${allPossibleLinks.size} dalam " +
+                    "${System.currentTimeMillis() - startedAt} ms",
+                url = data, method = "loadLinks",
+                durationMs = System.currentTimeMillis() - startedAt,
+                runId = runId)
             if (allPossibleLinks.isEmpty() && config.selfExtract) {
                 com.lagradost.api.Log.d("ProviderScrapper",
                     "[${config.id}] self-extract: 0 kandidat -> dispatch URL episode sendiri")

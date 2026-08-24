@@ -97,6 +97,7 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
     ) {
         val id = extractId(url)
         logDebug(name, "ConfigDriven: url=$url id=$id variants=${config.variants.size} steps=${config.steps.size}")
+        val __t0 = System.currentTimeMillis()
 
         for (variant in config.variants) {
             val state = RunState(url, referer, id, variant)
@@ -111,11 +112,21 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
             }
             if (state.videoUrls.isNotEmpty()) {
                 logDebug(name, "Variant '${variant.name}' produced ${state.videoUrls.size} link(s) for $url")
+                logSuccess(name,
+                    "ekstraksi sukses: ${state.videoUrls.size} url dalam " +
+                        "${System.currentTimeMillis() - __t0} ms",
+                    url = url, extractor = name,
+                    durationMs = System.currentTimeMillis() - __t0)
                 deliver(state, callback)
                 return
             }
             logDebug(name, "Variant '${variant.name}' produced 0 links, trying next")
         }
+        com.baseprovider.log.logFail(name,
+            "semua ${config.variants.size} varian gagal menghasilkan link " +
+                "(${System.currentTimeMillis() - __t0} ms)",
+            url = url, extractor = name,
+            durationMs = System.currentTimeMillis() - __t0)
     }
 
     internal fun extractId(url: String): String? {        val source = config.idSource ?: return null

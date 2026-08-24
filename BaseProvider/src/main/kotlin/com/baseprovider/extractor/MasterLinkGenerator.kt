@@ -67,6 +67,7 @@ object MasterLinkGenerator {
         runId: String? = null,
         callback: (ExtractorLink) -> Unit
     ) {
+        val __t0 = System.currentTimeMillis()
         if (url.isBlank() || JUNK_URL_REGEX.containsMatchIn(url)) {
             // Link kosong ATAU non-media/tracking: jangan sampai ke player.
             com.baseprovider.log.logFail(
@@ -190,8 +191,10 @@ object MasterLinkGenerator {
             this.headers = effectiveHeaders
         })
         com.baseprovider.log.logSuccess(source,
-            "link delivered (${if (isAdaptive) "adaptive" else "direct"})",
-            url = url, extractor = source, runId = runId)
+            "link delivered (${if (isAdaptive) "adaptive" else "direct"}) " +
+                "dalam ${System.currentTimeMillis() - __t0} ms",
+            url = url, extractor = source, runId = runId,
+            durationMs = System.currentTimeMillis() - __t0)
     }
 
     @Suppress("DEPRECATION_ERROR")

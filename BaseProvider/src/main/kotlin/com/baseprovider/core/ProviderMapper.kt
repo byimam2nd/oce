@@ -375,12 +375,15 @@ class ProviderMapper(
         // selItems = elemen selector, uniqHref = unik by-href, eps = hasil akhir,
         // dupNums = nomor yang sengaja dipertahankan ganda (href beda).
         if (episodes.isNotEmpty()) {
+            val __e0 = System.currentTimeMillis()
             val dupNums = episodes.groupBy { it.episode }
                 .filterValues { it.size > 1 }.keys
             logSuccess(config.id,
                 "EpiStats: selItems=${epItems.size} uniqHref=" +
                     (if (uniqHrefCount >= 0) uniqHrefCount else episodes.size) +
-                    " eps=${episodes.size} dupNums=$dupNums")
+                    " eps=${episodes.size} dupNums=$dupNums " +
+                    "(${System.currentTimeMillis() - __e0} ms)",
+                durationMs = System.currentTimeMillis() - __e0)
         }
         return if (config.reverseEpisodes && seasonDataScript ==
             null) episodes.reversed() else episodes

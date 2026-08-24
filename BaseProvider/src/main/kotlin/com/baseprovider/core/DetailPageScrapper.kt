@@ -41,6 +41,7 @@ class DetailPageScrapper(
             htmlCache = htmlCache)
         val currentUrl = url
         val key = config.id
+        val __t0 = System.currentTimeMillis()
         // Marker TV dihitung SEKALI di atas — dipakai fallback gate sekaligus
         // keputusan isMovie di bawah (tanpa mengubah semantik keduanya).
         val hasTvPath = config.tvPathSegment.isNotBlank() && currentUrl
@@ -203,7 +204,8 @@ class DetailPageScrapper(
             "Loaded page: ${metadata.title} (${if (isMovie) "Movie" else "Series"}, tags=${metadata.tags?.size ?: 0})",
             url = currentUrl, method = "load",
             selectors = "loadTitle, loadPoster, loadDesc, loadInfoBox"
-        )
+        , durationMs = System.currentTimeMillis() - __t0,
+                url = currentUrl)
 
         if (isMovie) {
             val watchUrl = if (config.watchButtons.isNotBlank()) {
