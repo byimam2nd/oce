@@ -9,7 +9,6 @@
     "TvSeries"
   ],
   "searchPathPattern": "{baseUrl}/?s={query}",
-  "mainPagePathPattern": "{baseUrl}/{data}/page/{page}",
   "moviePathSegment": "",
   "tvPathSegment": "/anime/",
   "reverseEpisodes": true,
@@ -22,172 +21,24 @@
   },
   "mainPageLists": [
     [
-      "anime",
-      "All Anime"
+      "anime/?status=&type=&order=popular&page=",
+      "Popular"
     ],
     [
-      "genres/action",
-      "Action"
+      "anime/?status=&type=&order=update&page=",
+      "Recently Updated"
     ],
     [
-      "genres/adventure",
-      "Adventure"
+      "anime/?sub=&order=latest&page=",
+      "Latest Added"
     ],
     [
-      "genres/chinese-style",
-      "Chinese Style"
+      "anime/?status=ongoing&type=&order=update&page=",
+      "Ongoing"
     ],
     [
-      "genres/chinese-horror",
-      "Chinese Horror"
-    ],
-    [
-      "genres/comedy",
-      "Comedy"
-    ],
-    [
-      "genres/comic-adaptation",
-      "Comic Adaptation"
-    ],
-    [
-      "genres/cultivation",
-      "Cultivation"
-    ],
-    [
-      "genres/dark-humor",
-      "Dark Humor"
-    ],
-    [
-      "genres/demon",
-      "Demon"
-    ],
-    [
-      "genres/demons",
-      "Demons"
-    ],
-    [
-      "genres/drama",
-      "Drama"
-    ],
-    [
-      "genres/encouraging",
-      "Encouraging"
-    ],
-    [
-      "genres/fantasy",
-      "Fantasy"
-    ],
-    [
-      "genres/folklore",
-      "Folklore"
-    ],
-    [
-      "genres/game",
-      "Game"
-    ],
-    [
-      "genres/historical",
-      "Historical"
-    ],
-    [
-      "genres/inspiring",
-      "Inspiring"
-    ],
-    [
-      "genres/isekai",
-      "Isekai"
-    ],
-    [
-      "genres/magic",
-      "Magic"
-    ],
-    [
-      "genres/man",
-      "Man"
-    ],
-    [
-      "genres/martial-arts",
-      "Martial Arts"
-    ],
-    [
-      "genres/monsters",
-      "Monsters"
-    ],
-    [
-      "genres/mystery",
-      "Mystery"
-    ],
-    [
-      "genres/mythology",
-      "Mythology"
-    ],
-    [
-      "genres/novel",
-      "Novel"
-    ],
-    [
-      "genres/novel-adaptation",
-      "Novel Adaptation"
-    ],
-    [
-      "genres/over-power",
-      "Over Power"
-    ],
-    [
-      "genres/reincarnation",
-      "Reincarnation"
-    ],
-    [
-      "genres/romance",
-      "Romance"
-    ],
-    [
-      "genres/school",
-      "School"
-    ],
-    [
-      "genres/sci-fi-urban-cultivation",
-      "Sci-Fi Urban Cultivation"
-    ],
-    [
-      "genres/sci-fi",
-      "Sci-Fi"
-    ],
-    [
-      "genres/shounen",
-      "Shounen"
-    ],
-    [
-      "genres/slice-of-life",
-      "Slice of Life"
-    ],
-    [
-      "genres/super-power",
-      "Super Power"
-    ],
-    [
-      "genres/supernatural",
-      "Supernatural"
-    ],
-    [
-      "genres/time-travel",
-      "Time Travel"
-    ],
-    [
-      "genres/vitality-themed",
-      "Vitality Themed"
-    ],
-    [
-      "genres/war",
-      "War"
-    ],
-    [
-      "genres/wuxia",
-      "Wuxia"
-    ],
-    [
-      "genres/xianxia",
-      "Xianxia"
+      "anime/?status=completed&type=&order=update&page=",
+      "Completed"
     ]
   ],
   "searchItems": "article.bs, article.item",
