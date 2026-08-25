@@ -32,6 +32,9 @@ data class ProviderConfig(
     // berisi posting dewasa yg ikut muncul di pencarian & pecah sebagai
     // series palsu).
     val excludeUrlPatterns: String = "",
+    // Timeout untuk APIHolder.getTracker dalam milliseconds (Long agar cocok
+    // langsung dengan withTimeoutOrNull tanpa konversi).
+    val trackerTimeoutMs: Long = 300L,
     val tvPathSegment: String = "/anime/",
     val episodeDataUrlPattern: String = "{url}",
 

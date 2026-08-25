@@ -10,7 +10,7 @@ cloudstream {
 
     tvTypes = listOf("Anime")
     iconUrl =
-        "https://animexin.dev/wp-content/uploads/2023/03/cropped-LogoMakr_1RyN7Y-1-32x32.png"
+        "https://animexin.dev/wp-content/uploads/2026/01/cropped-New-Logo-e1768365053967-192x192.png"
 
     isCrossPlatform = false
 }

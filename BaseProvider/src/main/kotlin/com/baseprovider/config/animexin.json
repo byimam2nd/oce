@@ -4,10 +4,7 @@
   "mainUrl": "https://animexin.dev",
   "mirrorUrls": [],
   "lang": "id",
-  "supportedTypes": [
-    "Anime",
-    "TvSeries"
-  ],
+  "supportedTypes": ["Anime", "AnimeMovie", "TvSeries"],
   "searchPathPattern": "{baseUrl}/?s={query}",
   "moviePathSegment": "",
   "tvPathSegment": "/anime/",
@@ -22,7 +19,7 @@
   "mainPageLists": [
     [
       "anime/?status=&type=&order=popular&page=",
-      "Popular"
+      "Popular Donghua"
     ],
     [
       "anime/?status=&type=&order=update&page=",

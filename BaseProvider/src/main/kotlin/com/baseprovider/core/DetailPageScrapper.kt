@@ -33,10 +33,19 @@ class DetailPageScrapper(
 ) {
     private val htmlCache = ExpiringCache<Document>(config.cacheTtlMinutes * 60 * 1000L)
 
-    suspend fun load(url: String): LoadResponse = loadRecursive(url, 0)
+    suspend fun load(url: String): LoadResponse {
+        val visited = mutableSetOf(normalizeUrl(url))
+        return loadRecursive(url, 0, visited)
+    }
 
-    private suspend fun loadRecursive(url: String,
-        depth: Int): LoadResponse {
+    private fun normalizeUrl(url: String): String =
+        url.substringBefore("#").trimEnd('/')
+
+    private suspend fun loadRecursive(
+        url: String,
+        depth: Int,
+        visited: MutableSet<String>
+    ): LoadResponse {
         val document = fetchDocument(url, config, referer = config.mainUrl,
             htmlCache = htmlCache)
         val currentUrl = url
@@ -61,58 +70,40 @@ class DetailPageScrapper(
         val epItems = if (config.episodeItems.isNotBlank()) SelectorResolver
             .select(document, config.episodeItems, "${config.id}:episodeItems")
             else org.jsoup.select.Elements()
-        // Adaptive fallback: selector episodeItems gagal (struktur situs berubah),
-        // tapi halaman tetap memuat link-link episode (pola /eps/, -episode-, dll).
-        // Tanpa fallback ini epItems kosong -> isMovie=true -> tampil hanya 1 video.
-        //
-        // Gate movie — sinyal KONTEN dulu (selector yang sudah ada), URL sebagai
-        // lapisan cadangan. Semua lapisan bersifat TAMBAHAN:
-        //  1. hasOnPagePlayer : linkOptions selector COCOK di halaman ini =
-        //     player tab langsung ada -> halaman tonton tunggal (film). Ini
-        //     sinyal konten utama; diskriminator tema muvipro: landing series
-        //     tidak punya player tab, film punya.
-        //  2. looksLikeMovieUrl: slug-root -YYYY tanpa marker TV.
-        //  3. depthOneRoot + tvPathSegment: situs beregmen series khusus,
-        //     slug root tanpa indikator TV = film (cakup film tanpa tahun).
+
+        // Player tab ada di halaman? (dipakai detector sebagai salah satu sinyal)
         val hasOnPagePlayer = config.linkOptions.isNotBlank() && runCatching {
             config.linkOptions.split(',').any {
                 document.selectFirst(it.trim()) != null
             }
         }.getOrDefault(false)
-        val depthOneRoot = runCatching {
-            java.net.URI(currentUrl).path?.trim('/')?.indexOf('/') == -1
-        }.getOrDefault(false)
-        // Arbitrase konten (lapisan 1): player tab ADA + tanpa indikator TV =
-        // halaman tonton tunggal. Elemen episodeItems yang cocok di halaman
-        // seperti ini adalah KONTAMINASI relocate/fingerprint lintas-halaman
-        // (kasus /sacrifice-2026/: selItems=2 palsu) — diabaikan, dan halaman
-        // diputuskan film terlepas dari daftar liar itu.
-        val singleVideoPage = hasOnPagePlayer && !hasTvPath && !urlLooksTv
-        val movieGateSkipFallback = singleVideoPage ||
-            mapper.looksLikeMovieUrl(currentUrl) ||
-            (config.tvPathSegment.isNotBlank() && !hasTvPath && !urlLooksTv &&
-                depthOneRoot)
-        val episodeLinks = if (epItems.isEmpty() &&
-            !movieGateSkipFallback &&
+
+        // Fallback episode links: deteksi berbasis pola URL (bukan selector)
+        val fallbackEpisodeLinks = if (epItems.isEmpty() &&
             config.supportedTypes.any { it != TvType.Movie }) {
             SelectorResolver.detectEpisodeLinks(document, currentUrl)
-        } else {
-            if (singleVideoPage && epItems.isNotEmpty()) {
-                logSuccess(key,
-                    "MovieGateSkip: $singleVideoPage — abaikan ${epItems.size} " +
-                        "elemen episode liar (player tab ada, tanpa marker TV)")
-            }
-            org.jsoup.select.Elements()
-        }
-        val effectiveEpItems = if (singleVideoPage) org.jsoup.select.Elements()
-            else if (epItems.isNotEmpty()) epItems else episodeLinks
+        } else org.jsoup.select.Elements()
+
+        // Season container dicek SEBELUM detector (dibutuhkan sebagai sinyal)
+        val seasonDataScript = if (config.seasonContainer
+            .isNotBlank()) SelectorResolver.selectFirst(document,
+                config.seasonContainer, "${config.id}:seasonContainer") else null
+
+        // ── MovieSeriesDetector: semua logika movie/series terpusat di sini ──
+        val detection = MovieSeriesDetector.detect(
+            url = currentUrl,
+            config = config,
+            epItems = epItems,
+            hasOnPagePlayer = hasOnPagePlayer,
+            seasonDataScript = seasonDataScript,
+            fallbackEpisodeLinks = fallbackEpisodeLinks,
+            looksLikeMovieUrlFn = mapper::looksLikeMovieUrl
+        )
+        val effectiveEpItems = detection.effectiveEpItems
+
         if (depth < 2 && config.followLinkSelector.isNotBlank()) {
             val needsFollow = !titlePresent || !posterPresent
             val epHints = effectiveEpItems.isNotEmpty()
-            // Follow jika metadata kritis kurang ATAU episode tidak ada di
-            // page-1 — follow selector biasanya menunjuk halaman yang
-            // melengkapi data. Tanpa cek episode, halaman dengan title OK
-            // tapi episode kosong akan kehilangan daftar episode.
             val missingData = needsFollow || !epHints
             val nextAnchor = if (missingData) SelectorResolver.selectFirst(
                 document, config.followLinkSelector,
@@ -120,28 +111,26 @@ class DetailPageScrapper(
             val nextHref = nextAnchor?.attr("href")
             if (!nextHref.isNullOrBlank() && !nextHref.startsWith("javascript:", true)) {
                 val nextUrl = fixUrlSmart(nextHref, currentUrl)
-                if (nextUrl != currentUrl && nextUrl !=
-                    url) return loadRecursive(nextUrl, depth + 1)
+                val normalizedNext = normalizeUrl(nextUrl)
+                if (normalizedNext != normalizeUrl(currentUrl) &&
+                    normalizedNext != normalizeUrl(url) &&
+                    visited.add(normalizedNext)
+                ) {
+                    return loadRecursive(nextUrl, depth + 1, visited)
+                }
             }
         }
 
         val metadata = mapper.extractMetadata(document, currentUrl)
 
-        val seasonDataScript = if (config.seasonContainer
-            .isNotBlank()) SelectorResolver.selectFirst(document,
-                config.seasonContainer, "${config.id}:seasonContainer") else null
-        // Heuristic isMovie tidak hanya mengandung epItems.isEmpty(): URL yang
-        // jelas tv-like (/tv/, /series/, /anime/, /episode/) menandakan series
-        // walaupun selector episode gagal match. Movie -> moviePathSegment atau
-        // tidak ada indikator series sama sekali.
-        val isMovie = (seasonDataScript == null) && !hasTvPath && !urlLooksTv && (
-            (config.moviePathSegment.isNotBlank() && currentUrl
-                .contains(config.moviePathSegment))
-                || effectiveEpItems.isEmpty()
-        )
-        logDebug(key,
-            "load[$currentUrl] isMovie=$isMovie singleVideoPage=$singleVideoPage " +
-                "tvPath=$hasTvPath urlLooksTv=$urlLooksTv epEff=${effectiveEpItems.size}")
+        // ── Tipe dari MovieSeriesDetector (terpusat, ter-log dengan reason) ──
+        val isMovie = detection.isMovie
+        logSuccess(key,
+            "Detection: type=${if (isMovie) "MOVIE" else "SERIES"} " +
+                "reason=${detection.reason} rawEps=${detection.rawEpCount} " +
+                "validEps=${detection.validEpCount} " +
+                "(${System.currentTimeMillis() - __t0} ms)")
+
         val type = if (isMovie) TvType.Movie else if (config.supportedTypes
             .contains(TvType.Anime)) TvType.Anime else TvType.TvSeries
 
@@ -179,7 +168,7 @@ class DetailPageScrapper(
                 // AniList/MAL/TMDb masih berjalan, langsung lanjut tanpa tracker
                 // — metadata halaman (poster/plot/episode dari HTML) tetap tampil
                 // tanpa menunggu. Tidak ada yang memblokir render.
-                withTimeoutOrNull(300L) {
+                withTimeoutOrNull(config.trackerTimeoutMs) {
                     try {
                         APIHolder.getTracker(listOf(metadata.title),
                             TrackerType.getTypes(type), metadata.year,

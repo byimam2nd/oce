@@ -52,6 +52,7 @@ fun fromJson(id: String, json: JSONObject): ProviderConfig {
         movieUrlRegex = json.optString("movieUrlRegex", ""),
         selfExtract = json.optBoolean("selfExtract", false),
         excludeUrlPatterns = json.optString("excludeUrlPatterns", ""),
+        trackerTimeoutMs = json.optLong("trackerTimeoutMs", 300L),
         tvPathSegment = json.optString("tvPathSegment", "/anime/"),
         episodeDataUrlPattern = json.optString("episodeDataUrlPattern", "{url}"),
         reverseEpisodes = json.optBoolean("reverseEpisodes", true),
