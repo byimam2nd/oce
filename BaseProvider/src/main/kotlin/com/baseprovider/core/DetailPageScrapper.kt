@@ -61,55 +61,45 @@ class DetailPageScrapper(
         val epItems = if (config.episodeItems.isNotBlank()) SelectorResolver
             .select(document, config.episodeItems, "${config.id}:episodeItems")
             else org.jsoup.select.Elements()
-        // Adaptive fallback: selector episodeItems gagal (struktur situs berubah),
-        // tapi halaman tetap memuat link-link episode (pola /eps/, -episode-, dll).
-        // Tanpa fallback ini epItems kosong -> isMovie=true -> tampil hanya 1 video.
-        //
-        // Gate movie — sinyal KONTEN dulu (selector yang sudah ada), URL sebagai
-        // lapisan cadangan. Semua lapisan bersifat TAMBAHAN:
-        //  1. hasOnPagePlayer : linkOptions selector COCOK di halaman ini =
-        //     player tab langsung ada -> halaman tonton tunggal (film). Ini
-        //     sinyal konten utama; diskriminator tema muvipro: landing series
-        //     tidak punya player tab, film punya.
-        //  2. looksLikeMovieUrl: slug-root -YYYY tanpa marker TV.
-        //  3. depthOneRoot + tvPathSegment: situs beregmen series khusus,
-        //     slug root tanpa indikator TV = film (cakup film tanpa tahun).
-        val hasOnPagePlayer = config.linkOptions.isNotBlank() && runCatching {
-            config.linkOptions.split(',').any {
-                document.selectFirst(it.trim()) != null
+
+        // ── Validasi konten: apakah elemen episode berasal dari series ini? ──
+        // Cek: slug dari currentUrl harus muncul di href mayoritas epItems.
+        // Jika YA -> daftar episode sungguhan (berapa pun jumlahnya).
+        // Jika TIDAK -> kontaminasi relocate/fingerprint -> abaikan.
+        // Kasus THOG: slug "tales-of-herding-gods" muncul di 97 href → SERIES ✓
+        // Kasus DM21 Sacrifice: slug "sacrifice-2026" TIDAK ada di href
+        //   "/tv/ludwig-season-2-2026/" → kontaminasi → MOVIE ✓
+        val currentSlug = runCatching {
+            java.net.URI(currentUrl).path?.trim('/')?.substringBefore('/') ?: ""
+        }.getOrDefault("")
+
+        fun hasRealEpisodes(items: org.jsoup.select.Elements): Boolean {
+            if (items.isEmpty()) return false
+            if (currentSlug.isBlank()) return items.isNotEmpty()
+            var match = 0
+            for (ep in items) {
+                val a = ep.selectFirst("a[href]") ?: ep.takeIf { it.tagName() == "a" }
+                val href = a?.attr("href") ?: ""
+                if (href.contains(currentSlug, ignoreCase = true)) match++
             }
-        }.getOrDefault(false)
-        val depthOneRoot = runCatching {
-            java.net.URI(currentUrl).path?.trim('/')?.indexOf('/') == -1
-        }.getOrDefault(false)
-        // Arbitrase konten (lapisan 1): player tab ADA + tanpa indikator TV =
-        // halaman tonton tunggal. HANYA berlaku utk provider yang mendukung
-        // Movie — provider pure-series (Animexin: Anime+TvSeries saja)
-        // TIDAK PERNAH dianggap film, apa pun yang ada di halamannya.
-        // Syarat epItems.size < 5 sebagai defense-in-depth tambahan.
-        val providerSupportsMovies = config.supportedTypes.any {
-            it == TvType.Movie || it == TvType.AnimeMovie
+            return match >= (items.size + 1) / 2 // ≥50% cocok = sungguhan
         }
-        val singleVideoPage = hasOnPagePlayer && !hasTvPath && !urlLooksTv &&
-            providerSupportsMovies && epItems.size < 5
-        val movieGateSkipFallback = singleVideoPage ||
-            mapper.looksLikeMovieUrl(currentUrl) ||
-            (config.tvPathSegment.isNotBlank() && !hasTvPath && !urlLooksTv &&
-                depthOneRoot)
-        val episodeLinks = if (epItems.isEmpty() &&
-            !movieGateSkipFallback &&
+
+        // Adaptive fallback detectEpisodeLinks — hanya jika epItems kosong
+        // ATAU elemen yang ada bukan episode dari series ini (kontaminasi).
+        val episodeLinks = if ((epItems.isEmpty() || !hasRealEpisodes(epItems)) &&
             config.supportedTypes.any { it != TvType.Movie }) {
+            if (epItems.isNotEmpty()) {
+                logSuccess(key,
+                    "EpisodeFilter: ${epItems.size} elemen BUKAN episode dari " +
+                        "series ini (slug='$currentSlug') — abaikan")
+            }
             SelectorResolver.detectEpisodeLinks(document, currentUrl)
         } else {
-            if (singleVideoPage && epItems.isNotEmpty()) {
-                logSuccess(key,
-                    "MovieGateSkip: $singleVideoPage — abaikan ${epItems.size} " +
-                        "elemen episode liar (player tab ada, tanpa marker TV)")
-            }
             org.jsoup.select.Elements()
         }
-        val effectiveEpItems = if (singleVideoPage) org.jsoup.select.Elements()
-            else if (epItems.isNotEmpty()) epItems else episodeLinks
+        val effectiveEpItems = if (epItems.isNotEmpty() &&
+            hasRealEpisodes(epItems)) epItems else episodeLinks
         if (depth < 2 && config.followLinkSelector.isNotBlank()) {
             val needsFollow = !titlePresent || !posterPresent
             val epHints = effectiveEpItems.isNotEmpty()
@@ -144,7 +134,7 @@ class DetailPageScrapper(
                 || effectiveEpItems.isEmpty()
         )
         logDebug(key,
-            "load[$currentUrl] isMovie=$isMovie singleVideoPage=$singleVideoPage " +
+            "load[$currentUrl] isMovie=$isMovie " +
                 "tvPath=$hasTvPath urlLooksTv=$urlLooksTv epEff=${effectiveEpItems.size}")
         val type = if (isMovie) TvType.Movie else if (config.supportedTypes
             .contains(TvType.Anime)) TvType.Anime else TvType.TvSeries
