@@ -37,6 +37,14 @@
       "source": "meta",
       "filter": ".m3u8",
       "store": ""
+    },
+    {
+      "step": "webview",
+      "url": "{url}",
+      "referer": "",
+      "headers": {},
+      "interceptPattern": "(m3u8|mp4)",
+      "timeoutMs": 20000
     }
   ]
 }
