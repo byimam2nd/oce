@@ -15,6 +15,7 @@ object ConfigRegistry {
         "IndoDrama21" to "indodrama21",
         "LayarKaca21" to "layarkaca21",
         "Samehadaku" to "samehadaku",
+        "AnimexinDev" to "animexindev",
     )
 
     private val globalConfig: ProviderConfig by lazy { loadBundled("global") ?: ProviderConfig(id = "GLOBAL") }
