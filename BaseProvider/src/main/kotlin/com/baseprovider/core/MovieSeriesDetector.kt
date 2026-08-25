@@ -4,6 +4,7 @@ import com.baseprovider.config.ProviderConfig
 import com.baseprovider.model.DetectionReason
 import com.baseprovider.model.DetectionResult
 import org.jsoup.nodes.Document
+import org.jsoup.nodes.Element
 import org.jsoup.select.Elements
 
 /**
