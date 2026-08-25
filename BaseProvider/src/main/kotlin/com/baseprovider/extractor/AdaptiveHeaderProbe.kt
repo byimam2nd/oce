@@ -72,7 +72,8 @@ object AdaptiveHeaderProbe {
      * reset / timeout — BUKAN bukti link rusak).
      */
     private sealed class ProbeResult {
-        data class Ok(val ms: Long, val captured: Captured? = null) : ProbeResult()
+        data class Ok(val ms: Long, val bytesRead: Long = 0L,
+                      val captured: Captured? = null) : ProbeResult()
         data object HttpReject : ProbeResult()
         data object NetworkError : ProbeResult()
     }
@@ -218,8 +219,11 @@ object AdaptiveHeaderProbe {
         }.toMutableList()
         val host = runCatching { URI(url).host }.getOrNull() ?: url.take(60)
         var anyNetworkError = false
+        data class Cand(val combo: Combo, val res: ProbeResult.Ok) {
+            fun kbps(): Double = res.bytesRead * 1000.0 / (res.ms.coerceAtLeast(1))
+        }
+        val oks = mutableListOf<Cand>()
         while (jobs.isNotEmpty()) {
-            // Ambil hasil combo yang selesai PALING AWAL (via select).
             val done = select {
                 jobs.forEach { job -> job.onAwait { job } }
             }
@@ -227,22 +231,15 @@ object AdaptiveHeaderProbe {
             val (combo, result) = done.await()
             when (result) {
                 is ProbeResult.Ok -> {
-                    // Combo valid pertama menang; cancel probe yang masih jalan.
-                    com.baseprovider.log.logSuccess("AdaptiveProbe",
-                        "$host: PROBE WIN mode=${combo.mode} ${result.ms}ms url=$url")
-                    Log.d(
-                        "AdaptiveProbe",
-                        "$host: WIN ${combo.mode} ${result.ms}ms"
-                    )
-                    jobs.forEach {
-                        it.cancel()
-                        Log.d("AdaptiveProbe", "$host: cancelled")
-                    }
-                    return@coroutineScope Decision(
-                        combo.mode, combo.referer, combo.headers, valid = true,
-                        capturedBody = result.captured?.text,
-                        bodyTruncated = result.captured?.truncated ?: false
-                    )
+                    // Kumpulkan SEMUA kandidat valid: pemenang dipilih dari
+                    // THROUGHPUT terbaik (bytes/ms), bukan yang pertama selesai
+                    // — kasus rumble.com: mode cepat merespons tapi kena throttle
+                    // saat streaming segmen (buffering lambat), mode lain lebih
+                    // lancar. Pemilihan by-throughput menjawab keluhan itu.
+                    Log.d("AdaptiveProbe",
+                        "$host: ${combo.mode} OK ${result.ms}ms " +
+                            "${result.bytesRead}B")
+                    oks.add(Cand(combo, result))
                 }
                 is ProbeResult.HttpReject ->
                     Log.d("AdaptiveProbe", "$host: ${combo.mode} HTTP-reject")
@@ -251,6 +248,26 @@ object AdaptiveHeaderProbe {
                     Log.d("AdaptiveProbe", "$host: ${combo.mode} network-error")
                 }
             }
+        }
+        if (oks.isNotEmpty()) {
+            val win = oks.maxWithOrNull(
+                compareBy({ it.kbps() }, { -it.res.ms })
+            )!!
+            oks.filter { it !== win }.forEach {
+                com.baseprovider.log.logDebug("AdaptiveProbe",
+                    "$host: kalah throughput mode=${it.combo.mode} " +
+                        "${"%.0f".format(it.kbps())} KB/s")
+            }
+            com.baseprovider.log.logSuccess("AdaptiveProbe",
+                "$host: PROBE WIN mode=${win.combo.mode} ${win.res.ms}ms " +
+                    "%.0f KB/s (${win.res.bytesRead}B) url=$url"
+                        .format(win.kbps()),
+                url = url)
+            return@coroutineScope Decision(
+                win.combo.mode, win.combo.referer, win.combo.headers, valid = true,
+                capturedBody = win.res.captured?.text,
+                bodyTruncated = win.res.captured?.truncated ?: false
+            )
         }
         if (anyNetworkError) {
             // Ada kegagalan jaringan (bukan HTTP reject): kirim BARE tetap
@@ -299,6 +316,7 @@ object AdaptiveHeaderProbe {
                             if (text.isNotEmpty()) {
                                 return ProbeResult.Ok(
                                     System.currentTimeMillis() - start,
+                                    total,
                                     Captured(text, total >= PROBE_READ_BYTES)
                                 )
                             }
@@ -309,6 +327,8 @@ object AdaptiveHeaderProbe {
                                 if (n <= 0) break
                                 total += n
                             }
+                            return ProbeResult.Ok(
+                                System.currentTimeMillis() - start, total)
                         }
                     }
                 } catch (e: Exception) {
