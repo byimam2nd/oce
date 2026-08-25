@@ -83,11 +83,15 @@ class DetailPageScrapper(
             java.net.URI(currentUrl).path?.trim('/')?.indexOf('/') == -1
         }.getOrDefault(false)
         // Arbitrase konten (lapisan 1): player tab ADA + tanpa indikator TV =
-        // halaman tonton tunggal. TAPI jika elemen episode BANYAK (>=5),
-        // itu daftar episode sungguhan — player tab mungkin hanya preview
-        // atau embed tema. Kasus Animexin THOG: 97 eps + player tab ada.
+        // halaman tonton tunggal. HANYA berlaku utk provider yang mendukung
+        // Movie — provider pure-series (Animexin: Anime+TvSeries saja)
+        // TIDAK PERNAH dianggap film, apa pun yang ada di halamannya.
+        // Syarat epItems.size < 5 sebagai defense-in-depth tambahan.
+        val providerSupportsMovies = config.supportedTypes.any {
+            it == TvType.Movie || it == TvType.AnimeMovie
+        }
         val singleVideoPage = hasOnPagePlayer && !hasTvPath && !urlLooksTv &&
-            epItems.size < 5
+            providerSupportsMovies && epItems.size < 5
         val movieGateSkipFallback = singleVideoPage ||
             mapper.looksLikeMovieUrl(currentUrl) ||
             (config.tvPathSegment.isNotBlank() && !hasTvPath && !urlLooksTv &&
