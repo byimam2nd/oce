@@ -83,11 +83,11 @@ class DetailPageScrapper(
             java.net.URI(currentUrl).path?.trim('/')?.indexOf('/') == -1
         }.getOrDefault(false)
         // Arbitrase konten (lapisan 1): player tab ADA + tanpa indikator TV =
-        // halaman tonton tunggal. Elemen episodeItems yang cocok di halaman
-        // seperti ini adalah KONTAMINASI relocate/fingerprint lintas-halaman
-        // (kasus /sacrifice-2026/: selItems=2 palsu) — diabaikan, dan halaman
-        // diputuskan film terlepas dari daftar liar itu.
-        val singleVideoPage = hasOnPagePlayer && !hasTvPath && !urlLooksTv
+        // halaman tonton tunggal. TAPI jika elemen episode BANYAK (>=5),
+        // itu daftar episode sungguhan — player tab mungkin hanya preview
+        // atau embed tema. Kasus Animexin THOG: 97 eps + player tab ada.
+        val singleVideoPage = hasOnPagePlayer && !hasTvPath && !urlLooksTv &&
+            epItems.size < 5
         val movieGateSkipFallback = singleVideoPage ||
             mapper.looksLikeMovieUrl(currentUrl) ||
             (config.tvPathSegment.isNotBlank() && !hasTvPath && !urlLooksTv &&
