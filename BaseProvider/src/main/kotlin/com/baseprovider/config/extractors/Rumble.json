@@ -39,6 +39,35 @@
       "source": "response",
       "filter": ".m3u8",
       "universal": false
+    },
+    {
+      "step": "regex",
+      "comment": "Struktur baru 2026-08: url video pindah dari blok {mp4..evt}",
+      "pattern": "\"url\"\\s*:\\s*\"(https?:[^\"]*(?:\\.m3u8|\\.mp4|chunklist)[^\"]*)\"",
+      "group": 1,
+      "source": "response",
+      "filter": "",
+      "universal": false,
+      "store": ""
+    },
+    {
+      "step": "regex",
+      "comment": "Jaring lebar: semua url media apa pun bentuk JSON-nya",
+      "pattern": "",
+      "group": 1,
+      "source": "response",
+      "filter": ".m3u8",
+      "universal": true,
+      "store": ""
+    },
+    {
+      "step": "webview",
+      "comment": "Fallback device: rumble kadang me-reset koneksi non-browser TLS",
+      "url": "{url}",
+      "referer": "",
+      "headers": {},
+      "interceptPattern": "(m3u8|mp4)",
+      "timeoutMs": 20000
     }
   ]
 }
