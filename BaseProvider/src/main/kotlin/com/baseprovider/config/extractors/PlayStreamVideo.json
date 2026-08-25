@@ -1,0 +1,40 @@
+{
+  "id": "PlayStreamVideo",
+  "name": "PlayStreamVideo",
+  "mainUrl": "https://notice.playstream.video",
+  "requiresReferer": true,
+  "variants": [
+    {
+      "name": "default",
+      "headers": {}
+    }
+  ],
+  "steps": [
+    {
+      "step": "fetch",
+      "url": "{url}",
+      "referer": "",
+      "headers": {},
+      "store": "response"
+    },
+    {
+      "step": "regex",
+      "pattern": "",
+      "group": 1,
+      "source": "response",
+      "filter": "",
+      "universal": true,
+      "store": ""
+    },
+    {
+      "step": "webview",
+      "url": "{url}",
+      "referer": "",
+      "headers": {},
+      "interceptPattern": "(m3u8|mp4)",
+      "timeoutMs": 20000
+    }
+  ],
+  "videoReferer": "",
+  "outputFilter": "none"
+}

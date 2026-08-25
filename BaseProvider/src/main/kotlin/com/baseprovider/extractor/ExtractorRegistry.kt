@@ -55,7 +55,8 @@ object ProviderExtractors {
         "EmbedPyrox",
         "VeevTo",
         "SamehadakuPage",
-        "CyberJunkiePage"
+        "CyberJunkiePage",
+        "PlayStreamVideo"
     )
 
     private fun buildList(): List<ExtractorApi> {

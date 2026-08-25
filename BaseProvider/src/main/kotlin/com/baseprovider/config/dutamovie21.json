@@ -16,7 +16,7 @@
   "searchPathPattern": "{baseUrl}/page/{page}/?s={query}",
   "mainPagePathPattern": "{baseUrl}/{data}/page/{page}",
   "moviePathSegment": "/movie/",
-  "movieUrlRegex": "-\\d{4}/?$",
+  "movieUrlRegex": "-\\d{4}/?$|/blog/[^/]+/?$",
   "tvPathSegment": "/tv/",
   "reverseEpisodes": false,
   "useDocumentLarge": true,
@@ -128,5 +128,5 @@
   "yearSelector": "div.movie-info h1",
   "yearExtractorRegex": "\\d, (\\d+)",
   "selfExtract": true,
-  "excludeUrlPatterns": "^https?://[^/]+/blog/"
+  "excludeUrlPatterns": ""
 }
