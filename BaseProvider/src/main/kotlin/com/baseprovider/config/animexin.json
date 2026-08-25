@@ -24,6 +24,170 @@
     [
       "anime",
       "All Anime"
+    ],
+    [
+      "genres/action",
+      "Action"
+    ],
+    [
+      "genres/adventure",
+      "Adventure"
+    ],
+    [
+      "genres/chinese-style",
+      "Chinese Style"
+    ],
+    [
+      "genres/chinese-horror",
+      "Chinese Horror"
+    ],
+    [
+      "genres/comedy",
+      "Comedy"
+    ],
+    [
+      "genres/comic-adaptation",
+      "Comic Adaptation"
+    ],
+    [
+      "genres/cultivation",
+      "Cultivation"
+    ],
+    [
+      "genres/dark-humor",
+      "Dark Humor"
+    ],
+    [
+      "genres/demon",
+      "Demon"
+    ],
+    [
+      "genres/demons",
+      "Demons"
+    ],
+    [
+      "genres/drama",
+      "Drama"
+    ],
+    [
+      "genres/encouraging",
+      "Encouraging"
+    ],
+    [
+      "genres/fantasy",
+      "Fantasy"
+    ],
+    [
+      "genres/folklore",
+      "Folklore"
+    ],
+    [
+      "genres/game",
+      "Game"
+    ],
+    [
+      "genres/historical",
+      "Historical"
+    ],
+    [
+      "genres/inspiring",
+      "Inspiring"
+    ],
+    [
+      "genres/isekai",
+      "Isekai"
+    ],
+    [
+      "genres/magic",
+      "Magic"
+    ],
+    [
+      "genres/man",
+      "Man"
+    ],
+    [
+      "genres/martial-arts",
+      "Martial Arts"
+    ],
+    [
+      "genres/monsters",
+      "Monsters"
+    ],
+    [
+      "genres/mystery",
+      "Mystery"
+    ],
+    [
+      "genres/mythology",
+      "Mythology"
+    ],
+    [
+      "genres/novel",
+      "Novel"
+    ],
+    [
+      "genres/novel-adaptation",
+      "Novel Adaptation"
+    ],
+    [
+      "genres/over-power",
+      "Over Power"
+    ],
+    [
+      "genres/reincarnation",
+      "Reincarnation"
+    ],
+    [
+      "genres/romance",
+      "Romance"
+    ],
+    [
+      "genres/school",
+      "School"
+    ],
+    [
+      "genres/sci-fi-urban-cultivation",
+      "Sci-Fi Urban Cultivation"
+    ],
+    [
+      "genres/sci-fi",
+      "Sci-Fi"
+    ],
+    [
+      "genres/shounen",
+      "Shounen"
+    ],
+    [
+      "genres/slice-of-life",
+      "Slice of Life"
+    ],
+    [
+      "genres/super-power",
+      "Super Power"
+    ],
+    [
+      "genres/supernatural",
+      "Supernatural"
+    ],
+    [
+      "genres/time-travel",
+      "Time Travel"
+    ],
+    [
+      "genres/vitality-themed",
+      "Vitality Themed"
+    ],
+    [
+      "genres/war",
+      "War"
+    ],
+    [
+      "genres/wuxia",
+      "Wuxia"
+    ],
+    [
+      "genres/xianxia",
+      "Xianxia"
     ]
   ],
   "searchItems": "article.bs, article.item",
