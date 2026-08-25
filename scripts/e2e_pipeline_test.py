@@ -602,7 +602,7 @@ def sweep(provider_id):
 
 def run_sweep_all():
     providers = ["Anichin", "Animasu", "Donghuastream", "Dutamovie21",
-                 "IndoDrama21", "LayarKaca21", "Samehadaku", "AnimexinDev"]
+                 "IndoDrama21", "LayarKaca21", "Samehadaku", "Animexin"]
     results = {}
     for pid in providers:
         try:
