@@ -89,6 +89,8 @@ class ProviderMapper(
     // L4: regex movieUrlRegex dikompilasi sekali per pola unik.
     private val movieUrlRegexCache = java.util.concurrent.ConcurrentHashMap<String, Regex?>()
 
+    private val excludeRegexCache = java.util.concurrent.ConcurrentHashMap<String, Regex?>()
+
     // L4: regex hrefClean dikompilasi sekali per pola unik, tidak per elemen
     // (toSearchResult dipanggil untuk tiap item hasil search).
     private val compiledHrefClean = ConcurrentHashMap<String, Regex?>()
@@ -145,6 +147,20 @@ class ProviderMapper(
                 com.lagradost.api.Log.d("ProviderMapper",
                     "[$key] skip listing-url: $href")
                 return null
+            }
+            // Guard exclusion per-provider: sub-direktori non-katalog
+            // (kasus /blog/ Dutamovie21) jangan pernah jadi item.
+            for (patRaw in config.excludeUrlPatterns.split(',')) {
+                val pat = patRaw.trim()
+                if (pat.isBlank()) continue
+                val rx = excludeRegexCache.getOrPut(pat) {
+                    runCatching { Regex(pat, RegexOption.IGNORE_CASE) }.getOrNull()
+                }
+                if (rx != null && rx.containsMatchIn(href)) {
+                    com.lagradost.api.Log.d("ProviderMapper",
+                        "[$key] skip excluded-url: $href")
+                    return null
+                }
             }
             val poster = if (config.searchPoster.isNotBlank()) {
                 SelectorResolver.selectValidated(element, config.searchPoster, "$key:searchPoster", FieldType.POSTER) { it.safeExtractImage(config.attrImage) }

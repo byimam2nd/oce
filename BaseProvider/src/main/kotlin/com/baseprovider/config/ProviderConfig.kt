@@ -27,6 +27,11 @@ data class ProviderConfig(
     // episode itu sendiri ke extractor yang cocok dengan hostnya (untuk
     // situs yang menyuntik player via JS - kasus Samehadaku/wibufile).
     val selfExtract: Boolean = false,
+    // Regex (dipisah koma) URL yang DITOLAK menjadi item konten — utk
+    // memisahkan sub-direktori non-katalog (kasus Dutamovie21: /blog/
+    // berisi posting dewasa yg ikut muncul di pencarian & pecah sebagai
+    // series palsu).
+    val excludeUrlPatterns: String = "",
     val tvPathSegment: String = "/anime/",
     val episodeDataUrlPattern: String = "{url}",
 
