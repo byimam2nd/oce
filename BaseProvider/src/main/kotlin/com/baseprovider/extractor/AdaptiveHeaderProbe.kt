@@ -252,12 +252,25 @@ object AdaptiveHeaderProbe {
             }
         }
         if (oks.isNotEmpty()) {
-            val win = oks.maxWithOrNull(
+            var win = oks.maxWithOrNull(
                 compareBy({ it.kbps() }, { -it.res.ms })
             )!!
+            // Tie-breaker utk sampel mikro (<10KB): throughput tak terukur
+            // secara bermakna (playlist ~1KB). Prefer BROWSER_LIKE sebagai
+            // paling tahan deteksi HTTP-layer saat streaming segmen panjang.
+            if (win.res.bytesRead < 10_000L) {
+                oks.firstOrNull { it.combo.mode == Mode.BROWSER_LIKE }?.let {
+                    if (it !== win) {
+                        com.baseprovider.log.logDebug("AdaptiveProbe",
+                            "$host: sampel mikro (${win.res.bytesRead}B) -> " +
+                                "override ke BROWSER_LIKE")
+                        win = it
+                    }
+                }
+            }
             oks.filter { it !== win }.forEach {
                 com.baseprovider.log.logDebug("AdaptiveProbe",
-                    "$host: kalah throughput mode=${it.combo.mode} " +
+                    "$host: kalah mode=${it.combo.mode} " +
                         "${"%.0f".format(it.kbps())} KB/s")
             }
             com.baseprovider.log.logSuccess("AdaptiveProbe",
