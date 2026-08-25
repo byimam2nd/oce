@@ -220,7 +220,9 @@ object AdaptiveHeaderProbe {
         val host = runCatching { URI(url).host }.getOrNull() ?: url.take(60)
         var anyNetworkError = false
         data class Cand(val combo: Combo, val res: ProbeResult.Ok) {
-            fun kbps(): Double = res.bytesRead * 1000.0 / (res.ms.coerceAtLeast(1))
+            // KB/s sejati: bytes -> KB lalu bagi durasi detik
+            fun kbps(): Double =
+                (res.bytesRead / 1024.0) * 1000.0 / res.ms.coerceAtLeast(1)
         }
         val oks = mutableListOf<Cand>()
         while (jobs.isNotEmpty()) {
