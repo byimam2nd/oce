@@ -325,7 +325,7 @@ def pipeline(provider_id, item_url, expect_type=None, expect_ep96_dup=False, lab
     url_looks_tv_ = any(m in item_url.lower() for m in TV_MARKERS)
     tv_seg = cfgp.get("tvPathSegment","")
     depth1 = '/' not in urlparse(item_url).path.strip('/')
-    single_video = has_player and (tv_seg not in item_url) and not url_looks_tv_ and len(ep_sel) < 5
+    single_video = has_player and (tv_seg not in item_url) and not url_looks_tv_
     gate_movie = single_video or looks_like_movie(item_url, cfgp) or (
         bool(tv_seg) and tv_seg not in item_url and not url_looks_tv_ and depth1)
     if single_video and ep_sel:
