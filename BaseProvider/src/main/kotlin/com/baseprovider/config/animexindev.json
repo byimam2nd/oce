@@ -1,0 +1,54 @@
+{
+  "id": "AnimexinDev",
+  "name": "AnimexinDev",
+  "mainUrl": "https://animexin.dev",
+  "mirrorUrls": [],
+  "lang": "id",
+  "supportedTypes": [
+    "Anime",
+    "TvSeries"
+  ],
+  "searchPathPattern": "{baseUrl}/?s={query}",
+  "mainPagePathPattern": "{baseUrl}/{data}/page/{page}",
+  "moviePathSegment": "",
+  "tvPathSegment": "/anime/",
+  "reverseEpisodes": true,
+  "useDocumentLarge": true,
+  "selfExtract": false,
+  "iframeSelectors": "iframe[src]",
+  "globalHeaders": {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"
+  },
+  "mainPageLists": [
+    [
+      "anime",
+      "All Anime"
+    ]
+  ],
+  "searchItems": "article.bs, article.item",
+  "searchTitle": "div.tt, .tt a, h2.entry-title a, .entry-title a",
+  "searchHref": "a",
+  "searchPoster": "img[src], img[data-src]",
+  "loadTitle": "h1.entry-title",
+  "loadPoster": "meta[property=\"og:image\"], div.thumb img, img.wp-post-image",
+  "loadDesc": "div.entry-content, div.description, div.sinopsis",
+  "loadInfoBox": "div.content-moviedata, .spe, .info-content",
+  "loadTags": "a[rel=\"category tag\"], .genxed a, .mgen a",
+  "loadRating": ".rating strong, .rtg",
+  "loadTrailer": "",
+  "loadRecommend": "div.listupd article, #related ul li",
+  "episodeItems": ".eplister li",
+  "episodeHref": ".eplister li > a, a",
+  "episodeTitle": ".epl-title, .epl-name, a",
+  "episodeNum": ".epl-num, .ep-num",
+  "linkOptions": "option[data-index], option[value]",
+  "switchVideoSelector": "",
+  "actorItems": "",
+  "actorName": "",
+  "followLinkSelector": "",
+  "yearSelector": "",
+  "yearExtractorRegex": "",
+  "attrImage": "src",
+  "bloatRegex": ""
+}
