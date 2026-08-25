@@ -64,7 +64,7 @@ class MovieSeriesDetectorTest {
         }
         val r = detect(
             url = "https://animexin.dev/tales-of-herding-gods/",
-            epHtml = urls.joinToString("") { "<li><a href=\"$it\">Ep $it</a></li>" },
+            epHtml = urls.joinToString("") { "<div class=\"eplister\"><li><a href=\"$it\">Ep $it</a></li></div>" },
             hasPlayer = true
         )
         assertFalse("THOG Animexin root-slug harus SERIES", r.isMovie)
@@ -124,7 +124,7 @@ class MovieSeriesDetectorTest {
         }
         val r = detect(
             url = "https://animexin.dev/anime/test-show/",
-            epHtml = urls.joinToString("") { "<li><a href=\"$it\">Ep $it</a></li>" },
+            epHtml = urls.joinToString("") { "<div class=\"eplister\"><li><a href=\"$it\">Ep $it</a></li></div>" },
             hasPlayer = false
         )
         assertFalse("Tanpa player tetap SERIES", r.isMovie)
