@@ -56,7 +56,10 @@ object ProviderExtractors {
         "VeevTo",
         "SamehadakuPage",
         "CyberJunkiePage",
-        "PlayStreamVideo"
+        "PlayStreamVideo",
+        "PlayMogo",
+        "DTube",
+        "Odysee"
     )
 
     private fun buildList(): List<ExtractorApi> {
