@@ -10,6 +10,7 @@ buildscript {
         maven { url = uri("jitpack-local") }
         google()
         mavenCentral()
+        maven("https://jitpack.io")
         gradlePluginPortal()
     }
 
