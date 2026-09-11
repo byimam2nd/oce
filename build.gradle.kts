@@ -7,7 +7,7 @@ import java.util.Properties
 
 buildscript {
     repositories {
-        maven { url = uri("../jitpack-local") }
+        maven { url = uri("jitpack-local") }
         google()
         mavenCentral()
         gradlePluginPortal()
