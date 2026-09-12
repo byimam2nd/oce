@@ -101,7 +101,7 @@ subprojects {
 
         compileOptions {
             // Dynamic Java version
-            val javaVersionProp = localProperties.getProperty("JAVA_VERSION", "1_8")
+            val javaVersionProp = localProperties.getProperty("JAVA_VERSION", "11")
             val javaVersion = JavaVersion.valueOf("VERSION_$javaVersionProp")
             sourceCompatibility = javaVersion
             targetCompatibility = javaVersion
@@ -109,7 +109,7 @@ subprojects {
 
         tasks.withType<KotlinJvmCompile> {
             compilerOptions {
-                jvmTarget.set(JvmTarget.JVM_1_8)
+                jvmTarget.set(JvmTarget.JVM_11)
                 freeCompilerArgs.addAll(
                     "-Xno-call-assertions",
                     "-Xno-param-assertions",
