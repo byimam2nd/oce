@@ -1,0 +1,40 @@
+name: Supabase Log Cleanup
+
+# Hapus otomatis log yang sudah direview/difix dari tabel `logs` Supabase.
+# Sumber kebenaran: scripts/log_review_status.json — setiap id di file itu
+# dianggap selesai dan barisnya di-delete (lihat scripts/supabase_cleanup.py).
+# Log yang tersisa = failure yang belum diselesaikan (work queue).
+
+on:
+  schedule:
+    # Setiap Senin 03:00 UTC
+    - cron: "0 3 * * 1"
+  workflow_dispatch: {}
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout source (private)
+        uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run Supabase log cleanup
+        if: ${{ secrets.SUPABASE_ACCESS_TOKEN != '' }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: python3 scripts/supabase_cleanup.py --apply
+
+      - name: Skip cleanup (secret belum dikonfigurasi)
+        if: ${{ secrets.SUPABASE_ACCESS_TOKEN == '' }}
+        run: |
+          echo "⚠️  secrets.SUPABASE_ACCESS_TOKEN belum di-set di repo "
+          echo "    byimam2nd/oce-source → cleanup di-skip."
+          echo "    Tambahkan Management API PAT Supabase sebagai secret "
+          echo "    untuk mengaktifkan cleanup otomatis."
