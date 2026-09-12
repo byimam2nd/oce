@@ -8,13 +8,15 @@ name: Supabase Log Cleanup
 on:
   schedule:
     # Setiap Senin 03:00 UTC
-    - cron: "0 3 * * 1"
+    - cron: '0 3 * * 1'
   workflow_dispatch: {}
 
 jobs:
   cleanup:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
     steps:
       - name: Checkout source (private)
@@ -26,13 +28,11 @@ jobs:
           python-version: "3.12"
 
       - name: Run Supabase log cleanup
-        if: ${{ secrets.SUPABASE_ACCESS_TOKEN != '' }}
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        if: env.SUPABASE_ACCESS_TOKEN != ''
         run: python3 scripts/supabase_cleanup.py --apply
 
       - name: Skip cleanup (secret belum dikonfigurasi)
-        if: ${{ secrets.SUPABASE_ACCESS_TOKEN == '' }}
+        if: env.SUPABASE_ACCESS_TOKEN == ''
         run: |
           echo "⚠️  secrets.SUPABASE_ACCESS_TOKEN belum di-set di repo "
           echo "    byimam2nd/oce-source → cleanup di-skip."
