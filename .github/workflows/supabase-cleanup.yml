@@ -17,6 +17,8 @@ jobs:
     timeout-minutes: 10
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
     steps:
       - name: Checkout source (private)
@@ -28,13 +30,12 @@ jobs:
           python-version: "3.12"
 
       - name: Run Supabase log cleanup
-        if: env.SUPABASE_ACCESS_TOKEN != ''
+        if: env.SUPABASE_ACCESS_TOKEN != '' || env.SUPABASE_SERVICE_ROLE_KEY != ''
         run: python3 scripts/supabase_cleanup.py --apply
 
       - name: Skip cleanup (secret belum dikonfigurasi)
-        if: env.SUPABASE_ACCESS_TOKEN == ''
+        if: env.SUPABASE_ACCESS_TOKEN == '' && env.SUPABASE_SERVICE_ROLE_KEY == ''
         run: |
-          echo "⚠️  secrets.SUPABASE_ACCESS_TOKEN belum di-set di repo "
-          echo "    byimam2nd/oce-source → cleanup di-skip."
-          echo "    Tambahkan Management API PAT Supabase sebagai secret "
-          echo "    untuk mengaktifkan cleanup otomatis."
+          echo "⚠️  SUPABASE_ACCESS_TOKEN (Management API PAT) atau"
+          echo "    SUPABASE_SERVICE_ROLE_KEY belum di-set → cleanup di-skip."
+          echo "    Keduanya diambil dari Project Settings → API di Supabase."
