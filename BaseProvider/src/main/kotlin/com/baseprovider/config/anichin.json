@@ -3,6 +3,7 @@
   "name": "Anichin",
   "mainUrl": "https://anichin.moe",
   "lang": "id",
+  "mainPageCacheBuster": true,
   "supportedTypes": ["Anime", "AnimeMovie", "TvSeries"],
   "searchPathPattern": "{baseUrl}/page/{page}/?s={query}",
   "moviePathSegment": "-movie-",

@@ -66,6 +66,7 @@ fun fromJson(id: String, json: JSONObject): ProviderConfig {
         useDocumentLarge = json.optBoolean("useDocumentLarge", false),
         cacheTtlMinutes = json.optLong("cacheTtlMinutes", 5L),
         isHorizontal = json.optBoolean("isHorizontal", false),
+        mainPageCacheBuster = json.optBoolean("mainPageCacheBuster", false),
         mirrorUrls = jsonArrayToList(json.optJSONArray("mirrorUrls")),
         uaPool = jsonArrayToList(json.optJSONArray("uaPool")),
         refererPlayerMode = json.optString("refererPlayerMode", "current_url"),

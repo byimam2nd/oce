@@ -57,6 +57,9 @@ class ProviderScrapper(
                 .replace("{data}", request.data).replace("{page}", page
                     .toString())
         }
+        if (config.mainPageCacheBuster && request.name == "Recently Updated") {
+            val separator = if (url.contains("?")) "&" else "?"
+            url = url + "${separator}_=${System.currentTimeMillis()}"
 
         return runCatching {
             val document = fetchDocument(url, config, htmlCache =
