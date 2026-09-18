@@ -17,7 +17,12 @@ fun Element.safeExtractImage(attributes: List<String>): String {
     return try {
         attributes.asSequence()
             .flatMap { it.split(",").map { a -> a.trim() } }
-            .map { attr(it) }.filter { it.isNotBlank() && it != "about:blank" }.firstOrNull()?.split(" ")?.firstOrNull() ?: ""
+            .mapNotNull { name ->
+                val raw = attr(name)
+                if (raw.isBlank() || raw == "about:blank") null
+                else runCatching { absUrl(name) }.getOrDefault("").ifBlank { raw }
+            }
+            .firstOrNull()?.split(" ")?.firstOrNull() ?: ""
     } catch (_: Exception) { "" }
 }
 

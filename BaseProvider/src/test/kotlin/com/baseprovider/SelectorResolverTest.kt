@@ -1,6 +1,7 @@
 package com.baseprovider
 
 import com.baseprovider.model.SelectorResolver
+import com.baseprovider.model.safeExtractImage
 import org.jsoup.Jsoup
 import org.junit.Assert.*
 import org.junit.Test
@@ -120,5 +121,25 @@ class SelectorResolverTest {
             doc, "https://site.com/tv/show-2026/"
         )
         assertTrue(links.isEmpty())
+    }
+
+    @Test
+    fun `safeExtractImage resolves root-relative poster to absolute`() {
+        // Anichin serve src="/wp-content/..."; tanpa baseUri hasil harus tetap
+        // bisa dipakai, dengan baseUri harus menjadi URL absolut.
+        val html = """<img class="ts-post-image" src="/wp-content/uploads/poster.webp">"""
+        val docNoBase = Jsoup.parse(html)
+        val imgNoBase = docNoBase.selectFirst("img")!!
+        val noBase = imgNoBase.safeExtractImage(listOf("src"))
+        // tanpa baseUri jsoup absUrl tidak bisa resolve → fallback raw
+        assertTrue(noBase.isNotBlank())
+
+        val docWithBase = Jsoup.parse(html, "https://anichin.moe/")
+        val img = docWithBase.selectFirst("img")!!
+        val resolved = img.safeExtractImage(listOf("src"))
+        assertEquals(
+            "https://anichin.moe/wp-content/uploads/poster.webp",
+            resolved
+        )
     }
 }
