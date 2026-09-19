@@ -130,6 +130,7 @@ suspend fun fetchDocument(
                                             Log.d("OCE", "fetchDocument CF/403 on $attemptUrl (UA=$ua), trying next variant/host")
                                             continue
                                         }
+<<<<<<< HEAD
                                         e.code == 429 -> {
                                             // Rate limit: hormati Retry-After via SmartThrottle
                                             shouldPenalizeHost = true
