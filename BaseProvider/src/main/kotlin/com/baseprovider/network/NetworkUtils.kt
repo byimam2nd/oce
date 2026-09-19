@@ -12,8 +12,9 @@ import java.util.Date
 internal val NON_RETRYABLE_HTTP = Regex("""\b(404|410|451)\b""")
 
 // Indikasi Cloudflare / anti-bot challenge yang tidak membaik dengan retry biasa.
+// 403 dihapus — plain 403 (non-CF) ditangani oleh handler terpisah di HttpClient.
 internal val CLOUDFLARE_HTTP = Regex(
-    """\b403\b|Just a moment|__cf_chl|cf-chl-|challenge-platform|cf-ray|cloudflare""",
+    """Just a moment|__cf_chl|cf-chl-|challenge-platform|cf-ray|cloudflare""",
     RegexOption.IGNORE_CASE
 )
 
