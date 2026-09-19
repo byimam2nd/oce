@@ -27,11 +27,13 @@ internal val RATE_LIMIT_HTTP = Regex("""\b429\b""")
  * pemanggil harus memeriksa `.code` secara eksplisit dan melempar exception ini.
  * Membawa `retryAfterSeconds` yang di-parse dari header `Retry-After` (RFC 7231):
  * bisa bernilai detik maupun HTTP-date.
+ * `body` berisi response body untuk deteksi Cloudflare challenge.
  */
 class HttpStatusException(
     val code: Int,
     val retryAfterSeconds: Long? = null,
-    message: String
+    message: String,
+    val body: String = ""
 ) : Exception(message) {
     override val message: String
         get() = super.message ?: "HTTP $code"

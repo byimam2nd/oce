@@ -90,10 +90,12 @@ suspend fun fetchDocument(
                                 // Ditaruh di dalam executeWithRetry agar 429 di-retry dengan delay Retry-After.
                                 if (r.code >= 400) {
                                     val retryAfter = parseRetryAfter(r.headers["Retry-After"])
+                                    val body = r.text ?: ""
                                     throw HttpStatusException(
                                         r.code,
                                         retryAfter,
-                                        "HTTP ${r.code} on $attemptUrl"
+                                        "HTTP ${r.code} on $attemptUrl",
+                                        body
                                     )
                                 }
                                 r
@@ -112,10 +114,11 @@ suspend fun fetchDocument(
                             lastError = e
                             hostFailed = true
                             when {
-                                e is HttpStatusException -> {
-                                    val msg = e.message.orEmpty()
-                                    when {
-                                        CLOUDFLARE_HTTP.containsMatchIn(msg) -> {
+e is HttpStatusException -> {
+                                     val msg = e.message.orEmpty()
+                                     val body = e.body
+                                     when {
+                                         CLOUDFLARE_HTTP.containsMatchIn(msg) || CLOUDFLARE_HTTP.containsMatchIn(body) -> {
                                             shouldPenalizeHost = true
                                             // 403 CF: coba solve challenge via WebView (otomatis, tanpa
                                             // config). Kalau sukses, cf_clearance + UA WebView tersimpan -
