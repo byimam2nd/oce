@@ -130,20 +130,49 @@ suspend fun fetchDocument(
 e is HttpStatusException -> {
                                      val msg = e.message.orEmpty()
                                      val body = e.body
+                                     val isCloudflare = CLOUDFLARE_HTTP.containsMatchIn(msg) 
+                                         || CLOUDFLARE_HTTP.containsMatchIn(body)
+                                         || (e.code == 403 && body.contains("challenge-platform", true))
+                                         || host == "anichin.moe"
                                      when {
-                                         CLOUDFLARE_HTTP.containsMatchIn(msg) || CLOUDFLARE_HTTP.containsMatchIn(body) -> {
+                                         isCloudflare -> {
                                             shouldPenalizeHost = true
                                             // 403 CF: coba solve challenge via WebView (otomatis, tanpa
                                             // config). Kalau sukses, cf_clearance + UA WebView tersimpan -
                                             // restart sub-loop supaya request ulang diprioritaskan pakai UA WebView.
                                             if (WebViewCloudflareSolver.shouldAttempt(host)) {
-                                                Log.d("OCE", "fetchDocument CF/403 on $attemptUrl, trying WebView CF solver")
+                                                com.baseprovider.log.logFail(
+                                                    "HttpClient",
+                                                    "CF Solver attempt for $host on $attemptUrl",
+                                                    url = attemptUrl,
+                                                    method = "fetchDocument",
+                                                    type = com.baseprovider.log.FailureType.NETWORK_FAILURE,
+                                                    stage = "CF_SOLVER_ATTEMPT",
+                                                    extractor = "WebViewCloudflareSolver"
+                                                )
                                                 val solved = WebViewCloudflareSolver.trySolve(attemptUrl, referer ?: config.mainUrl)
-                                                Log.d("OCE", "WebView CF solver for $attemptUrl: ${if (solved) "solved" else "failed"}")
-                                                if (solved) continue@hostLoop
+                                                if (solved) {
+                                                    com.baseprovider.log.logSuccess(
+                                                        "HttpClient",
+                                                        "CF Solver succeeded for $host",
+                                                        url = attemptUrl,
+                                                        method = "fetchDocument",
+                                                        stage = "CF_SOLVER_SUCCESS"
+                                                    )
+                                                    continue@hostLoop
+                                                } else {
+                                                    com.baseprovider.log.logFail(
+                                                        "HttpClient",
+                                                        "CF Solver failed for $host on $attemptUrl",
+                                                        url = attemptUrl,
+                                                        method = "fetchDocument",
+                                                        type = com.baseprovider.log.FailureType.NETWORK_FAILURE,
+                                                        stage = "CF_SOLVER_FAILED",
+                                                        extractor = "WebViewCloudflareSolver"
+                                                    )
+                                                }
                                             }
                                             // Rotasi UA berikutnya, lalu mirror berikutnya.
-                                            Log.d("OCE", "fetchDocument CF/403 on $attemptUrl (UA=$ua), trying next variant/host")
                                             continue
                                         }
 e.code == 429 -> {
@@ -157,8 +186,40 @@ e.code == 403 -> {
                                               // Plain 403 (geo-block, IP ban, etc.): try next UA variant
                                               // JANGAN set retryAfter — akan delay percobaan UA berikutnya via SmartThrottle.wait()
                                               // Failure di-report setelah SEMUA UA habis lewat reportFailure di akhir hostLoop.
+                                              // Exception: anichin.moe selalu coba CF solver
+                                              if (host == "anichin.moe" && WebViewCloudflareSolver.shouldAttempt(host)) {
+                                                  com.baseprovider.log.logFail(
+                                                      "HttpClient",
+                                                      "CF Solver attempt for $host (plain 403) on $attemptUrl",
+                                                      url = attemptUrl,
+                                                      method = "fetchDocument",
+                                                      type = com.baseprovider.log.FailureType.NETWORK_FAILURE,
+                                                      stage = "CF_SOLVER_ATTEMPT",
+                                                      extractor = "WebViewCloudflareSolver"
+                                                  )
+                                                  val solved = WebViewCloudflareSolver.trySolve(attemptUrl, referer ?: config.mainUrl)
+                                                  if (solved) {
+                                                      com.baseprovider.log.logSuccess(
+                                                          "HttpClient",
+                                                          "CF Solver succeeded for $host (plain 403)",
+                                                          url = attemptUrl,
+                                                          method = "fetchDocument",
+                                                          stage = "CF_SOLVER_SUCCESS"
+                                                      )
+                                                      continue@hostLoop
+                                                  } else {
+                                                      com.baseprovider.log.logFail(
+                                                          "HttpClient",
+                                                          "CF Solver failed for $host (plain 403) on $attemptUrl",
+                                                          url = attemptUrl,
+                                                          method = "fetchDocument",
+                                                          type = com.baseprovider.log.FailureType.NETWORK_FAILURE,
+                                                          stage = "CF_SOLVER_FAILED",
+                                                          extractor = "WebViewCloudflareSolver"
+                                                      )
+                                                  }
+                                              }
                                               shouldPenalizeHost = true
-                                              Log.d("OCE", "fetchDocument 403 on $attemptUrl, trying next variant/host")
                                               continue
                                           }
                                          e.code == 404 || e.code == 410 || e.code == 451 -> {
