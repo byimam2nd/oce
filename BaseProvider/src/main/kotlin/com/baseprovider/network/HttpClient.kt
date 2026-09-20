@@ -304,7 +304,6 @@ object WebViewCloudflareSolver {
 
             // Cleanup
             pollJob.cancel()
-            runCatching { mainJob.invokeOnCompletion { } }
 
             if (!solved) {
                 failedUntil[host] = System.currentTimeMillis() + FAIL_COOLDOWN_MS
