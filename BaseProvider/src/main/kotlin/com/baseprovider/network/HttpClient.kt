@@ -370,9 +370,9 @@ object WebViewCloudflareSolver {
                 failedUntil[host] = System.currentTimeMillis() + FAIL_COOLDOWN_MS
             } else {
                 failedUntil.remove(host)
-                // Simpan cookie ke HostCookieJar
+                // Simpan SEMUA cookie dari CookieManager ke HostCookieJar
                 val cookie = cookieManager.getCookie(url)
-                if (cookie != null && cookie.contains("cf_clearance")) {
+                if (cookie != null) {
                     HostCookieJar.update(url, parseCookieMap(cookie))
                     WebViewResolver.webViewUserAgent?.let { solvedUserAgents[host] = it }
                 }
