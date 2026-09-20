@@ -214,7 +214,7 @@ private fun googleReferer(config: ProviderConfig): String? =
 object WebViewCloudflareSolver {
     private val solvedUserAgents = java.util.concurrent.ConcurrentHashMap<String, String>()
     private val failedUntil = java.util.concurrent.ConcurrentHashMap<String, Long>()
-    private const val FAIL_COOLDOWN_MS = 30 * 60_000L
+    private const val FAIL_COOLDOWN_MS = 2 * 60_000L
     // L8: cap map agar tidak tumbuh tak terbatas selama sesi (banyak host
     // berbeda dari mirror/redirect). Entry yang cooldown-nya sudah lewat
     // tidak berguna lagi — dibuang dulu sebelum evict acak saat over cap.
@@ -286,7 +286,7 @@ object WebViewCloudflareSolver {
         }
     }
 
-    private const val CF_SOLVE_BUDGET_MS = 10_000L
+    private const val CF_SOLVE_BUDGET_MS = 20_000L
 
     private fun parseCookieMap(cookie: String): Map<String, String> {
         return cookie.split(";").mapNotNull {
