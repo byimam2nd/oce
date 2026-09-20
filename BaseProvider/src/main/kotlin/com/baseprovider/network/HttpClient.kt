@@ -6,8 +6,16 @@ import com.lagradost.api.Log
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.network.WebViewResolver
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineExceptionHandler
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import java.net.URI
@@ -251,32 +259,59 @@ object WebViewCloudflareSolver {
         val cookieManager = runCatching {
             android.webkit.CookieManager.getInstance()
         }.getOrNull() ?: return false
+        
         val resolver = WebViewResolver(
-            // Tidak pernah exit berdasarkan URL - exit via requestCallBack
             interceptUrl = Regex(".^"),
             userAgent = null,
             useOkhttp = false,
-            // Match semua request supaya requestCallBack dipanggil tiap navigasi
             additionalUrls = listOf(Regex(".")),
-            timeout = 30_000L
+            timeout = 60_000L
         )
+        
         return runCatching {
             var solved = false
-            // M5: batasi waktu tunggu solve — jangan sampai 30s penuh. Jika
-            // challenge belum selesai dalam budget, anggap gagal dan lanjut
-            // rotasi UA/mirror (cf_clearance masih bisa tersimpan via callback).
-            withTimeoutOrNull(CF_SOLVE_BUDGET_MS) {
-                resolver.resolveUsingWebView(url, referer = referer) { _ ->
+            // Pola event-driven: loop check cookie secara berkala (polling async) 
+            // alih-alih hardcode timeout mati. Keluar begitu cf_clearance didapat
+            // atau waktu total habis (max 45 detik untuk Turnstile interaktif).
+            val startTime = System.currentTimeMillis()
+            val maxTimeoutMs = 45_000L
+            val pollIntervalMs = 500L
+
+            withTimeoutOrNull(maxTimeoutMs) {
+                // Jalankan resolver di background job / suspend check
+                val job = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                    resolver.resolveUsingWebView(url, referer = referer) { _ ->
+                        val cookie = cookieManager.getCookie(url)
+                        if (cookie != null && cookie.contains("cf_clearance")) {
+                            HostCookieJar.update(url, parseCookieMap(cookie))
+                            WebViewResolver.webViewUserAgent?.let { solvedUserAgents[host] = it }
+                            solved = true
+                            true
+                        } else false
+                    }
+                }
+
+                while (!solved && System.currentTimeMillis() - startTime < maxTimeoutMs) {
                     val cookie = cookieManager.getCookie(url)
                     if (cookie != null && cookie.contains("cf_clearance")) {
                         HostCookieJar.update(url, parseCookieMap(cookie))
                         WebViewResolver.webViewUserAgent?.let { solvedUserAgents[host] = it }
                         solved = true
-                        true // true = destroy WebView segera
-                    } else false
+                        break
+                    }
+                    kotlinx.coroutines.delay(pollIntervalMs)
+                }
+                
+                if (solved) {
+                    runCatching { job.cancel() }
                 }
             }
-            if (!solved) failedUntil[host] = System.currentTimeMillis() + FAIL_COOLDOWN_MS
+
+            if (!solved) {
+                failedUntil[host] = System.currentTimeMillis() + FAIL_COOLDOWN_MS
+            } else {
+                failedUntil.remove(host)
+            }
             capMap(failedUntil)
             capMap(solvedUserAgents)
             solved
@@ -285,8 +320,6 @@ object WebViewCloudflareSolver {
             false
         }
     }
-
-    private const val CF_SOLVE_BUDGET_MS = 20_000L
 
     private fun parseCookieMap(cookie: String): Map<String, String> {
         return cookie.split(";").mapNotNull {
