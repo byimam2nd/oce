@@ -16,6 +16,10 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.selects.onAwait
+import kotlinx.coroutines.selects.onTimeout
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import java.net.URI
@@ -259,64 +263,75 @@ object WebViewCloudflareSolver {
         val cookieManager = runCatching {
             android.webkit.CookieManager.getInstance()
         }.getOrNull() ?: return false
-        
-        val resolver = WebViewResolver(
-            interceptUrl = Regex(".^"),
-            userAgent = null,
-            useOkhttp = false,
-            additionalUrls = listOf(Regex(".")),
-            timeout = 60_000L
-        )
-        
+
+        // Max 45 detik untuk challenge interaktif (Turnstile).
+        val maxTimeoutMs = 45_000L
+        val pollIntervalMs = 500L
+
         return runCatching {
-            var solved = false
-            // Pola event-driven: loop check cookie secara berkala (polling async) 
-            // alih-alih hardcode timeout mati. Keluar begitu cf_clearance didapat
-            // atau waktu total habis (max 45 detik untuk Turnstile interaktif).
-            val startTime = System.currentTimeMillis()
-            val maxTimeoutMs = 45_000L
-            val pollIntervalMs = 500L
+            val cookieDeferred = CompletableDeferred<Boolean>()
 
-            withTimeoutOrNull(maxTimeoutMs) {
-                // Jalankan resolver di background job / suspend check
-                val job = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-                    resolver.resolveUsingWebView(url, referer = referer) { _ ->
-                        val cookie = cookieManager.getCookie(url)
-                        if (cookie != null && cookie.contains("cf_clearance")) {
-                            HostCookieJar.update(url, parseCookieMap(cookie))
-                            WebViewResolver.webViewUserAgent?.let { solvedUserAgents[host] = it }
-                            solved = true
-                            true
-                        } else false
-                    }
-                }
+            // Jalankan WebViewResolver di Main thread (wajib untuk Android WebView)
+            val mainJob = withContext(Dispatchers.Main) {
+                val resolver = WebViewResolver(
+                    interceptUrl = Regex(".^"),
+                    userAgent = null,
+                    useOkhttp = false,
+                    additionalUrls = listOf(Regex(".")),
+                    timeout = 60_000L
+                )
 
-                while (!solved && System.currentTimeMillis() - startTime < maxTimeoutMs) {
+                // Callback dieksekusi di Main thread saat WebViewInterceptor tangkap request
+                resolver.resolveUsingWebView(url, referer = referer) { _ ->
                     val cookie = cookieManager.getCookie(url)
                     if (cookie != null && cookie.contains("cf_clearance")) {
-                        HostCookieJar.update(url, parseCookieMap(cookie))
-                        WebViewResolver.webViewUserAgent?.let { solvedUserAgents[host] = it }
-                        solved = true
-                        break
-                    }
-                    kotlinx.coroutines.delay(pollIntervalMs)
-                }
-                
-                if (solved) {
-                    runCatching { job.cancel() }
+                        cookieDeferred.complete(true)
+                        true // destroy WebView
+                    } else false
                 }
             }
+
+            // Polling cookie di IO thread (thread-safe untuk CookieManager.getCookie)
+            val pollJob = kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+                val startTime = System.currentTimeMillis()
+                while (System.currentTimeMillis() - startTime < 45_000L) {
+                    val cookie = cookieManager.getCookie(url)
+                    if (cookie != null && cookie.contains("cf_clearance")) {
+                        cookieDeferred.complete(true)
+                        break
+                    }
+                    kotlinx.coroutines.delay(500)
+                }
+                // Timeout polling - complete false jika belum solved
+                cookieDeferred.complete(false)
+            }
+
+            // Tunggu salah satu: cookie ditemukan ATAU timeout
+            val solved = cookieDeferred.await()
+
+            // Cleanup
+            pollJob.cancel()
+            runCatching { mainJob.cancel() }
 
             if (!solved) {
                 failedUntil[host] = System.currentTimeMillis() + FAIL_COOLDOWN_MS
             } else {
                 failedUntil.remove(host)
+                // Simpan cookie ke HostCookieJar
+                val cookie = cookieManager.getCookie(url)
+                if (cookie != null && cookie.contains("cf_clearance")) {
+                    HostCookieJar.update(url, parseCookieMap(cookie))
+                    WebViewResolver.webViewUserAgent?.let { solvedUserAgents[host] = it }
+                }
             }
+
             capMap(failedUntil)
             capMap(solvedUserAgents)
             solved
         }.getOrElse { e ->
             if (e is kotlinx.coroutines.CancellationException) throw e
+            pollJob.cancel()
+            runCatching { mainJob.cancel() }
             false
         }
     }
