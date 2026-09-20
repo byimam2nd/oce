@@ -93,6 +93,30 @@ User → CloudStream App → ProviderCloudstream.getMainPage()
   → HomePageResponse(listOf(HomePageList))
 ```
 
+### Flow 1b: Cloudflare Challenge Handling (fetchDocument)
+```
+fetchDocument(url)
+  → HttpClient.fetchDocument()
+    → for each mirror + UA variant:
+      → app.get(url) → NiceResponse
+      → if code >= 400:
+          → throw HttpStatusException(code, retryAfter, message, body)
+      → doc.setBaseUri(res.url)           // POSTER FIX: enable absUrl()
+      → return doc
+    → catch HttpStatusException:
+      → if CLOUDFLARE_HTTP.match(msg) OR CLOUDFLARE_HTTP.match(body):
+          → WebViewCloudflareSolver.trySolve()
+            → WebView load challenge
+            → cf_clearance cookie → HostCookieJar
+            → bind to WebView UA (solvedUserAgents[host])
+          → if solved → continue@hostLoop (retry with solved UA)
+      → else if code == 403:
+          → continue (try next UA, NO retryAfter)
+      → else if code in 500..599 / 429:
+          → SmartThrottle.reportRetryAfter / reportFailure
+      → break / continue to next mirror
+```
+
 ### Flow 2: Search
 ```
 User → CloudStream App → ProviderCloudstream.search(query)
@@ -109,10 +133,22 @@ User → CloudStream App → ProviderCloudstream.search(query)
 User → CloudStream App → ProviderCloudstream.load(url)
   → BaseProviderEngine.load()
     → DetailPageScrapper.load(url)
-      → fetchDocument(url)                // HTTP GET + HTML cache
+      → fetchDocument(url)                // HTTP GET + HTML cache (with setBaseUri)
       → SelectorResolver.selectFirst()    // loadTitle, loadPoster, loadDesc, etc.
       → ProviderMapper.buildLoadResponse() // → LoadResponse with episodes
   → LoadResponse
+```
+
+### Poster Resolution (loadPoster / searchPoster)
+```
+loadPoster selector → SelectorResolver.selectValidated()
+  → safeExtractImage(attributes) [ProviderParser.kt]
+    → attr(name) → raw URL
+    → runCatching { absUrl(name) }        // needs doc.baseUri
+    → fallback to raw if absUrl fails
+  → SelectorValidator.isValidPoster()
+    → requires http(s):// or // prefix
+  → fixUrlSmart() → final absolute URL
 ```
 
 ### Flow 4: Load Links (Video Extraction)

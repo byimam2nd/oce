@@ -196,6 +196,83 @@ curl -sL -A "Mozilla/5.0 ..." "$EMBED_URL" | grep -oP 'file\s*:\s*"([^"]+)"'
 curl -sI "$M3U8_URL" | head -5
 ```
 
+### Cloudflare Challenge Handling (HTTP 403 + Challenge Page)
+
+Situs seperti Anichin mengirim **HTTP 403 + HTML challenge page** (bukan redirect). Plugin harus:
+
+1. **Capture response body** di `HttpStatusException`:
+   ```kotlin
+   if (r.code >= 400) {
+       val body = r.text ?: ""
+       throw HttpStatusException(r.code, retryAfter, "HTTP ${r.code} on $url", body)
+   }
+   ```
+
+2. **Check BOTH message AND body** di exception handler:
+   ```kotlin
+   when {
+       CLOUDFLARE_HTTP.containsMatchIn(msg) || CLOUDFLARE_HTTP.containsMatchIn(body) -> {
+           // Cloudflare challenge detected → call WebViewCloudflareSolver
+       }
+   }
+   ```
+
+3. **CLOUDFLARE_HTTP regex** HANYA match indikator CF asli (TIDAK `\b403\b`):
+   ```kotlin
+   internal val CLOUDFLARE_HTTP = Regex(
+       """Just a moment|__cf_chl|cf-chl-|challenge-platform|cf-ray|cloudflare""",
+       RegexOption.IGNORE_CASE
+   )
+   ```
+   → Plain 403 (geo-block, IP ban) tidak trigger solver, langsung rotasi UA.
+
+4. **403 handler** TIDAK set `retryAfter` (menghindari timeout di rotasi UA):
+   ```kotlin
+   e.code == 403 -> {
+       shouldPenalizeHost = true
+       // JANGAN SmartThrottle.reportRetryAfter(host, 30)
+       continue  // coba UA berikutnya langsung
+   }
+   ```
+
+5. **WebViewCloudflareSolver** otomatis jalan saat CF terdeteksi:
+   - Buka WebView, jalankan JS challenge
+   - Ambil `cf_clearance` cookie → simpan ke `HostCookieJar`
+   - Bind cookie ke UA WebView (`solvedUserAgents[host]`)
+   - Request ulang pakai UA yang sudah solve
+
+## Poster URL Resolution (root-relative → absolute)
+
+Anichin serve poster sebagai `/wp-content/...` (root-relative). `absUrl()` butuh `Document.baseUri`.
+
+**Fix di HttpClient.kt** (setelah parse berhasil):
+```kotlin
+val doc = if (config.useDocumentLarge) res.documentLarge else res.document
+doc.setBaseUri(res.url)  // Set baseUri dari final response URL
+```
+
+**Fix di ProviderParser.kt** (`safeExtractImage`):
+```kotlin
+.mapNotNull { name ->
+    val raw = attr(name)
+    if (raw.isBlank() || raw == "about:blank") null
+    else runCatching { absUrl(name) }.getOrDefault("").ifBlank { raw }
+}
+```
+
+**SelectorValidator.isValidPoster** butuh URL absolut (`http(s)://` atau `//`). Dengan fix di atas, root-relative resolved → lolos validasi.
+
+**Test regression** di `SelectorResolverTest.kt`:
+```kotlin
+val docNoBase = Jsoup.parse(html)  // tanpa baseUri
+val noBase = imgNoBase.safeExtractImage(listOf("src"))
+assertTrue(noBase.isNotBlank())  // fallback raw
+
+val docWithBase = Jsoup.parse(html, "https://anichin.moe/")
+val resolved = img.safeExtractImage(listOf("src"))
+assertEquals("https://anichin.moe/wp-content/uploads/poster.webp", resolved)
+```
+
 ## Failure Modes
 
 | Problem | Cause | Fix |
@@ -205,6 +282,8 @@ curl -sI "$M3U8_URL" | head -5
 | All links rejected | AdaptiveHeaderProbe fails all combos | Check if site needs special headers |
 | CF 403 | Cloudflare challenge | curl_cffi test, check if bypass works |
 | Stale links | Cached extractor results | Ensure no-cache rule, rebuild |
+| Main page empty | Cloudflare challenge on listing page | Capture response body in HttpStatusException, check body for CF indicators |
+| Poster not showing | root-relative poster URLs not resolved | Set doc.setBaseUri(res.url) in HttpClient, use absUrl() in safeExtractImage |
 
 ## Verification
 

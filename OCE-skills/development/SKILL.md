@@ -108,6 +108,43 @@ Bug report diterima
 6. **Fix** — perbaiki root cause, bukan symptom
 7. **Regression test** — pastikan fix tidak breaking yang lain
 
+## Case Study: Anichin Cloudflare + Poster (2026-09-20)
+
+**SYMPTOM:**
+- Main page lists empty
+- Poster not showing (METADATA_FAILURE)
+- User reports "broken"
+
+**EVIDENCE COLLECTION:**
+1. Supabase logs → NETWORK_FAILURE + CLOUDFLARE_FAILURE intermittent
+2. Manual curl → HTTP 403 + Cloudflare challenge HTML (challenge-platform, cf-ray)
+3. Code trace → HttpStatusException message only "HTTP 403 on URL", body NOT captured
+4. Exception handler → CLOUDFLARE_HTTP.containsMatchIn(msg) only checks message
+5. Regex audit → CLOUDFLARE_HTTP had \b403\b matching ALL 403s
+
+**HYPOTHESIS → VERIFICATION:**
+| Hypothesis | Verification | Result |
+|------------|--------------|--------|
+| CF challenge not detected | Add body to exception, check body | ✅ CF detected |
+| Plain 403 triggers CF solver | Remove \b403\b from regex | ✅ Only CF indicators trigger |
+| 30s retryAfter causes timeout | Remove retryAfter from 403 handler | ✅ UA rotation works |
+| Poster root-relative not resolved | setBaseUri + absUrl() in safeExtractImage | ✅ Poster absolute URLs |
+
+**ROOT CAUSES (2 separate issues):**
+1. **Cloudflare:** Body not captured + regex false positive → solver not called
+2. **Poster:** Document missing baseUri → absUrl() returns empty → validation fails
+
+**FIXES (minimal, targeted):**
+- NetworkUtils.kt: HttpStatusException +body, CLOUDFLARE_HTTP regex
+- HttpClient.kt: setBaseUri, 403 handler no retryAfter, check body for CF
+- ProviderParser.kt: safeExtractImage uses absUrl() with fallback
+- Tests: SelectorResolverTest covers poster resolution
+
+**VERIFICATION:**
+- CI green (build + unit tests)
+- Live curl_cffi test → 200 + 30 items
+- Regression test passes
+
 ## Testing
 
 ### Framework

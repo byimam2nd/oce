@@ -195,6 +195,37 @@ WHERE failure_type = 'METADATA'
 ORDER BY created_at DESC;
 ```
 
+## Case Study: Anichin Cloudflare + Poster Issue (2026-09-20)
+
+**Symptoms:**
+- Main page lists (Recently Updated, Popular, etc.) → empty
+- Poster not showing → `METADATA_FAILURE: Missing Poster`
+- Live curl → HTTP 403 + Cloudflare challenge page
+
+**Debugging Steps:**
+
+1. **Check Supabase logs** → `failure_type: NETWORK_FAILURE` + `CLOUDFLARE_FAILURE` intermittent
+2. **Manual curl** → HTML contains `challenge-platform`, `cf-ray`, `cloudflare` → Cloudflare managed challenge
+3. **Code inspection** → `HttpStatusException` only carried message "HTTP 403 on URL", **body NOT captured**
+4. **Exception handler** → `CLOUDFLARE_HTTP.containsMatchIn(msg)` checked message only → missed CF indicators in body
+5. **Regex issue** → `CLOUDFLARE_HTTP` contained `\b403\b` → matched ALL 403s, triggered WebView solver unnecessarily
+
+**Fixes Applied:**
+1. Capture body in `HttpStatusException` constructor
+2. Check `CLOUDFLARE_HTTP.containsMatchIn(body)` in exception handler
+3. Remove `\b403\b` from `CLOUDFLARE_HTTP` regex
+4. Remove `retryAfter` from 403 handler (prevented UA rotation timeout)
+
+**Poster Fix:**
+- `doc.setBaseUri(res.url)` in `HttpClient.kt` after parse
+- `safeExtractImage` use `absUrl()` with fallback to raw
+- Root-relative `/wp-content/...` → absolute `https://anichin.moe/wp-content/...`
+
+**Verification:**
+- CI green (build + unit tests)
+- Live test via curl_cffi (Cloudflare bypass) → 200 + 30 items
+- Unit test `SelectorResolverTest.kt` covers poster resolution
+
 ## Emoji Convention
 
 | Level | Emoji |
