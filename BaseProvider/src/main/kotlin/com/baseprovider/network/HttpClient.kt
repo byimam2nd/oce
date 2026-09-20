@@ -264,10 +264,6 @@ object WebViewCloudflareSolver {
             android.webkit.CookieManager.getInstance()
         }.getOrNull() ?: return false
 
-        // Max 45 detik untuk challenge interaktif (Turnstile).
-        val maxTimeoutMs = 45_000L
-        val pollIntervalMs = 500L
-
         return runCatching {
             val cookieDeferred = CompletableDeferred<Boolean>()
 
@@ -330,8 +326,6 @@ object WebViewCloudflareSolver {
             solved
         }.getOrElse { e ->
             if (e is kotlinx.coroutines.CancellationException) throw e
-            pollJob.cancel()
-            runCatching { mainJob.cancel() }
             false
         }
     }
