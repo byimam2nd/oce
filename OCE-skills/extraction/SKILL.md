@@ -236,8 +236,9 @@ Situs seperti Anichin mengirim **HTTP 403 + HTML challenge page** (bukan redirec
    ```
 
 5. **WebViewCloudflareSolver** otomatis jalan saat CF terdeteksi:
-   - Budget solve dinaikkan ke **20s** (`CF_SOLVE_BUDGET_MS = 20_000L`) untuk memberi waktu JS execution
-   - Fail cooldown diturunkan ke **2 menit** (`FAIL_COOLDOWN_MS = 2 * 60_000L`) agar tidak terkunci 30m jika gagal sekali
+   - **Wajib di `Dispatchers.Main`** (Android WebView tidak bisa di IO thread)
+   - **Polling async** (500ms) — event-driven, bukan hardcode timeout mati
+   - **Max budget 45s** untuk Turnstile interaktif
    - Buka WebView, jalankan JS challenge
    - Ambil `cf_clearance` cookie → simpan ke `HostCookieJar`
    - Bind cookie ke UA WebView (`solvedUserAgents[host]`)
