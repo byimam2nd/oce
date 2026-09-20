@@ -17,9 +17,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.selects.select
-import kotlinx.coroutines.selects.onAwait
-import kotlinx.coroutines.selects.onTimeout
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import java.net.URI
