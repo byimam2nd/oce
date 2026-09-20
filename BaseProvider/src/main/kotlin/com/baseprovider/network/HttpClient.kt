@@ -102,6 +102,10 @@ suspend fun fetchDocument(
                             }
                             HostCookieJar.update(attemptUrl, res.cookies)
                             val doc = if (config.useDocumentLarge) res.documentLarge else res.document
+                            // NiceHttp parse tanpa baseUri → absUrl() gagal utk path
+                            // root-relative (poster /wp-content/...). Set baseUri dari
+                            // URL final response agar absUrl() resolve dengan benar.
+                            doc.setBaseUri(res.url)
                             if (!skipCache) { htmlCache?.put(attemptUrl, doc) }
                             if (host.isNotBlank()) {
                                 HostCircuitBreaker.reportSuccess(host)
@@ -133,27 +137,34 @@ e is HttpStatusException -> {
                                             Log.d("OCE", "fetchDocument CF/403 on $attemptUrl (UA=$ua), trying next variant/host")
                                             continue
                                         }
-<<<<<<< HEAD
-                                        e.code == 429 -> {
-                                            // Rate limit: hormati Retry-After via SmartThrottle
-                                            shouldPenalizeHost = true
-                                            SmartThrottle.reportRetryAfter(host, e.retryAfterSeconds ?: 0L)
-                                            Log.d("OCE", "fetchDocument 429 on $attemptUrl, trying next variant/host")
-                                            continue
-                                        }
-                                        e.code == 404 || e.code == 410 || e.code == 451 -> {
-                                            // Geo-block 404 / konten hilang: BUKAN kegagalan host,
-                                            // jangan hukumi breaker/throttle. Coba mirror berikutnya.
-                                            Log.d("OCE", "fetchDocument HTTP ${e.code} on $attemptUrl, trying next host")
-                                            break
-                                        }
-                                        e.code in 500..599 -> {
-                                            // Server error = kegagalan level host
-                                            shouldPenalizeHost = true
-                                            Log.d("OCE", "fetchDocument HTTP ${e.code} on $attemptUrl, trying next host")
-                                            break
-                                        }
-                                        else -> throw e
+e.code == 429 -> {
+                                             // Rate limit: hormati Retry-After via SmartThrottle
+                                             shouldPenalizeHost = true
+                                             SmartThrottle.reportRetryAfter(host, e.retryAfterSeconds ?: 0L)
+                                             Log.d("OCE", "fetchDocument 429 on $attemptUrl, trying next variant/host")
+                                             continue
+                                         }
+e.code == 403 -> {
+                                              // Plain 403 (geo-block, IP ban, etc.): try next UA variant
+                                              // JANGAN set retryAfter — akan delay percobaan UA berikutnya via SmartThrottle.wait()
+                                              // Failure di-report setelah SEMUA UA habis lewat reportFailure di akhir hostLoop.
+                                              shouldPenalizeHost = true
+                                              Log.d("OCE", "fetchDocument 403 on $attemptUrl, trying next variant/host")
+                                              continue
+                                          }
+                                         e.code == 404 || e.code == 410 || e.code == 451 -> {
+                                             // Geo-block 404 / konten hilang: BUKAN kegagalan host,
+                                             // jangan hukumi breaker/throttle. Coba mirror berikutnya.
+                                             Log.d("OCE", "fetchDocument HTTP ${e.code} on $attemptUrl, trying next host")
+                                             break
+                                         }
+                                         e.code in 500..599 -> {
+                                             // Server error = kegagalan level host
+                                             shouldPenalizeHost = true
+                                             Log.d("OCE", "fetchDocument HTTP ${e.code} on $attemptUrl, trying next host")
+                                             break
+                                         }
+                                         else -> throw e
                                     }
                                 }
                                 else -> {
