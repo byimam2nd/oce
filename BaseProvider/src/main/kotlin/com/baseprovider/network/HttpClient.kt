@@ -287,7 +287,7 @@ object WebViewCloudflareSolver {
             // Polling cookie di IO thread (thread-safe untuk CookieManager.getCookie)
             val pollJob = kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
                 val startTime = System.currentTimeMillis()
-                while (System.currentTimeMillis() - startTime < 45_000L) {
+                while (System.currentTimeMillis() - startTime < 45_000L && isActive) {
                     val cookie = cookieManager.getCookie(url)
                     if (cookie != null && cookie.contains("cf_clearance")) {
                         cookieDeferred.complete(true)
