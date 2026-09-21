@@ -283,8 +283,14 @@ private fun googleReferer(config: ProviderConfig): String? =
  */
 object WebViewCloudflareSolver {
     private val solvedUserAgents = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private val solvedAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
     private val failedUntil = java.util.concurrent.ConcurrentHashMap<String, Long>()
     private const val FAIL_COOLDOWN_MS = 2 * 60_000L
+    // CF clearance biasanya expired 2 jam. Setelah 90 menit, izinkan solve
+    // ulang (CookieManager mungkin sudah kehilangan cookie, atau CF challenge
+    // baru muncul). Tanpa ini, shouldAttempt selalu false setelah solve
+    // pertama → request berikutnya 403 tanpa solusi.
+    private const val SOLVED_EXPIRE_MS = 90 * 60_000L
     // L8: cap map agar tidak tumbuh tak terbatas selama sesi (banyak host
     // berbeda dari mirror/redirect). Entry yang cooldown-nya sudah lewat
     // tidak berguna lagi — dibuang dulu sebelum evict acak saat over cap.
@@ -304,11 +310,18 @@ object WebViewCloudflareSolver {
      * Otomatis dicoba saat 403 CF terdeteksi, tanpa config flag. Namun kalau
      * solve pernah gagal (mis. Turnstile interactive), jangan ulangi membuka
      * WebView selama cooldown - menghindari delay 30s berulang per request.
+     * Setelah SOLVED_EXPIRE_MS, izinkan solve ulang (cf_clearance mungkin expired).
      */
     fun shouldAttempt(host: String): Boolean {
-        if (isSolved(host)) return false
         val failCooldown = failedUntil[host] ?: 0L
-        return System.currentTimeMillis() >= failCooldown
+        if (System.currentTimeMillis() < failCooldown) return false
+        // Cek apakah solve masih valid (dalam masa SOLVED_EXPIRE_MS)
+        val solvedTime = solvedAt[host] ?: return true
+        if (System.currentTimeMillis() - solvedTime < SOLVED_EXPIRE_MS) return false
+        // Expired — hapus entry dan izinkan solve ulang
+        solvedUserAgents.remove(host)
+        solvedAt.remove(host)
+        return true
     }
 
     /**
@@ -374,7 +387,10 @@ object WebViewCloudflareSolver {
                 val cookie = cookieManager.getCookie(url)
                 if (cookie != null) {
                     HostCookieJar.update(url, parseCookieMap(cookie))
-                    WebViewResolver.webViewUserAgent?.let { solvedUserAgents[host] = it }
+                    WebViewResolver.webViewUserAgent?.let {
+                        solvedUserAgents[host] = it
+                        solvedAt[host] = System.currentTimeMillis()
+                    }
                 }
             }
 
