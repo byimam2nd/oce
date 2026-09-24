@@ -30,6 +30,12 @@ object ProviderExtractors {
      * `config/extractors/`). Tambahkan id ke set ini saat migrasi diuji.
      * Id di luar set ini memakai class legacy — non-breaking & bisa rollback:
      * jika config gagal load, extractor fallback ke class legacy.
+     *
+     * `config/extractors/Odnoklassniki.json` sengaja DORMANT (id tidak ada
+     * di set ini): extractor ok.ru tetap legacy karena config steps tidak
+     * bisa mengekspresikan CDN throughput probe, fallback multi-quality
+     * "videos", dan unescape \". Hapus/migrasi config ini hanya bila
+     * config sudah setara fitur dengan OdnoklassnikiExtractor.
      */
     private val configDrivenIds = setOf(
         "AnichinStream", "EmTurbovid", "Rumble", "Voe",
