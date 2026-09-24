@@ -174,7 +174,10 @@ class ExtractorConfigParserTest {
             "ByseSX", "Vidguardto2",
             "BloggerVideo", "PlayPutarIn", "Lk21PlayerPage",
             "VideoNodePage", "ShortIcu", "PlayStreamplay",
-            "Dhcplay", "StreamHG"
+            "Dhcplay", "StreamHG",
+            "AnichinPlayer", "Krakenfiles",
+            "EmbedPyrox", "VeevTo", "SamehadakuPage", "CyberJunkiePage",
+            "PlayStreamVideo", "PlayMogo", "DTube", "Odysee"
         )
         for (fileName in bundledFiles) {
             val stream = this::class.java.classLoader?.getResourceAsStream("extractors/$fileName.json")
