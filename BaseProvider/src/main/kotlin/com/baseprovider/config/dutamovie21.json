@@ -3,6 +3,7 @@
   "name": "Dutamovie21",
   "mainUrl": "https://cyber-junkie.com",
   "mirrorUrls": [
+    "https://204.3.234.75",
     "https://vikingsgab.com",
     "https://simplycufflinks.com"
   ],
@@ -13,7 +14,8 @@
     "AsianDrama",
     "Anime"
   ],
-  "searchPathPattern": "{baseUrl}/page/{page}/?s={query}",
+  "searchPathPattern": "{baseUrl}/?s={query}&paged={page}",
+  "searchPathFallbackPattern": "{baseUrl}/page/{page}/?s={query}",
   "mainPagePathPattern": "{baseUrl}/{data}/page/{page}",
   "moviePathSegment": "/movie/",
   "movieUrlRegex": "-\\d{4}/?$|/blog/[^/]+/?$",
@@ -104,6 +106,11 @@
       "Thailand"
     ]
   ],
+  "mainPageListFallbacks": {
+    "category/box-office": "action",
+    "category/serial-tv": "drama",
+    "horror": "thriller"
+  },
   "searchItems": "article.item, article.item-infinite, div#gmr-main-load article",
   "searchTitle": "h2.entry-title a, .entry-title a",
   "searchHref": "a",

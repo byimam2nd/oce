@@ -16,6 +16,9 @@ data class ProviderConfig(
 
     // ── URL Patterns ──
     val searchPathPattern: String = "{baseUrl}/page/{page}/?s={query}",
+    // Pola search alternatif yang dicoba bila primary menghasilkan kosong
+    // / gagal (pola lama dipertahankan sebagai fallback, bukan diganti).
+    val searchPathFallbackPattern: String = "",
     val mainPagePathPattern: String = "{baseUrl}/{data}{page}",
     val moviePathSegment: String = "/movie/",
     // Regex URL movie alternatif (opsional). Dipakai saat migrasi domain
@@ -74,6 +77,9 @@ data class ProviderConfig(
 
     // ── Navigation ──
     val mainPageLists: List<Pair<String, String>> = emptyList(),
+    // Row pengganti saat row mainPageLists redirect keluar dari host provider
+    // (off-host). Mapping path -> path fallback lokal. Row asli TETAP ada.
+    val mainPageListFallbacks: Map<String, String> = emptyMap(),
 
     // ── Extractor Control ──
     val allowedExtractors: Set<String> = emptySet(),

@@ -45,7 +45,7 @@ class ProviderScrapper(
         } else {
             config.mainUrl
         }
-        val url = if (request.data.startsWith("http")) {
+        var url = if (request.data.startsWith("http")) {
             val d = request.data.replace("{page}", page.toString())
             val pagePattern = Regex("""(/page/|page=)$page(\b|/|$)""")
             if (!pagePattern.containsMatchIn(d)) {
@@ -53,14 +53,28 @@ class ProviderScrapper(
                 else { val conn = if (d.contains("?")) "&" else "?"; "${d}${conn}page=$page" }
             } else d
         } else {
-            config.mainPagePathPattern.replace("{baseUrl}", baseUrl)
-                .replace("{data}", request.data).replace("{page}", page
-                    .toString())
+            buildMainPageUrl(baseUrl, request.data, page)
         }
 
         return runCatching {
-            val document = fetchDocument(url, config, htmlCache =
+            var document = fetchDocument(url, config, htmlCache =
                 htmlCache)
+            // Adaptive row fallback: saat row redirect keluar dari host
+            // milik provider (mis. /horror/ -> rebahinxxi), ganti dengan row
+            // lokal dari config (mainPageListFallbacks). Row asli tetap ada;
+            // fallback hanya menambah. Tanpa mapping / dalam host -> tanpa aksi.
+            AdaptiveRouter.mainPageFallback(
+                request.data,
+                runCatching { document.baseUri() }.getOrNull() ?: url,
+                AdaptiveRouter.allowedHosts(config),
+                config.mainPageListFallbacks
+            )?.let { fb ->
+                com.baseprovider.log.logSuccess(config.id,
+                    "MainPage '${request.name}' p$page: off-host redirect -> fallback row '$fb'",
+                    url = url, method = "getMainPage")
+                url = buildMainPageUrl(baseUrl, fb, page)
+                document = fetchDocument(url, config, htmlCache = htmlCache)
+            }
             val isHorizontal = config.isHorizontal
             val home = if (config.searchItems.isNotBlank()) {
                 val elements = SelectorResolver.select(document, config.searchItems,
@@ -155,43 +169,78 @@ class ProviderScrapper(
                 emptyList()
             }
         }
-        val __st0 = System.currentTimeMillis()
-        return runCatching {
-            val url = config.searchPathPattern.replace("{baseUrl}",
-                baseUrl).replace("{page}", page.toString()).replace("{query}", encodedQuery)
-            val document = fetchDocument(url, config, refer, htmlCache =
-                htmlCache)
-            if (config.searchItems.isNotBlank()) {
-                val elements = SelectorResolver.select(document, config.searchItems,
-                    "${config.id}:searchItems")
-                logDebug(config.id, "search[$query] page=$page -> ${elements.size} item mentah")
-                coroutineScope {
-                    elements.map { el ->
-                        async(Dispatchers.IO) {
-                            runCatching { mapper
-                                .toSearchResult(el, url) }.getOrNull()
-                        }
-                    }.awaitAll().filterNotNull().distinctBy { it.url }
-                }.also {
-                    com.baseprovider.log.logSuccess(config.id,
-                        "Search '$query' p$page: ${it.size} hasil dalam " +
-                            "${System.currentTimeMillis() - __st0} ms",
-                        url = url, method = "search",
-                        durationMs = System.currentTimeMillis() - __st0)
-                }
-            } else emptyList()
+        val primaryUrl = AdaptiveRouter.buildSearchUrl(
+            config.searchPathPattern, baseUrl, encodedQuery, page)
+        val primary = runCatching {
+            searchPage(primaryUrl, query, page, refer)
         }.getOrElse { e ->
             if (e is kotlinx.coroutines.CancellationException) throw e
             logFail(
                 config.id,
                 "Search Execution Failed for '$query': ${e.message}",
-                url = baseUrl,
+                url = primaryUrl,
                 method = "search",
                 type = FailureType.NETWORK_FAILURE,
                 selectors = "searchItems"
             )
             emptyList()
         }
+        // Primary tidak menghasilkan apa-apa -> coba pola fallback (pola lama
+        // dipertahankan sebagai opsi cadangan, bukan dihapus).
+        if (primary.isNotEmpty() ||
+            config.searchPathFallbackPattern.isBlank()) return primary
+        val fallbackUrl = AdaptiveRouter.buildSearchUrl(
+            config.searchPathFallbackPattern, baseUrl, encodedQuery, page)
+        if (fallbackUrl == primaryUrl) return primary
+        com.baseprovider.log.logSuccess(config.id,
+            "Search '$query' p$page: primary 0 item -> fallback pattern",
+            url = fallbackUrl, method = "search")
+        return runCatching {
+            searchPage(fallbackUrl, query, page, refer)
+        }.getOrElse { e ->
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            logFail(
+                config.id,
+                "Search fallback pattern failed for '$query': ${e.message}",
+                url = fallbackUrl,
+                method = "search",
+                type = FailureType.NETWORK_FAILURE,
+                selectors = "searchItems"
+            )
+            emptyList()
+        }
+    }
+
+    /** Eksekusi satu halaman search (fetch + parse + log). */
+    private suspend fun searchPage(
+        url: String,
+        query: String,
+        page: Int,
+        refer: String?
+    ): List<SearchResponse> {
+        val __st0 = System.currentTimeMillis()
+        val document = fetchDocument(url, config, refer, htmlCache =
+            htmlCache)
+        if (config.searchItems.isNotBlank()) {
+            val elements = SelectorResolver.select(document, config.searchItems,
+                "${config.id}:searchItems")
+            logDebug(config.id, "search[$query] page=$page -> ${elements.size} item mentah")
+            return coroutineScope {
+                elements.map { el ->
+                    async(Dispatchers.IO) {
+                        runCatching { mapper
+                            .toSearchResult(el, url) }.getOrNull()
+                    }
+                }.awaitAll().filterNotNull().distinctBy { it.url }
+            }.also {
+                com.baseprovider.log.logSuccess(config.id,
+                    "Search '$query' p$page: ${it.size} hasil dalam " +
+                        "${System.currentTimeMillis() - __st0} ms",
+                    url = url, method = "search",
+                    durationMs = System.currentTimeMillis() - __st0)
+            }
+        }
+        return emptyList()
     }
 
     suspend fun loadLinks(
@@ -352,6 +401,16 @@ class ProviderScrapper(
         )
         return result
     }
+
+    /**
+     * Bangun URL main page dari template config. Dipakai utk row normal dan
+     * row fallback (mainPageListFallbacks).
+     */
+    private fun buildMainPageUrl(baseUrl: String, data: String,
+        page: Int): String =
+        config.mainPagePathPattern.replace("{baseUrl}", baseUrl)
+            .replace("{data}", data)
+            .replace("{page}", page.toString())
 
     /**
      * Prioritas ekstraksi: urutkan link agar yang paling mungkin menghasilkan
