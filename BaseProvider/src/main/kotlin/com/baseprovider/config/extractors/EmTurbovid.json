@@ -23,6 +23,15 @@
       "startMarker": "var urlPlay = '",
       "endMarker": "'",
       "source": "response"
+    },
+    {
+      "step": "regex",
+      "pattern": "var\\s*urlPlay\\s*=\\s*'([^']+)'",
+      "group": 1,
+      "source": "response",
+      "filter": "",
+      "universal": false,
+      "store": ""
     }
   ]
 }

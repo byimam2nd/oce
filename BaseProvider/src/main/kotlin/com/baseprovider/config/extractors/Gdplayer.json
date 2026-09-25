@@ -25,6 +25,15 @@
       "store": "kaken"
     },
     {
+      "step": "regex",
+      "pattern": "kaken\\s*=\\s*\"([^\"]+)\"",
+      "group": 1,
+      "source": "page",
+      "filter": "",
+      "universal": false,
+      "store": "kaken"
+    },
+    {
       "step": "constructUrl",
       "template": "{mainUrl}/api/?{kaken}=&_={ts}",
       "store": "apiUrl"

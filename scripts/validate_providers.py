@@ -198,6 +198,17 @@ def validate_extractor_configs(root):
         if not data.get("steps"):
             errors.append(f"{name}: steps must be a non-empty list")
 
+        is_registered = (
+            data["id"] in config_driven_ids or data["id"] in pure_config_ids)
+        if is_registered and isinstance(data.get("steps"), list) and data["steps"]:
+            step_types = [
+                s.get("step", "") if isinstance(s, dict) else ""
+                for s in data["steps"]]
+            if "substring" in step_types and "regex" not in step_types:
+                errors.append(
+                    f"{name}: config-driven extractor memakai step 'substring' "
+                    "tanpa 'regex' fallback — marker bisa berubah ketika situs "
+                    "berubah; wajib kombinasi substring+regex (adaptive pattern)")
     for cid in sorted(config_driven_ids - json_ids):
         errors.append(
             f"{cid}: listed in ExtractorRegistry.configDrivenIds but no "
