@@ -47,6 +47,57 @@ object SupabaseObservability {
     private val failedRuns = java.util.Collections
         .newSetFromMap(ConcurrentHashMap<String, Boolean>())
 
+    /**
+     * Statistik step per run, di-tally sinkron di jalur pemanggil (logStep)
+     * dan dikonsumsi oleh endRun untuk menurunkan status watchability run.
+     * Tanpa ini, run yang "success" padahal SEMUA link gagal diekstrak tidak
+     * terlihat — signal sebenarnya hanya siluman di scrape_steps.
+     */
+    private val runStepCounts =
+        ConcurrentHashMap<String, MutableMap<String, Int>>()
+
+    /** Hasil resolusi end-of-run: status final + ringkasan watchability. */
+    internal data class RunResolution(
+        val status: String, val summary: String?
+    )
+
+    /**
+     * Turunkan status akhir run dari statistik step (pure — bisa diuji).
+     * Bila tak ada satupun step yang tercatat, status caller dipertahankan.
+     * Bila step ada: semua berhasil -> success; tidak ada yang berhasil ->
+     * failed (dengan ringkasan); sebagian -> partial (dengan ringkasan).
+     * Ringkasan memakai kolom error_message yang sudah ada (tidak butuh
+     * schema baru), sehingga rincian "x/y link menghasilkan video" bisa
+     * langsung diquery per run.
+     */
+    internal fun deriveRunEndStatus(
+        collectCount: Int,
+        extractSuccess: Int,
+        extractFailed: Int,
+        extractTimeout: Int,
+        callerStatus: String
+    ): RunResolution {
+        val attempted = extractSuccess + extractFailed + extractTimeout
+        if (attempted == 0) return RunResolution(callerStatus, null)
+        val summary =
+            "COLLECT=$collectCount EXTRACT=$attempted (ok=$extractSuccess " +
+                "fail=$extractFailed timeout=$extractTimeout)"
+        return when {
+            extractSuccess > 0 && extractFailed == 0 &&
+                extractTimeout == 0 -> RunResolution("success", null)
+            extractSuccess == 0 -> RunResolution("failed", summary)
+            else -> RunResolution("partial", summary)
+        }
+    }
+
+    private fun tallyStep(runId: String, kind: String, status: String) {
+        val m = runStepCounts.computeIfAbsent(runId) {
+            ConcurrentHashMap()
+        }
+        val k = "$kind:$status"
+        m[k] = (m[k] ?: 0) + 1
+    }
+
     private fun enabled(): Boolean = URL.isNotBlank() && ANON_KEY.isNotBlank()
 
     private fun headers(prefer: String? = null) = buildMap {
@@ -123,7 +174,7 @@ object SupabaseObservability {
     fun endRun(
         runId: String?, status: String, returnedEarly: Boolean = false,
         durationMs: Long? = null, errorType: String? = null,
-        errorMessage: String? = null
+        errorMessage: String? = null, deriveFromSteps: Boolean = true
     ) {
         if (!enabled() || runId.isNullOrBlank()) return
         scope.launch {
@@ -138,12 +189,23 @@ object SupabaseObservability {
                 attempt++
             }
             if (!created) return@launch
+            val st: Map<String, Int> = runStepCounts.remove(runId)
+                ?: emptyMap()
+            val resolution = if (deriveFromSteps) deriveRunEndStatus(
+                collectCount = st["COLLECT:success"] ?: 0,
+                extractSuccess = st["EXTRACT:success"] ?: 0,
+                extractFailed = st["EXTRACT:failed"] ?: 0,
+                extractTimeout = st["EXTRACT:timeout"] ?: 0,
+                callerStatus = status
+            ) else RunResolution(status, null)
             val body = org.json.JSONObject().apply {
-                put("status", status)
+                put("status", resolution.status)
                 put("returned_early", returnedEarly)
                 durationMs?.let { put("duration_ms", it.toInt()) }
                 errorType?.let { put("error_type", it) }
-                errorMessage?.let { put("error_message", it) }
+                (resolution.summary ?: errorMessage)?.let {
+                    put("error_message", it)
+                }
                 put("finished_at", java.text.SimpleDateFormat(
                     "yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US).apply {
                     timeZone = java.util.TimeZone.getTimeZone("UTC")
@@ -171,6 +233,7 @@ object SupabaseObservability {
         errorType: String? = null
     ) {
         if (!enabled() || runId.isNullOrBlank()) return
+        tallyStep(runId, kind, status)
         val body = org.json.JSONObject().apply {
             put("run_id", runId)
             put("kind", kind)

@@ -26,6 +26,7 @@ class FallbackPipeline(private val config: ProviderConfig) {
     ) {
         val stepStartedAt = System.currentTimeMillis()
         val delivered = java.util.concurrent.atomic.AtomicInteger(0)
+        val lastFailure = java.util.concurrent.atomic.AtomicReference<String>()
         com.lagradost.api.Log.d("FallbackPipeline",
             "[${config.id}] processLink: $raw")
         val countingCallback: (ExtractorLink) -> Unit = { link ->
@@ -72,7 +73,8 @@ class FallbackPipeline(private val config: ProviderConfig) {
                         callback = countingCallback,
                         providerTag = config.id,
                         qualityStripRegex = config.qualityStripRegexCompiled,
-                        runId = runId
+                        runId = runId,
+                        failureDetail = lastFailure
                     )
                 }.getOrDefault(false)
                 if (!okDirect) {
@@ -82,6 +84,8 @@ class FallbackPipeline(private val config: ProviderConfig) {
                             runId, kind = "EXTRACT", status = "failed",
                             linkUrl = fixedUrl, errorType = FailureType
                                 .EXTRACTOR_FAILURE.label,
+                            extractorChain = lastFailure.get()
+                                ?.substringBefore('\n')?.trim(),
                             durationMs = System.currentTimeMillis() - stepStartedAt
                         )
                         return@runCatching false
@@ -97,6 +101,8 @@ class FallbackPipeline(private val config: ProviderConfig) {
                     runId, kind = "EXTRACT", status = "failed",
                     linkUrl = raw, errorType = FailureType
                         .EXTRACTOR_FAILURE.label,
+                    extractorChain = (lastFailure.get() ?: e.message)
+                        ?.substringBefore('\n')?.trim(),
                     durationMs = System.currentTimeMillis() - stepStartedAt
                 )
                 false
@@ -105,6 +111,8 @@ class FallbackPipeline(private val config: ProviderConfig) {
             SupabaseObservability.logStep(
                 runId, kind = "EXTRACT", status = "timeout",
                 linkUrl = raw, errorType = FailureType.TIMEOUT.label,
+                extractorChain = lastFailure.get()?.substringBefore('\n')
+                    ?.trim(),
                 durationMs = PER_LINK_TIMEOUT_MS
             )
             false

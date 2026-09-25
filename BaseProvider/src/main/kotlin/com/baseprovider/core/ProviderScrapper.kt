@@ -335,7 +335,8 @@ class ProviderScrapper(
                 SupabaseObservability.endRun(
                     runId,
                     status = "failed",
-                    durationMs = System.currentTimeMillis() - startedAt
+                    durationMs = System.currentTimeMillis() - startedAt,
+                    deriveFromSteps = false
                 )
                 throw e
             }

@@ -15,6 +15,7 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicReference
 
 // Batas total waktu untuk blok extractor paralel (local extractor) supaya
 // satu extractor yang lambat tidak menahan jalur fallback ke global/direct.
@@ -39,6 +40,17 @@ private suspend fun selectFirstOf(
     }
 }
 
+/**
+ * Catat pesan diagnostik kegagalan PERTAMA (compareAndSet-null). Fallback
+ * global/direct/deep-scan hanya overwrite jika belum ada nilai — penyebab
+ * paling spesifik (mis. nama extractor + HTTP code) tetap menang.
+ */
+private fun diag(
+    ref: AtomicReference<String>?, message: String
+) {
+    if (ref != null && ref.get() == null) ref.set(message)
+}
+
 suspend fun loadExtractorWithFallbackCustom(
     url: String,
     referer: String? = null,
@@ -49,7 +61,8 @@ suspend fun loadExtractorWithFallbackCustom(
     callChain: String = "-",
     qualityStripRegex: Regex = Regex("""\d{3,4}p|HD|SD|FHD""", RegexOption
         .IGNORE_CASE),
-    runId: String? = null
+    runId: String? = null,
+    failureDetail: AtomicReference<String>? = null
 ): Boolean {
     val collectedLinks = java.util.Collections
         .synchronizedList(mutableListOf<ExtractorLink>())
@@ -96,6 +109,9 @@ suspend fun loadExtractorWithFallbackCustom(
                                 if (e is kotlinx.coroutines.CancellationException) {
                                     throw e
                                 }
+                                diag(failureDetail, "${extractor.name}: " +
+                                    (e.message?.substringBefore('\n')?.trim()
+                                        ?: e.javaClass.simpleName))
                                 logFail(
                                     providerId,
                                     "Local Extractor (${extractor.name}) failed for $url: ${e.message}",
@@ -126,6 +142,9 @@ suspend fun loadExtractorWithFallbackCustom(
             loadExtractor(url, referer, subtitleCallback, internalCallback)
         }.onFailure { e ->
             if (e is kotlinx.coroutines.CancellationException) throw e
+            diag(failureDetail, "Global: " +
+                (e.message?.substringBefore('\n')?.trim()
+                    ?: e.javaClass.simpleName))
             logFail(
                 providerId, "Global Extractor failed for $url: ${e.message}",
                 url = url, method = "extractLinks",
@@ -169,6 +188,7 @@ suspend fun loadExtractorWithFallbackCustom(
                     )
                 }
             } else {
+                diag(failureDetail, "DeepScan: no video URLs in HTML source")
                 logFail(
                     providerId, "DeepScan found no video URLs in HTML source of $url",
                     url = url, method = "extractLinks",
@@ -180,6 +200,9 @@ suspend fun loadExtractorWithFallbackCustom(
             }
         }.onFailure { e ->
             if (e is kotlinx.coroutines.CancellationException) throw e
+            diag(failureDetail, "DeepScan: " +
+                (e.message?.substringBefore('\n')?.trim()
+                    ?: e.javaClass.simpleName))
             logFail(
                 providerId, "DeepScan network failure for $url: ${e.message}",
                 url = url, method = "extractLinks",
@@ -198,6 +221,7 @@ suspend fun loadExtractorWithFallbackCustom(
         .startsWith("http")) {
         val ft = if (urlDomain.contains("short.") || urlDomain.contains("shorte")) FailureType.SHORTLINK_FAILURE
             else FailureType.EXTRACTOR_FAILURE
+        diag(failureDetail, "all: $urlDomain")
         logFail(
             providerId, "All extraction methods failed to find playable links for host: $urlDomain",
             url = url, method = "extractLinks",
