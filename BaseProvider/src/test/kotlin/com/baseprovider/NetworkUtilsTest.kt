@@ -130,6 +130,21 @@ class NetworkUtilsTest {
     }
 
     @Test
+    fun `executeWithRetry propagates Cloudflare challenge detected in body without retry`() = runBlocking {
+        var calls = 0
+        try {
+            executeWithRetry<Unit>(maxRetries = 3, initialDelay = 5, maxDelay = 50) {
+                calls++
+                throw HttpStatusException(403, null, "HTTP 403 on https://example.com", "Just a moment...")
+            }
+            fail("expected CF exception to propagate")
+        } catch (e: HttpStatusException) {
+            assertEquals(1, calls)
+            assertEquals(403, e.code)
+        }
+    }
+
+    @Test
     fun `executeWithRetry retries transient failure then succeeds`() = runBlocking {
         var calls = 0
         val result = executeWithRetry(maxRetries = 3, initialDelay = 5, maxDelay = 50) {

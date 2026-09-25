@@ -95,7 +95,8 @@ suspend fun <T> executeWithRetry(
                         }
                     }
                     NON_RETRYABLE_HTTP.containsMatchIn(e.message.orEmpty()) -> throw e
-                    CLOUDFLARE_HTTP.containsMatchIn(e.message.orEmpty()) -> throw e
+                    CLOUDFLARE_HTTP.containsMatchIn(e.message.orEmpty()) ||
+                        CLOUDFLARE_HTTP.containsMatchIn(e.body) -> throw e
                     else -> {
                         lastException = e
                         if (attempt < maxRetries - 1) {
