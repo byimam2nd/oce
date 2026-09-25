@@ -18,6 +18,16 @@
       "store": "response"
     },
     {
+      "step": "iframe",
+      "comment": "Player tab ?player=N = pembungkus iframe ke embed host (gdplayer/dll). Ikuti iframe agar diextract extractor host tsb, bukan dead-end di wrapper page.",
+      "source": "response",
+      "selector": "iframe[src], video[src], source[src]",
+      "attribute": "src",
+      "exclude": "",
+      "include": "",
+      "base": "{url}"
+    },
+    {
       "step": "regex",
       "pattern": "",
       "group": 1,
