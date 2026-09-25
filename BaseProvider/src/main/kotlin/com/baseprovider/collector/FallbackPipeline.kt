@@ -91,7 +91,7 @@ class FallbackPipeline(private val config: ProviderConfig) {
                         return@runCatching false
                     }
                     tryManualIframeFetch(fixedUrl, label, currentUrl,
-                        subtitleCallback, countingCallback, runId)
+                        subtitleCallback, countingCallback, runId, lastFailure)
                 }
                 delivered.get() > 0
             }.getOrElse { e ->
@@ -146,8 +146,10 @@ class FallbackPipeline(private val config: ProviderConfig) {
         fixedUrl: String, label: String?, currentUrl: String,
         subtitleCallback: (SubtitleFile) -> Unit,
         wrappedCallback: (ExtractorLink) -> Unit,
-        runId: String? = null
+        runId: String? = null,
+        lastFailure: java.util.concurrent.atomic.AtomicReference<String>? = null
     ) {
+        val startedAt = System.currentTimeMillis()
         val baseForReferer = config.seriesUrl ?: config.mainUrl
         val refererForPlayer = if (config.refererPlayerMode == "series_url") "${baseForReferer.trimEnd('/')}/" else currentUrl
         logDebug(config.id, "Direct extraction failed, trying manual iframe fetch for: $fixedUrl (Referer: $refererForPlayer)")
@@ -170,6 +172,14 @@ class FallbackPipeline(private val config: ProviderConfig) {
                 type = FailureType.INVALID_IFRAME,
                 selectors = iframeSelectors
             )
+            SupabaseObservability.logStep(
+                runId, kind = "EXTRACT", status = "failed",
+                linkUrl = fixedUrl, errorType = FailureType
+                    .INVALID_IFRAME.label,
+                extractorChain = lastFailure?.get()?.substringBefore('\n')
+                    ?.trim(),
+                durationMs = System.currentTimeMillis() - startedAt
+            )
             return
         }
 
@@ -181,6 +191,14 @@ class FallbackPipeline(private val config: ProviderConfig) {
                 url = currentUrl, method = "loadLinks",
                 type = FailureType.INVALID_IFRAME,
                 selectors = iframeAttributes.joinToString(", ")
+            )
+            SupabaseObservability.logStep(
+                runId, kind = "EXTRACT", status = "failed",
+                linkUrl = fixedUrl, errorType = FailureType
+                    .INVALID_IFRAME.label,
+                extractorChain = lastFailure?.get()?.substringBefore('\n')
+                    ?.trim(),
+                durationMs = System.currentTimeMillis() - startedAt
             )
             return
         }
@@ -210,6 +228,17 @@ class FallbackPipeline(private val config: ProviderConfig) {
                 providerTag = config.id,
                 runId = runId,
                 callback = wrappedCallback
+            )
+        } else if (!okRecursive) {
+            // Iframe tidak membawa media langsung: catat kegagalan (sebelumnya
+            // host tanpa matching extractor "hilang" tanpa jejak di step).
+            SupabaseObservability.logStep(
+                runId, kind = "EXTRACT", status = "failed",
+                linkUrl = fixedUrl, errorType = FailureType
+                    .EXTRACTOR_FAILURE.label,
+                extractorChain = (lastFailure?.get() ?: "manual iframe: " +
+                    "no playable source").substringBefore('\n').trim(),
+                durationMs = System.currentTimeMillis() - startedAt
             )
         }
     }
