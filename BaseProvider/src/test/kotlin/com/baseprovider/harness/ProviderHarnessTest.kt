@@ -25,137 +25,136 @@ class ProviderHarnessTest {
     @Test
     fun providerHarness() {
         runBlocking {
-            try {
-        assumeTrue("set -Doce.harness=1", System.getProperty("oce.harness") == "1")
+            assumeTrue("set -Doce.harness=1", System.getProperty("oce.harness") == "1")
 
-        val providersProp = System.getProperty("oce.harness.providers") ?: "all"
-        val query = System.getProperty("oce.harness.query") ?: "naruto"
-        val maxEps = (System.getProperty("oce.harness.episodes") ?: "2").toInt()
-        val stepTimeoutMs = (System.getProperty("oce.harness.timeout") ?: "120000").toLong()
-        val outFile = System.getProperty("oce.harness.out")
+            val providersProp = System.getProperty("oce.harness.providers") ?: "all"
+            val query = System.getProperty("oce.harness.query") ?: "naruto"
+            val maxEps = (System.getProperty("oce.harness.episodes") ?: "2").toInt()
+            val stepTimeoutMs = (System.getProperty("oce.harness.timeout") ?: "120000").toLong()
+            val outFile = System.getProperty("oce.harness.out")
 
-        val targetProviders = if (providersProp == "all") {
-            listOf("Anichin", "Animasu", "Donghuastream", "Dutamovie21", "IndoDrama21", "LayarKaca21", "Samehadaku", "Animexin")
-        } else {
-            providersProp.split(",").map { it.trim() }.filter { it.isNotBlank() }
-        }
+            val targetProviders = if (providersProp == "all") {
+                listOf("Anichin", "Animasu", "Donghuastream", "Dutamovie21", "IndoDrama21", "LayarKaca21", "Samehadaku", "Animexin")
+            } else {
+                providersProp.split(",").map { it.trim() }.filter { it.isNotBlank() }
+            }
 
-        val report = StringBuilder()
-        report.append("# Provider Harness Report\n\n")
-        report.append("| provider | catalog | search | detail | links |\n")
-        report.append("|---|---|---|---|---|\n")
+            val report = StringBuilder()
+            report.append("# Provider Harness Report\n\n")
+            report.append("| provider | catalog | search | detail | links |\n")
+            report.append("|---|---|---|---|---|\n")
 
-        for (providerId in targetProviders) {
-            val lines = mutableListOf<String>()
-            ProviderLog.mirror = { lines.add(it) }
+            for (providerId in targetProviders) {
+                val lines = mutableListOf<String>()
+                ProviderLog.mirror = { lines.add(it) }
 
-            var catalogStatus = "SKIP"
-            var searchStatus = "SKIP"
-            var detailStatus = "SKIP"
-            var linksStatus = "SKIP"
+                var catalogStatus = "SKIP"
+                var searchStatus = "SKIP"
+                var detailStatus = "SKIP"
+                var linksStatus = "SKIP"
 
-            try {
-                val api = object : ProviderCloudstream() {
-                    override val providerId: String get() = providerId
-                }
+                try {
+                    val api = object : ProviderCloudstream() {
+                        override val providerId: String get() = providerId
+                    }
 
-                catalogStatus = runCatching {
-                    runTestStep(stepTimeoutMs, "catalog") {
+                    catalogStatus = runCatching {
+                        runTestStep(stepTimeoutMs, "catalog") {
+                            val req = MainPageRequest("OCE Harness", "", false)
+                            val home = api.getMainPage(1, req)
+                            val items = home.items.flatMap { (it as HomePageList).list }
+                            if (items.isEmpty()) "KOSONG" else "OK(${items.size})"
+                        }
+                    }.getOrElse { e -> classifyFailure(e) }
+
+                    val firstItemUrl = runCatching {
                         val req = MainPageRequest("OCE Harness", "", false)
                         val home = api.getMainPage(1, req)
-                        val items = home.items.flatMap { (it as HomePageList).list }
-                        if (items.isEmpty()) "KOSONG" else "OK(${items.size})"
-                    }
-                }.getOrElse { e -> classifyFailure(e) }
+                        home.items.flatMap { (it as HomePageList).list }
+                            .firstOrNull()?.url
+                    }.getOrNull()
 
-                val firstItemUrl = runCatching {
-                    val req = MainPageRequest("OCE Harness", "", false)
-                    val home = api.getMainPage(1, req)
-                    home.items.flatMap { (it as HomePageList).list }
-                        .firstOrNull()?.url
-                }.getOrNull()
-
-                searchStatus = runCatching {
-                    runTestStep(stepTimeoutMs, "search") {
-                        val results = api.search(query)
-                        if (results.isEmpty()) "KOSONG" else "OK(${results.size})"
-                    }
-                }.getOrElse { e -> classifyFailure(e) }
-
-                val detailUrl = firstItemUrl
-                    ?: runCatching { api.search(query).firstOrNull()?.url }.getOrNull()
-                    ?: ""
-
-                var episodeDataUrls: List<String> = emptyList()
-                var detailTitle = ""
-                detailStatus = runCatching {
-                    runTestStep(stepTimeoutMs, "detail") {
-                        val lr = api.load(detailUrl)
-                        detailTitle = lr.name
-                        episodeDataUrls = when (lr) {
-                            is AnimeLoadResponse -> lr.episodes.values.flatten().map { it.data }
-                            is TvSeriesLoadResponse -> lr.episodes.map { it.data }
-                            is MovieLoadResponse -> {
-                                lr.dataUrl?.let { listOf(it) } ?: listOf(detailUrl)
-                            }
-                            else -> emptyList()
+                    searchStatus = runCatching {
+                        runTestStep(stepTimeoutMs, "search") {
+                            val results = api.search(query)
+                            if (results.isEmpty()) "KOSONG" else "OK(${results.size})"
                         }
-                        if (episodeDataUrls.isEmpty()) "KOSONG" else "OK(${episodeDataUrls.size} eps)"
-                    }
-                }.getOrElse { e -> classifyFailure(e) }
+                    }.getOrElse { e -> classifyFailure(e) }
 
-                if (episodeDataUrls.isNotEmpty() && !detailStatus.startsWith("GAGAL") && !detailStatus.startsWith("TIMEOUT")) {
-                    val results = mutableListOf<String>()
-                    for ((idx, epUrl) in episodeDataUrls.take(maxEps).withIndex()) {
-                        val stepRes = runCatching {
-                            runTestStep(stepTimeoutMs, "links-$idx") {
-                                val collected = mutableListOf<ExtractorLink>()
-                                val ok = api.loadLinks(epUrl, false, {}, { collected.add(it) })
-                                if (!ok) "GAGAL: loadLinks returned false"
-                                else if (collected.isEmpty()) "KOSONG"
-                                else "OK(${collected.size} links: ${collected.take(2).map { it.name }.joinToString(",")})"
+                    val detailUrl = firstItemUrl
+                        ?: runCatching { api.search(query).firstOrNull()?.url }.getOrNull()
+                        ?: ""
+
+                    var episodeDataUrls: List<String> = emptyList()
+                    var detailTitle = ""
+                    detailStatus = runCatching {
+                        runTestStep(stepTimeoutMs, "detail") {
+                            val lr = api.load(detailUrl)
+                            detailTitle = lr.name
+                            episodeDataUrls = when (lr) {
+                                is AnimeLoadResponse -> lr.episodes.values.flatten().map { it.data }
+                                is TvSeriesLoadResponse -> lr.episodes.map { it.data }
+                                is MovieLoadResponse -> {
+                                    lr.dataUrl?.let { listOf(it) } ?: listOf(detailUrl)
+                                }
+                                else -> emptyList()
                             }
-                        }.getOrElse { e -> classifyFailure(e) }
-                        results.add("ep${idx + 1}: $stepRes")
+                            if (episodeDataUrls.isEmpty()) "KOSONG" else "OK(${episodeDataUrls.size} eps)"
+                        }
+                    }.getOrElse { e -> classifyFailure(e) }
+
+                    if (episodeDataUrls.isNotEmpty() && !detailStatus.startsWith("GAGAL") && !detailStatus.startsWith("TIMEOUT")) {
+                        val results = mutableListOf<String>()
+                        for ((idx, epUrl) in episodeDataUrls.take(maxEps).withIndex()) {
+                            val stepRes = runCatching {
+                                runTestStep(stepTimeoutMs, "links-$idx") {
+                                    val collected = mutableListOf<ExtractorLink>()
+                                    val ok = api.loadLinks(epUrl, false, {}, { collected.add(it) })
+                                    if (!ok) "GAGAL: loadLinks returned false"
+                                    else if (collected.isEmpty()) "KOSONG"
+                                    else "OK(${collected.size} links: ${collected.take(2).map { it.name }.joinToString(",")})"
+                                }
+                            }.getOrElse { e -> classifyFailure(e) }
+                            results.add("ep${idx + 1}: $stepRes")
+                        }
+                        linksStatus = results.joinToString("; ")
+                    } else {
+                        linksStatus = "SKIP (detail $detailStatus)"
                     }
-                    linksStatus = results.joinToString("; ")
-                } else {
-                    linksStatus = "SKIP (detail $detailStatus)"
-                }
-            } finally {
-                ProviderLog.mirror = null
-                val failLines = lines.filter { it.contains("FAIL") || it.contains("ERROR") || it.contains("CRITICAL") }
-                    .map { "  - $it" }
-                    .joinToString("\n")
-                val debugLines = lines.filter { it.contains("SELECT") || it.contains("MISS") || it.contains("HIT") }
-                    .take(10)
-                    .map { "  - $it" }
-                    .joinToString("\n")
-                val logSummary = StringBuilder()
-                if (failLines.isNotBlank()) logSummary.append("\n**Gagal**:\n$failLines")
-                if (debugLines.isNotBlank()) logSummary.append("\n**Selector**:\n$debugLines")
-                report.append("| $providerId | $catalogStatus | $searchStatus | $detailStatus | $linksStatus |\n")
-                if (logSummary.isNotBlank()) {
-                    report.append("| | | | | $logSummary |\n")
+                } catch (e: NoClassDefFoundError) {
+                    val msg = if (e.message?.contains("MainAPIKt") == true) {
+                        "NEEDS_ANDROID_RUNTIME: CloudStream classes.jar static initializer requires Android. Harness runs in JVM only; use health-check workflow for diagnostics."
+                    } else {
+                        "GAGAL: ${e.javaClass.simpleName}: ${e.message?.take(120) ?: "no message"}"
+                    }
+                    catalogStatus = msg
+                    searchStatus = "-"
+                    detailStatus = "-"
+                    linksStatus = "-"
+                } finally {
+                    ProviderLog.mirror = null
+                    val failLines = lines.filter { it.contains("FAIL") || it.contains("ERROR") || it.contains("CRITICAL") }
+                        .map { "  - $it" }
+                        .joinToString("\n")
+                    val debugLines = lines.filter { it.contains("SELECT") || it.contains("MISS") || it.contains("HIT") }
+                        .take(10)
+                        .map { "  - $it" }
+                        .joinToString("\n")
+                    val logSummary = StringBuilder()
+                    if (failLines.isNotBlank()) logSummary.append("\n**Gagal**:\n$failLines")
+                    if (debugLines.isNotBlank()) logSummary.append("\n**Selector**:\n$debugLines")
+                    report.append("| $providerId | $catalogStatus | $searchStatus | $detailStatus | $linksStatus |\n")
+                    if (logSummary.isNotBlank()) {
+                        report.append("| | | | | $logSummary |\n")
+                    }
                 }
             }
-        }
 
-        val finalReport = report.toString()
-        println(finalReport)
-        outFile?.let { File(it).writeText(finalReport) }
+            val finalReport = report.toString()
+            println(finalReport)
+            outFile?.let { File(it).writeText(finalReport) }
         }
-    } catch (e: NoClassDefFoundError) {
-        val msg = if (e.message?.contains("MainAPIKt") == true) {
-            "NEEDS_ANDROID_RUNTIME: CloudStream classes.jar static initializer requires Android. Harness runs in JVM only; use health-check workflow for diagnostics."
-        } else {
-            "GAGAL: ${e.javaClass.simpleName}: ${e.message?.take(120) ?: "no message"}"
-        }
-        println("# Provider Harness Report\n\n| provider | catalog | search | detail | links |\n|---|---|---|---|---|")
-        println("| all | $msg | - | - | - |")
-        outFile?.let { File(it).writeText("# Provider Harness Report\n\n$msg") }
     }
-}
 
     private suspend fun <T> runTestStep(
         timeoutMs: Long,
