@@ -23,7 +23,8 @@ import java.io.File
 class ProviderHarnessTest {
 
     @Test
-    fun `provider harness`() = runBlocking {
+    fun providerHarness() {
+        runBlocking {
         assumeTrue("set -Doce.harness=1", System.getProperty("oce.harness") == "1")
 
         val providersProp = System.getProperty("oce.harness.providers") ?: "all"
@@ -142,6 +143,7 @@ class ProviderHarnessTest {
         val finalReport = report.toString()
         println(finalReport)
         outFile?.let { File(it).writeText(finalReport) }
+        }
     }
 
     private suspend fun <T> runTestStep(
