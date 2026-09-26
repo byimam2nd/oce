@@ -46,6 +46,12 @@ object OceSettings {
         return p.getLong(KEY_CACHE_TTL, default)
     }
 
+    /** True = blokir item berdasar kategori dewasa (config.excludeCategoryPatterns). Default aktif. */
+    fun categoryFilterEnabled(providerId: String): Boolean {
+        val p = prefs(providerId) ?: return true
+        return p.getBoolean(KEY_FILTER_CATEGORIES, true)
+    }
+
     fun applyOverrides(providerId: String, base: ProviderConfig): ProviderConfig {
         val p = prefs(providerId) ?: return base
         return base.copy(
@@ -105,4 +111,5 @@ object OceSettings {
     internal const val KEY_CATEGORIES = "enabled_categories"
     internal const val KEY_CACHE_TTL = "cache_ttl_minutes"
     internal const val KEY_CUSTOM_CATEGORIES = "custom_categories"
+    internal const val KEY_FILTER_CATEGORIES = "filter_categories_enabled"
 }

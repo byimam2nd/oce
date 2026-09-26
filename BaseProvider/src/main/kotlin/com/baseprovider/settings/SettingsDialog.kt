@@ -31,7 +31,8 @@ internal class SettingsDialog {
         val customUrl: EditText,
         val customContainer: LinearLayout,
         val customChecks: LinkedHashMap<String, CheckBox>,
-        val statusView: TextView
+        val statusView: TextView,
+        val categoryFilterCheck: CheckBox
     )
 
     fun show(context: Context, providerId: String, config: ProviderConfig) {
@@ -138,7 +139,13 @@ internal class SettingsDialog {
         )
         layout.addView(labelRow(context, "Cache TTL (minutes)", ttlSpinner))
 
-        return Controls(layout, catChecks, ttlSpinner, customName, customUrl, customContainer, customChecks, statusView)
+        val categoryFilterCheck = CheckBox(context).apply {
+            text = "Filter kategori dewasa (semi/bokep/xxx)"
+            isChecked = OceSettings.categoryFilterEnabled(providerId)
+        }
+        layout.addView(categoryFilterCheck)
+
+        return Controls(layout, catChecks, ttlSpinner, customName, customUrl, customContainer, customChecks, statusView, categoryFilterCheck)
     }
 
     private fun validateAndAdd(
@@ -208,6 +215,7 @@ internal class SettingsDialog {
         prefs.edit()
             .putString(KEY_CATEGORIES, enabled.joinToString(","))
             .putLong(KEY_CACHE_TTL, TTL_OPTIONS[controls.ttlSpinner.selectedItemPosition])
+            .putBoolean(KEY_FILTER_CATEGORIES, controls.categoryFilterCheck.isChecked)
             .apply()
         reloadHome()
     }
@@ -274,6 +282,7 @@ internal class SettingsDialog {
         const val TAG = "OceSettings"
         const val KEY_CATEGORIES = "enabled_categories"
         const val KEY_CACHE_TTL = "cache_ttl_minutes"
+        const val KEY_FILTER_CATEGORIES = "filter_categories_enabled"
         val TTL_OPTIONS = longArrayOf(5L, 15L, 30L, 60L, 120L)
     }
 }

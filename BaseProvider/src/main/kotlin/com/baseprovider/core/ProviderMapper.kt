@@ -4,6 +4,7 @@ import com.baseprovider.config.*
 import com.baseprovider.log.*
 import com.baseprovider.model.*
 import com.baseprovider.network.*
+import com.baseprovider.settings.OceSettings
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import org.jsoup.nodes.Document
@@ -91,6 +92,13 @@ class ProviderMapper(
 
     private val excludeRegexCache = java.util.concurrent.ConcurrentHashMap<String, Regex?>()
 
+    private val categoryFilterRegexCache = java.util.concurrent.ConcurrentHashMap<String, Regex?>()
+
+    private fun categoryFilterRegex(pattern: String): Regex? =
+        categoryFilterRegexCache.computeIfAbsent(pattern) {
+            runCatching { Regex(it) }.getOrNull()
+        }
+
     // L4: regex hrefClean dikompilasi sekali per pola unik, tidak per elemen
     // (toSearchResult dipanggil untuk tiap item hasil search).
     private val compiledHrefClean = ConcurrentHashMap<String, Regex?>()
@@ -160,6 +168,32 @@ class ProviderMapper(
                     com.lagradost.api.Log.d("ProviderMapper",
                         "[$key] skip excluded-url: $href")
                     return null
+                }
+            }
+            // Guard kategori dewasa (config-driven + toggle di settings):
+            // item yang kategori-nya cocok pola (mis. Semi Indo, Bokep INDO)
+            // DITOLAK dari home/search, meski judulnya normal (kasus
+            // Dutamovie21 item 'macan' kategori ['Bokep INDO','Semi Indo']).
+            if (OceSettings.categoryFilterEnabled(config.id) &&
+                config.excludeCategoryPatterns.isNotBlank()
+            ) {
+                val rx = categoryFilterRegex(config.excludeCategoryPatterns)
+                if (rx != null) {
+                    val categoryText = if (config.loadTags.isNotBlank()) {
+                        val els = SelectorResolver.select(element, config.loadTags,
+                            "$key:loadTags")
+                        els.joinToString(" ") { it.text()?.trim() ?: "" }
+                    } else null
+                    // Fallback universal: atom link rel="category tag"/rel="tag"
+                    val haystack = (categoryText
+                        ?: element.select("a[rel=\"category tag\"], a[rel=\"tag\"]")
+                            .joinToString(" ") { it.text()?.trim() ?: "" })
+                        .trim()
+                    if (rx.containsMatchIn(haystack)) {
+                        com.lagradost.api.Log.d("ProviderMapper",
+                            "[$key] blocked category '$haystack'")
+                        return null
+                    }
                 }
             }
             val poster = if (config.searchPoster.isNotBlank()) {

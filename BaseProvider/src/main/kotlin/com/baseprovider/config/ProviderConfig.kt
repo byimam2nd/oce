@@ -157,6 +157,13 @@ data class ProviderConfig(
 
     // ── Bloat Regex ──
     val bloatRegex: Regex = BLOAT_REGEX_DEFAULT,
+
+    // ── Category Filter ──
+    // Regex kategori item yang DITOLAK muncul di home/search (konten dewasa,
+    // semi, dll). Cocok terhadap teks kategori item (mis. rel="category tag").
+    // Kosong = filter mati untuk provider tsb. Toggle di settings dialog
+    // per-provider (OceSettings.KEY_FILTER_CATEGORIES) meng-override di runtime.
+    val excludeCategoryPatterns: String = EXCLUDE_CATEGORY_PATTERNS_DEFAULT,
 ) {
     val qualityStripRegexCompiled: Regex by lazy {
         try {
@@ -182,7 +189,8 @@ data class ProviderConfig(
             "bloatRegex" to bloatRegex.pattern,
             "yearExtractorRegex" to yearExtractorRegex,
             "hrefCleanRegex" to hrefCleanRegex,
-            "qualityStripRegex" to qualityStripRegex
+            "qualityStripRegex" to qualityStripRegex,
+            "excludeCategoryPatterns" to excludeCategoryPatterns
         ).forEach { (name, pattern) ->
             if (pattern.isNotBlank()) {
                 try { Regex(pattern) } catch (e: Exception) {
@@ -196,8 +204,10 @@ data class ProviderConfig(
         }
     }
 
-    companion object {}
+    companion object
 }
+
+val EXCLUDE_CATEGORY_PATTERNS_DEFAULT = """(?i)\b(semi|bokep|xxx)\b"""
 
 val BLOAT_REGEX_DEFAULT = Regex(
     """(?i)(\bONA\b|\bOngoing\b|\bCompleted\b|\bSpecial\b|\bTAMAT\b|\bIndo\b|\bFull\b|\bSeason\b""" +

@@ -139,6 +139,8 @@ fun fromJson(id: String, json: JSONObject): ProviderConfig {
         bloatRegex = try { Regex(json.optString("bloatRegex",
             BLOAT_REGEX_DEFAULT
                 .pattern)) } catch (_: Exception) { BLOAT_REGEX_DEFAULT },
+        excludeCategoryPatterns = json.optString("excludeCategoryPatterns",
+            EXCLUDE_CATEGORY_PATTERNS_DEFAULT),
     )
 }
 
