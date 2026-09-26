@@ -40,6 +40,16 @@ object SelectorResolver {
     private const val DECAY_LOG_INTERVAL_MS = 5 * 60_000L
     private val lastDecayLog = ConcurrentHashMap<String, Long>()
 
+    // Ciri halaman yang DITERIMA berupa CF challenge (bukan konten asli):
+    // selector apa pun pasti gagal match dan log SELECTOR_FAILURE jadi
+    // menyesatkan. `Just a moment`/`__cf_chl`/`cf_chl_opt` hanya muncul di
+    // challenge page — `challenge-platform` sengaja TIDAK dipakai karena
+    // juga ada di halaman normal yang di-hosting Cloudflare.
+    private val CF_CHALLENGE_SIGNATURE = Regex(
+        """Just a moment|__cf_chl|cf_chl_opt|managed check|captcha-bref*""",
+        RegexOption.IGNORE_CASE
+    )
+
     private data class Fingerprint(
         val tag: String,
         val attributes: Map<String, String>,
@@ -147,7 +157,8 @@ object SelectorResolver {
                 return el
             }
         }
-        logDecay(key, "selectFirst: all variants failed, relocate no match: '$selector'")
+        logDecay(key, "selectFirst: all variants failed, relocate no match: '$selector'",
+            document)
         return null
     }
 
@@ -175,7 +186,8 @@ object SelectorResolver {
                 return Elements(relocated)
             }
         }
-        logDecay(key, "select: all variants failed, relocate no match: '$selector'")
+        logDecay(key, "select: all variants failed, relocate no match: '$selector'",
+            document)
         return Elements()
     }
 
@@ -216,7 +228,7 @@ object SelectorResolver {
             }
             logDebug("SelectorResolver",
                 "selectValidated[$key] INVALID variant='$variant' (tipe $type)")
-            if (key.isNotBlank()) markBroken(key, variant)
+            if (key.isNotBlank()) markBroken(key, variant, document)
         }
         if (key.isNotBlank()) {
             relocateValidated(document, key, type, extract)?.let { el ->
@@ -224,7 +236,8 @@ object SelectorResolver {
                 return el
             }
         }
-        logDecay(key, "selectValidated: all variants failed validation, relocate no match: '$selector'")
+        logDecay(key, "selectValidated: all variants failed validation, relocate no match: '$selector'",
+            document)
         return null
     }
 
@@ -439,9 +452,13 @@ object SelectorResolver {
      * tidak pernah match (tanpa fingerprint) TIDAK di-log — itu normal
      * (field opsional yang memang tidak ada di halaman).
      */
-    private fun logDecay(key: String, message: String) {
+    private fun logDecay(key: String, message: String, document: Element?) {
         if (key.isBlank()) return
         if (!fingerprints.containsKey(key)) return
+        // Halaman yang diterima bisa berupa CF challenge (bukan konten asli).
+        // Deteksi dulu agar dipakai di bawah & tidak banjiri SELECTOR_FAILURE.
+        val html = document?.outerHtml()
+        val isChallenge = isCloudflareChallengePage(html)
         val now = System.currentTimeMillis()
         val last = lastDecayLog[key] ?: 0L
         if (now - last < DECAY_LOG_INTERVAL_MS) return
@@ -450,21 +467,41 @@ object SelectorResolver {
         // dengan log lain), key lengkap disimpan di kolom selectors untuk
         // query korelasi "selector mana paling sering rusak".
         val providerId = key.substringBefore(':').takeIf { it.isNotBlank() } ?: key
+        if (isChallenge) {
+            // Selector "gagal" karena halaman adalah CF challenge, bukan
+            // karena struktur berubah. Jangan banjiri log SELECTOR_FAILURE
+            // yang menyesatkan — catat sekali sebagai CLOUDFLARE saja.
+            logFail(
+                tag = providerId,
+                message = "$message [CF challenge page — bukan selector rusak]",
+                url = document?.baseUri()?.takeIf { it.isNotBlank() },
+                type = FailureType.CLOUDFLARE_FAILURE,
+                selectors = key,
+                stage = "SELECT"
+            )
+            return
+        }
         logFail(
             tag = providerId,
             message = message,
+            url = document?.baseUri()?.takeIf { it.isNotBlank() },
             type = FailureType.SELECTOR_FAILURE,
             selectors = key,
             stage = "SELECT"
         )
     }
 
+    // true bila dokumen yang diterima adalah halaman CF challenge (selector
+    // apa pun pasti gagal match — log SELECTOR_FAILURE akan menyesatkan).
+    internal fun isCloudflareChallengePage(html: String?): Boolean =
+        !html.isNullOrBlank() && CF_CHALLENGE_SIGNATURE.containsMatchIn(html)
+
     private fun isBroken(key: String, variant: String): Boolean {
         val set = brokenVariants[key] ?: return false
         return variant in set
     }
 
-    private fun markBroken(key: String, variant: String) {
+    private fun markBroken(key: String, variant: String, document: Element?) {
         val set = brokenVariants.getOrPut(key) { mutableSetOf() }
         if (set.size >= MAX_BROKEN_PER_KEY) {
             // Jangan biarkan set membengkak — reset saat penuh agar bisa
@@ -474,7 +511,9 @@ object SelectorResolver {
         } else {
             set.add(variant)
         }
-        logDecay(key, "variant blacklisted (match DOM tapi gagal validasi tipe): '$variant'")
+        logDecay(key,
+            "variant blacklisted (match DOM tapi gagal validasi tipe): '$variant'",
+            document)
     }
 
     private fun unmarkBroken(key: String, variant: String) {

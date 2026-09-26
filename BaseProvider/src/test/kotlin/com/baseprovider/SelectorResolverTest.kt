@@ -142,4 +142,29 @@ class SelectorResolverTest {
             resolved
         )
     }
+
+    @Test
+    fun `isCloudflareChallengePage detects actual CF challenge page`() {
+        val challenge = """
+            <html><head><title>Just a moment...</title></head>
+            <body><div class="cf_chl_opt"><div class="cf_chl_raf-hd"></div></div></body>
+        </html>
+        """.trimIndent()
+        assertTrue(SelectorResolver.isCloudflareChallengePage(challenge))
+    }
+
+    @Test
+    fun `isCloudflareChallengePage not fooled by challenge-platform on normal page`() {
+        // challenge-platform juga muncul di halaman normal yang hosting-nya
+        // Cloudflare — deteksi tidak boleh false positive.
+        val normal = """
+            <html><head>
+              <script src="https://challenges.cloudflare.com/turnstile/v0/api.js"></script>
+            </head><body><div class="anime-list"><article>Mao</article></div></body>
+        </html>
+        """.trimIndent()
+        assertFalse(SelectorResolver.isCloudflareChallengePage(normal))
+        assertFalse(SelectorResolver.isCloudflareChallengePage(null))
+        assertFalse(SelectorResolver.isCloudflareChallengePage(""))
+    }
 }
