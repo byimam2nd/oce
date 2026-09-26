@@ -99,6 +99,19 @@ class ProviderMapper(
             runCatching { Regex(it) }.getOrNull()
         }
 
+    /**
+     * True bila `text` (mis. kategori dari halaman detail) cocok pola
+     * excludeCategoryPatterns. Dipakai post-filter hasil search yang elemen
+     * listing-nya tidak memuat atribut kategori (kasus Dutamovie21 search).
+     */
+    fun matchesExcludeCategory(text: String): Boolean {
+        if (!OceSettings.categoryFilterEnabled(config.id) ||
+            config.excludeCategoryPatterns.isBlank() || text.isBlank()
+        ) return false
+        val rx = categoryFilterRegex(config.excludeCategoryPatterns) ?: return false
+        return rx.containsMatchIn(text)
+    }
+
     // L4: regex hrefClean dikompilasi sekali per pola unik, tidak per elemen
     // (toSearchResult dipanggil untuk tiap item hasil search).
     private val compiledHrefClean = ConcurrentHashMap<String, Regex?>()

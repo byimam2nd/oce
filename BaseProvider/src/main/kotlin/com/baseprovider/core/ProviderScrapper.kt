@@ -6,6 +6,7 @@ import com.baseprovider.config.*
 import com.baseprovider.log.*
 import com.baseprovider.model.*
 import com.baseprovider.network.*
+import com.baseprovider.settings.OceSettings
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
 import kotlinx.coroutines.CompletableDeferred
@@ -32,6 +33,9 @@ class ProviderScrapper(
     // Semaphore untuk ekstraksi paralel link (banyak sumber diproses
     // bersamaan, tiap link dibatasi PER_LINK_TIMEOUT_MS oleh FallbackPipeline).
     private val linkSemaphore = Semaphore(5)
+    // Post-filter kategori (search): fetch halaman detail tiap hasil terjadi
+    // paralel — batasi concurrency agar tidak membebani host sekaligus.
+    private val detailFetchSemaphore = Semaphore(4)
     private val htmlCache = ExpiringCache<Document>(5 * 60 * 1000L)
     private val linkCollector = LinkCollector(config)
     private val fallbackPipeline = FallbackPipeline(config)
@@ -225,20 +229,49 @@ class ProviderScrapper(
             val elements = SelectorResolver.select(document, config.searchItems,
                 "${config.id}:searchItems")
             logDebug(config.id, "search[$query] page=$page -> ${elements.size} item mentah")
-            return coroutineScope {
+            val results = coroutineScope {
                 elements.map { el ->
                     async(Dispatchers.IO) {
                         runCatching { mapper
                             .toSearchResult(el, url) }.getOrNull()
                     }
                 }.awaitAll().filterNotNull().distinctBy { it.url }
-            }.also {
-                com.baseprovider.log.logSuccess(config.id,
-                    "Search '$query' p$page: ${it.size} hasil dalam " +
-                        "${System.currentTimeMillis() - __st0} ms",
-                    url = url, method = "search",
-                    durationMs = System.currentTimeMillis() - __st0)
             }
+            // Post-filter kategori dewasa untuk hasil search: item listing
+            // (Dutamovie21 dkk) tidak memuat kategori di elemen, sehingga
+            // filter tahap element (toSearchResult) lolos. Baca kategori dari
+            // halaman detail dan tolak item dewasa (kasus search 'semi').
+            val filtered = if (OceSettings.categoryFilterEnabled(config.id) &&
+                config.excludeCategoryPatterns.isNotBlank() &&
+                config.loadTags.isNotBlank()
+            ) {
+                coroutineScope {
+                    results.map { item ->
+                        async(Dispatchers.IO) {
+                            runCatching {
+                                detailFetchSemaphore.withPermit {
+                                    val detail = fetchDocument(item.url, config,
+                                        htmlCache = htmlCache)
+                                    val catText = SelectorResolver.select(detail,
+                                        config.loadTags, "${config.id}:loadTags")
+                                        .joinToString(" ") { it.text()?.trim() ?: "" }
+                                    if (mapper.matchesExcludeCategory(catText)) {
+                                        com.lagradost.api.Log.d("ProviderMapper",
+                                            "[${config.id}] blocked category (detail) '$catText'")
+                                        null
+                                    } else item
+                                }
+                            }.getOrNull()
+                        }
+                    }.awaitAll().filterNotNull()
+                }
+            } else results
+            com.baseprovider.log.logSuccess(config.id,
+                "Search '$query' p$page: ${filtered.size} hasil dalam " +
+                    "${System.currentTimeMillis() - __st0} ms",
+                url = url, method = "search",
+                durationMs = System.currentTimeMillis() - __st0)
+            return filtered
         }
         return emptyList()
     }
