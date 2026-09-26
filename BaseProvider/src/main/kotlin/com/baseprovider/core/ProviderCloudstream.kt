@@ -8,7 +8,7 @@ import com.lagradost.cloudstream3.utils.*
 
 open class ProviderCloudstream : MainAPI() {
 
-    val providerId: String by lazy {
+    open val providerId: String by lazy {
         this::class.java.simpleName.replace("Provider", "").replace(Regex("[^a-zA-Z0-9]"), "")
     }
 

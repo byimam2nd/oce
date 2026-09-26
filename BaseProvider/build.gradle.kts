@@ -54,3 +54,13 @@ dependencies {
         testImplementation(files(cloudstream3Jar))
     }
 }
+
+// Harness provider (test-only): teruskan -Poce.* dari CLI ke JVM test.
+tasks.withType<Test>().configureEach {
+    project.properties.forEach { (k, v) ->
+        val key = k.toString()
+        if (key.startsWith("oce.") && v is String) {
+            systemProperty(key, v)
+        }
+    }
+}

@@ -13,6 +13,13 @@ import java.net.URI
 object ProviderLog {
     private const val GLOBAL_PREFIX = "OCE"
 
+    /**
+     * Sink opsional untuk harness test. Log Android (`Log.d`) tidak terlihat
+     * di JVM unit test, jadi harness memasang mirror ini untuk mendapat baris
+     * log yang sama di stdout CI. Null = tidak ada efek di produksi.
+     */
+    internal var mirror: ((String) -> Unit)? = null
+
     private const val SUPABASE_BATCH_SIZE = 10
     private const val SUPABASE_FLUSH_INTERVAL_MS = 2000L
 
@@ -86,6 +93,7 @@ object ProviderLog {
             LogLevel.ERROR -> Log.e(GLOBAL_PREFIX, logcatMsg)
             LogLevel.CRITICAL -> Log.e(GLOBAL_PREFIX, logcatMsg)
         }
+        mirror?.invoke("${level.name} $logcatMsg")
 
         // SUCCESS di-upload juga: dibutuhkan sebagai penanda runtime/telemetri
         // (MovieGateSkip, EpiStats, Loaded page) agar perilaku device dapat
