@@ -49,7 +49,7 @@
   "searchHref": "a",
   "searchPoster": "div.content-thumbnail img, img[data-src], img[src]",
   "loadTitle": "h1.entry-title, div.movie-info h1",
-  "loadPoster": "meta[property=\"og:image\"], div.gmr-movie-data figure img, figure.pull-left img",
+  "loadPoster": "figure.pull-left img||div.gmr-movie-data figure img||meta[property=\"og:image\"]",
   "loadDesc": "div.description, div.entry-content",
   "loadInfoBox": "div.content-moviedata",
   "loadTags": "div.gmr-moviedata a[rel=\"category tag\"], .gmr-movie-on a",
