@@ -471,7 +471,7 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
     }
 
     /** Decrypt AES/GCM/NoPadding: key = b64url(parts[0]) + b64url(parts[1]). */
-    private fun decryptAesGcm(keyParts: List<String>, iv: String, payload: String): String {
+    internal fun decryptAesGcm(keyParts: List<String>, iv: String, payload: String): String {
         if (keyParts.isEmpty() || iv.isBlank() || payload.isBlank()) return ""
         return try {
             val key = keyParts.flatMap { b64UrlDecode(it).toList() }.toByteArray()
@@ -496,7 +496,7 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
     }
 
     /** Eval JS via Rhino di Dispatchers.Default, ambil objek lalu stringify. */
-    private suspend fun runRhino(js: String, objectName: String): String =
+    internal suspend fun runRhino(js: String, objectName: String): String =
         withContext(Dispatchers.Default) {
             if (js.isBlank()) return@withContext ""
             try {
@@ -518,7 +518,7 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
         }
 
     /** Decode signature URL: xor hex → base64 → drop/reverse/swap (Vidguardto). */
-    private fun sigDecode(url: String): String {
+    internal fun sigDecode(url: String): String {
         if (url.isBlank()) return url
         val sig = url.split("sig=").getOrNull(1)?.split("&")
             ?.getOrNull(0) ?: return url
