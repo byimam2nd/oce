@@ -55,8 +55,7 @@ class DetailPageScrapper(
         // keputusan isMovie di bawah (tanpa mengubah semantik keduanya).
         val hasTvPath = config.tvPathSegment.isNotBlank() && currentUrl
             .contains(config.tvPathSegment)
-        val urlLooksTv = listOf("/tv/", "/series/", "/anime/", "/drama/",
-            "/episode/", "/eps/").any { currentUrl.contains(it, true) }
+        val urlLooksTv = TV_LIKE_PATH_MARKERS.any { currentUrl.contains(it, true) }
         // M2: cek kelengkapan page-1 DENGAN selector murah (tanpa panggil
         // extractMetadata yang ber-log METADATA_FAILURE — page-1 yang sengaja
         // stub untuk di-follow tidak boleh memunculkan failure palsu). Hanya

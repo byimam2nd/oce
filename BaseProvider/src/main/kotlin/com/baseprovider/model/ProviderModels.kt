@@ -6,6 +6,11 @@ import com.lagradost.cloudstream3.ShowStatus
  * INTERNAL DATA CONTRACT LAYER
  */
 
+/** Marker URL umum situs TV (path segment) yang mengindikasikan series than movie. */
+val TV_LIKE_PATH_MARKERS = listOf(
+    "/tv/", "/series/", "/anime/", "/drama/", "/episode/", "/eps/"
+)
+
 data class MetadataPackage(
     val title: String, 
     val poster: String, 

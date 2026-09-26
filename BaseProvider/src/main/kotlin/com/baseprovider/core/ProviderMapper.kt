@@ -72,9 +72,7 @@ class ProviderMapper(
         if (config.tvPathSegment.isNotBlank() && url.contains(config.tvPathSegment)) {
             return false
         }
-        if (listOf("/tv/", "/series/", "/anime/", "/drama/", "/episode/", "/eps/")
-                .any { url.contains(it, true) }
-        ) return false
+        if (TV_LIKE_PATH_MARKERS.any { url.contains(it, true) }) return false
         // Pola regex dari config (movieUrlRegex) — sumber kebenaran per-situs,
         // bukan hardcode. Dipakai juga DetailPageScrapper via helper ini.
         if (config.movieUrlRegex.isNotBlank()) {
@@ -227,8 +225,7 @@ class ProviderMapper(
             // Heuristic adaptive: URL tv-like tanpa butuh tvPathSegment config
             // (mis. /tv/, /series/, /anime/) dikenali sebagai series walaupun
             // config belum di-update struktur situsnya.
-            val urlLooksTv = listOf("/tv/", "/series/", "/anime/", "/drama/",
-                "/episode/", "/eps/").any { href.contains(it, true) }
+            val urlLooksTv = TV_LIKE_PATH_MARKERS.any { href.contains(it, true) }
             val isMovie = (!hasTvPath && !urlLooksTv && (
                 (config.moviePathSegment.isNotBlank() && href
                     .contains(config.moviePathSegment))

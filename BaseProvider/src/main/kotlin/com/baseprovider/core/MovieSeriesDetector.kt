@@ -3,6 +3,7 @@ package com.baseprovider.core
 import com.baseprovider.config.ProviderConfig
 import com.baseprovider.model.DetectionReason
 import com.baseprovider.model.DetectionResult
+import com.baseprovider.model.TV_LIKE_PATH_MARKERS
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import org.jsoup.select.Elements
@@ -37,8 +38,7 @@ object MovieSeriesDetector {
         looksLikeMovieUrlFn: (String) -> Boolean
     ): DetectionResult {
         val hasTvPath = config.tvPathSegment.isNotBlank() && url.contains(config.tvPathSegment)
-        val urlLooksTv = listOf("/tv/", "/series/", "/anime/", "/drama/", "/episode/", "/eps/")
-            .any { url.contains(it, true) }
+        val urlLooksTv = TV_LIKE_PATH_MARKERS.any { url.contains(it, true) }
 
         // ── Validasi kualitas epItems dari configured selector ──
         val (validItems, invalidCount) = validateEpisodes(epItems, url)
