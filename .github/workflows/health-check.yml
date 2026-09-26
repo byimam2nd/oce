@@ -3,7 +3,12 @@ name: Health Check - Provider Observability
 on:
   schedule:
     - cron: '20 22 * * *' # 05:20 WIB (UTC+7)
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      window_hours:
+        description: 'Lebar jendela laporan (jam). Pakai 1 untuk mengisolasi tes manual.'
+        required: false
+        default: '24'
 
 permissions:
   contents: read
@@ -22,6 +27,7 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          HEALTH_WINDOW_HOURS: ${{ inputs.window_hours || '24' }}
         run: |
           python3 scripts/health_check.py > /tmp/health.md 2> /tmp/health.err || {
             echo "::error::health_check.py gagal"; cat /tmp/health.err; exit 1; }
