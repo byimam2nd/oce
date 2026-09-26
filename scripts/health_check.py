@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Provider health-check report dari observability Supabase (OCE).
 
-Membaca scrape_runs + scrape_steps (anon key, SELECT-only), membandingkan
-jendela saat ini (default 24h) dengan baseline (24h sebelumnya), lalu
-menghasilkan laporan Markdown yang menandai provider menurun / mati dan
-signature extractor yang gagal. Dipakai oleh workflow health-check.
+Membaca scrape_runs + scrape_steps + logs (anon key, SELECT-only),
+membandingkan jendela saat ini (default 24h) dengan baseline (24h
+sebelumnya), lalu menghasilkan laporan Markdown yang menandai provider
+menurun / mati, signature extractor yang gagal, dan drift selector
+(pola SELECTOR gagal baru per situs). Dipakai oleh workflow health-check.
 
 Env:
   SUPABASE_URL, SUPABASE_ANON_KEY  (wajib)
@@ -147,6 +148,24 @@ def main() -> None:
     sig_b = Counter(sig_of(s.get("extractor_chain")) for s in steps_base)
     err_c = Counter((s.get("error_type") or "?") for s in steps_cur)
 
+    # logs: pola SELECTOR gagal (drift struktur HTML) per situs
+    def log_bucket(lo: datetime, hi: datetime):
+        rows = api_get("logs", [
+            ("select", "tag,host,failure_type,stage,created_at"),
+            ("failure_type", "eq.SELECTOR"),
+            ("created_at", f"gte.{iso(lo)}"),
+            ("created_at", f"lt.{iso(hi)}"),
+            ("order", "created_at.desc"),
+        ])
+        return Counter(
+            (r.get("tag") or "?", r.get("host") or "?")
+            for r in rows if r.get("created_at")
+        )
+
+    sel_c = log_bucket(win_from, now)
+    sel_b = log_bucket(base_from, win_from)
+    sel_total_c = sum(sel_c.values())
+
     lines = []
     w = lines.append
     w(f"# Provider Health Report")
@@ -154,7 +173,8 @@ def main() -> None:
     w(f"- Window: `{iso(win_from)}` .. `{iso(now)}` (UTC, {WINDOW_H}h)")
     w(f"- Baseline: `{iso(base_from)}` .. `{iso(win_from)}` ({BASELINE_H}h sebelumnya)")
     w(f"- Sumber: {len(sources)} | runs: {len(runs)} | step gagal (window): "
-      f"{len(steps_cur)} | (baseline): {len(steps_base)}")
+      f"{len(steps_cur)} | (baseline): {len(steps_base)} | "
+      f"selector gagal (window): {sel_total_c}")
     w("")
 
     w("## Provider")
@@ -205,6 +225,22 @@ def main() -> None:
         if fresh:
             FLAGS.append(f"signature gagal baru: {k} ({v}x)")
         w(f"| {k} | {v} | {sig_b.get(k, 0)} | {fresh} |")
+    w("")
+
+    w("## Selector drift (SELECTOR gagal, window vs baseline)")
+    w("")
+    if not sel_c:
+        w("_Tidak ada SELECTOR_FAILURE pada window ini._")
+    else:
+        w("| provider | host | window | baseline | baru? |")
+        w("|---|---|---|---|---|")
+        for (tag, host), v in sel_c.most_common(15):
+            base_n = sel_b.get((tag, host), 0)
+            fresh = "YA" if v >= 3 and base_n == 0 else ""
+            if fresh:
+                FLAGS.append(f"selector drift baru: {tag} @ {host} ({v}x)")
+            w(f"| {tag} | {host} | {v} | {base_n} | {fresh} |")
+        w("")
     w("")
 
     if FLAGS:
