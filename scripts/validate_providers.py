@@ -25,7 +25,7 @@ VALID_TYPES = {
 }
 SERIES_TYPES = {"TvSeries", "Anime", "AnimeMovie", "AsianDrama", "Cartoon", "OVA"}
 MOVIE_TYPES = {"Movie", "AnimeMovie"}
-REGEX_FIELDS = ["bloatRegex", "yearExtractorRegex", "hrefCleanRegex", "qualityStripRegex"]
+REGEX_FIELDS = ["bloatRegex", "yearExtractorRegex", "hrefCleanRegex", "qualityStripRegex", "excludeCategoryPatterns"]
 REGISTRY_RE = re.compile(r"([A-Za-z0-9_]+)\(\)")
 LOOPBACK_PREFIXES = ("127.", "0.", "169.254")
 
