@@ -167,6 +167,9 @@ class ProviderHarnessTest {
     }
 
     private fun classifyFailure(e: Throwable): String {
+        if (e is NoClassDefFoundError && e.message?.contains("MainAPIKt") == true) {
+            throw e
+        }
         return when {
             e is kotlinx.coroutines.TimeoutCancellationException -> "TIMEOUT"
             e.message?.contains("WebView", ignoreCase = true) == true -> "NEEDS_WEBVIEW"
