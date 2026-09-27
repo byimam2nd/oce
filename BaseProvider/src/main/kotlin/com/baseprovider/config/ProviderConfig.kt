@@ -211,16 +211,16 @@ data class ProviderConfig(
         }
     }
 
+    /** Resolve selector item untuk row main page tertentu.
+     *  Jika row ini punya entri di mainPageItems (berdasarkan nama row),
+     *  gunakan selector tersebut; jika tidak fallback ke searchItems global.
+     *  Desain ini backward-compatible: provider tanpa mainPageItems
+     *  terus memakai searchItems. */
+    internal fun mainPageItemsSelector(rowName: String): String =
+        mainPageItems[rowName]?.takeIf { it.isNotBlank() } ?: searchItems
+
     companion object
 }
-
-/** Resolve selector item untuk row main page tertentu.
- *  Jika row ini punya entri di mainPageItems (berdasarkan nama row),
- *  gunakan selector tersebut; jika tidak fallback ke searchItems global.
- *  Desain ini backward-compatible: provider tanpa mainPageItems
- *  terus memakai searchItems. */
-internal fun mainPageItemsSelector(rowName: String): String =
-    mainPageItems[rowName]?.takeIf { it.isNotBlank() } ?: searchItems
 
 val EXCLUDE_CATEGORY_PATTERNS_DEFAULT = """(?i)\b(semi|bokep|xxx)\b"""
 
