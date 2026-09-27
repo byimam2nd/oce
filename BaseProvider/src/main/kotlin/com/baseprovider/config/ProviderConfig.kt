@@ -80,6 +80,13 @@ data class ProviderConfig(
     // Row pengganti saat row mainPageLists redirect keluar dari host provider
     // (off-host). Mapping path -> path fallback lokal. Row asli TETAP ada.
     val mainPageListFallbacks: Map<String, String> = emptyMap(),
+    // Selector item OPSIONAL per daftar main page, kunci = nama row
+    // (sama dengan Pair ke-2 di mainPageLists). Dipakai saat satu selector
+    // global (searchItems) tidak bisa dipakai untuk semua row — mis. homepage
+    // yang punya beberapa section .listupd sehingga selector global ikut
+    // mencampur section lain. Row tanpa entri -> fallback ke searchItems,
+    // jadi provider lama tidak terpengaruh.
+    val mainPageItems: Map<String, String> = emptyMap(),
 
     // ── Extractor Control ──
     val allowedExtractors: Set<String> = emptySet(),
@@ -206,6 +213,14 @@ data class ProviderConfig(
 
     companion object
 }
+
+/** Resolve selector item untuk row main page tertentu.
+ *  Jika row ini punya entri di mainPageItems (berdasarkan nama row),
+ *  gunakan selector tersebut; jika tidak fallback ke searchItems global.
+ *  Desain ini backward-compatible: provider tanpa mainPageItems
+ *  terus memakai searchItems. */
+internal fun mainPageItemsSelector(rowName: String): String =
+    mainPageItems[rowName]?.takeIf { it.isNotBlank() } ?: searchItems
 
 val EXCLUDE_CATEGORY_PATTERNS_DEFAULT = """(?i)\b(semi|bokep|xxx)\b"""
 

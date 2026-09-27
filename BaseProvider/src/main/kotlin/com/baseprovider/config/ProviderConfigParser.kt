@@ -79,6 +79,7 @@ fun fromJson(id: String, json: JSONObject): ProviderConfig {
         googleReferer = json.optBoolean("googleReferer", false),
         mainPageLists = parsePairsList(json.optJSONArray("mainPageLists")),
         mainPageListFallbacks = jsonObjectToMap(json.optJSONObject("mainPageListFallbacks")),
+        mainPageItems = jsonObjectToMap(json.optJSONObject("mainPageItems")),
         allowedExtractors = jsonArrayToSet(json.optJSONArray("allowedExtractors")),
         skipHosts = jsonArrayToSet(json.optJSONArray("skipHosts")),
         dubKeyword = json.optString("dubKeyword", "dub"),

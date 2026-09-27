@@ -133,4 +133,43 @@ class ProviderConfigParserTest {
         assertTrue(unknown.contains("searchTitel"))
         assertFalse(unknown.contains("searchTitle"))
     }
+
+    @Test
+    fun `mainPageItemsSelector resolves per-row selector with fallback`() {
+        val json = JSONObject("""
+        {
+            "mainUrl": "https://test.com",
+            "supportedTypes": ["Movie"],
+            "searchItems": ".global-item",
+            "mainPageItems": {"CustomRow": ".custom-item"}
+        }""")
+        val config = fromJson("test", json)
+        assertEquals(".custom-item", config.mainPageItemsSelector("CustomRow"))
+        assertEquals(".global-item", config.mainPageItemsSelector("OtherRow"))
+    }
+
+    @Test
+    fun `mainPageItemsSelector empty map falls back to searchItems`() {
+        val json = JSONObject("""
+        {
+            "mainUrl": "https://test.com",
+            "supportedTypes": ["Movie"],
+            "searchItems": ".global-item"
+        }""")
+        val config = fromJson("empty-items", json)
+        assertEquals(".global-item", config.mainPageItemsSelector("AnyRow"))
+    }
+
+    @Test
+    fun `mainPageItemsSelector blank value falls back to searchItems`() {
+        val json = JSONObject("""
+        {
+            "mainUrl": "https://test.com",
+            "supportedTypes": ["Movie"],
+            "searchItems": ".global-item",
+            "mainPageItems": {"BlankRow": "  "}
+        }""")
+        val config = fromJson("blank", json)
+        assertEquals(".global-item", config.mainPageItemsSelector("BlankRow"))
+    }
 }
