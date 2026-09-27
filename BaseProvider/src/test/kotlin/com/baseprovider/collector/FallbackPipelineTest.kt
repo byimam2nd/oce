@@ -3,6 +3,8 @@ package com.baseprovider.collector
 import com.baseprovider.config.ProviderConfig
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Base64
 
@@ -52,5 +54,72 @@ class FallbackPipelineTest {
     @Test
     fun `base64 html tanpa iframe menghasilkan string kosong`() = runBlocking {
         assertEquals("", pipeline.decodeRawLink(b64("<div>no iframe here</div>")))
+    }
+
+    // ── iframe HTML mentah (tanpa base64) ──
+
+    @Test
+    fun `iframe html mentah ter-unwrap ke src`() = runBlocking {
+        val raw = """<iframe width="560" height="315" src="//ok.ru/videoembed/10091720346164?nochat=1" frameborder="0" allowfullscreen></iframe>"""
+        assertEquals("//ok.ru/videoembed/10091720346164?nochat=1", pipeline.decodeRawLink(raw))
+    }
+
+    @Test
+    fun `iframe html mentah dengan huruf kapital ter-unwrap`() = runBlocking {
+        val raw = """<IFRAME SRC="https://morencius.com/embed/gjyusjb6sjrd" WIDTH=640></IFRAME>"""
+        assertEquals("https://morencius.com/embed/gjyusjb6sjrd", pipeline.decodeRawLink(raw))
+    }
+
+    // ── isUnusableCandidate ──
+
+    private val page = "https://anichin.moe/lord-of-the-ancient-god-grave-episode-01-subtitle-indonesia/"
+
+    @Test
+    fun `token sampah ditolak`() {
+        assertTrue(pipeline.isUnusableCandidate("all_comment", "$page/all_comment", page))
+    }
+
+    @Test
+    fun `path relatif yang menunjuk halaman sama ditolak`() {
+        // Gnomon 46.151.28.185: /fall-2-deadpoint-2026/?player=3 -> halaman itself
+        val cur = "http://46.151.28.185/fall-2-deadpoint-2026/"
+        assertTrue(
+            pipeline.isUnusableCandidate(
+                "/fall-2-deadpoint-2026/?player=3",
+                "http://46.151.28.185/fall-2-deadpoint-2026/?player=3",
+                cur
+            )
+        )
+    }
+
+    @Test
+    fun `kandidat embed asli tetap diterima`() {
+        assertFalse(
+            pipeline.isUnusableCandidate(
+                "https://dood.to/e/abc123", "https://dood.to/e/abc123", page
+            )
+        )
+    }
+
+    @Test
+    fun `path relatif ke halaman lain tetap diterima`() {
+        assertFalse(
+            pipeline.isUnusableCandidate(
+                "/embed/xyz", "https://anichin.moe/embed/xyz", page
+            )
+        )
+    }
+
+    @Test
+    fun `kandidat kosong atau resolved kosong ditolak`() {
+        assertTrue(pipeline.isUnusableCandidate("", "", page))
+        assertTrue(pipeline.isUnusableCandidate("https://ok.ru/v/1", "", page))
+    }
+
+    @Test
+    fun `currentUrl kosong tidak menyebabkan penolakan`() {
+        assertFalse(
+            pipeline.isUnusableCandidate("https://ok.ru/v/1", "https://ok.ru/v/1", "")
+        )
     }
 }

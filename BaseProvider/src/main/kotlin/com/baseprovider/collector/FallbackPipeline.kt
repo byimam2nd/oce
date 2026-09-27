@@ -42,7 +42,8 @@ class FallbackPipeline(private val config: ProviderConfig) {
                 val fixedUrl = fixUrlSmart(decodedRaw, currentUrl)
                     .safeHttpsify().substringBefore("#").fixKnownDomainAliases()
                 if (fixedUrl.isNotBlank()) resolvedUrl = fixedUrl
-                if (fixedUrl.isBlank()) {
+                if (isUnusableCandidate(raw, fixedUrl, currentUrl)) {
+                    logDebug(config.id, "Skipping unusable candidate: $raw")
                     SupabaseObservability.logStep(
                         runId, kind = "EXTRACT", status = "failed",
                         linkUrl = resolvedUrl, errorType = FailureType
@@ -134,7 +135,37 @@ class FallbackPipeline(private val config: ProviderConfig) {
         private const val PER_LINK_TIMEOUT_MS = 20_000L
     }
 
+    internal fun isUnusableCandidate(raw: String, resolved: String, currentUrl: String): Boolean {
+        val r = raw.trim()
+        if (r.isEmpty() || resolved.isBlank()) return true
+        // Token sampah hasil scraper (mis. "all_comment") tidak punya scheme,
+        // host, path, maupun query — pasti bukan link.
+        if (!r.startsWith("http") && !r.startsWith("//") && !r.startsWith("/") &&
+            !r.contains(".") && !r.contains("/") && !r.contains("?") && !r.contains("#")
+        ) return true
+        // Kandidat yang menunjuk halaman yang sedang diproses (path identik,
+        // query diabaikan) tidak bisa menghasilkan link baru.
+        return isSamePage(resolved, currentUrl)
+    }
+
+    private fun isSamePage(a: String, b: String): Boolean {
+        if (b.isBlank()) return false
+        return try {
+            val ua = URI(a)
+            val ub = URI(b)
+            ua.host != null && ua.host == ub.host &&
+                ua.path.trimEnd('/') == ub.path.trimEnd('/')
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     internal suspend fun decodeRawLink(raw: String): String {
+        // Sebagian mirror mengirim HTML iframe mentah (tanpa base64).
+        if (raw.trimStart().startsWith("<")) {
+            val src = Jsoup.parse(raw).selectFirst("iframe")?.attr("src")?.trim()
+            if (!src.isNullOrBlank()) return src
+        }
         if (raw.startsWith("http") || raw.startsWith("//") || raw
             .startsWith("/") || !raw.safeIsBase64()) return raw
         val lk21 = decryptLk21PlayerUrl(raw)
