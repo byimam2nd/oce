@@ -1,0 +1,99 @@
+name: Debug DB Query
+
+on:
+  workflow_dispatch:
+    inputs:
+      provider:
+        description: 'Provider ID (e.g. Anichin)'
+        required: true
+        default: 'Anichin'
+      hours:
+        description: 'Hours back'
+        required: false
+        default: '2'
+
+jobs:
+  query:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - name: Query scrape_runs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          PROVIDER: ${{ inputs.provider }}
+          HOURS: ${{ inputs.hours }}
+        run: |
+          python3 -c "
+import os, urllib.parse, urllib.request, json, sys
+from datetime import datetime, timedelta, timezone
+
+URL = os.environ['SUPABASE_URL'].rstrip('/')
+KEY = os.environ['SUPABASE_ANON_KEY']
+PROVIDER = os.environ['PROVIDER']
+HOURS = int(os.environ.get('HOURS', '2'))
+
+def iso(ts): return ts.isoformat(timespec='seconds')
+now = datetime.now(timezone.utc)
+since = iso(now - timedelta(hours=HOURS))
+
+# scrape_runs
+q = [
+  ('select', 'id,source_id,context,status,started_at,error_message,error_type,start_url'),
+  ('source_id', f'eq.{PROVIDER}'),
+  ('context', 'eq.EPISODE'),
+  ('started_at', f'gte.{since}'),
+  ('order', 'started_at.desc'),
+  ('limit', '20')
+]
+req_url = f'{URL}/rest/v1/scrape_runs?{urllib.parse.urlencode(q)}'
+req = urllib.request.Request(req_url, headers={
+  'apikey': KEY, 'Authorization': f'Bearer {KEY}', 'Accept': 'application/json'
+})
+with urllib.request.urlopen(req, timeout=30) as resp:
+  runs = json.loads(resp.read().decode())
+
+print(f'# {PROVIDER} scrape_runs (last {HOURS}h): {len(runs)}')
+print()
+print('| waktu (UTC) | status | start_url | error |')
+print('|---|---|---|---|')
+for r in runs:
+  t = r.get('started_at', '')[:19]
+  st = r.get('status', '')
+  url = r.get('start_url', '') or '-'
+  err = r.get('error_message', '') or '-'
+  if len(err) > 80: err = err[:77] + '...'
+  print(f'| {t} | {st} | {url} | {err} |')
+
+if runs:
+  # scrape_steps for these run ids
+  run_ids = [str(r['id']) for r in runs]
+  print()
+  print('## scrape_steps (extractor_chain) for these runs:')
+  for rid in run_ids[:10]:
+    q2 = [
+      ('select', 'extractor_chain,error_type,status,created_at,link_url,quality'),
+      ('run_id', f'eq.{rid}'),
+      ('order', 'created_at.desc')
+    ]
+    req_url2 = f'{URL}/rest/v1/scrape_steps?{urllib.parse.urlencode(q2)}'
+    req2 = urllib.request.Request(req_url2, headers={
+      'apikey': KEY, 'Authorization': f'Bearer {KEY}', 'Accept': 'application/json'
+    })
+    with urllib.request.urlopen(req2, timeout=30) as resp:
+      steps = json.loads(resp.read().decode())
+    if steps:
+      print(f'### run_id={rid}')
+      print('| extractor_chain | error_type | status | link_url | quality |')
+      print('|---|---|---|---|---|')
+      for s in steps:
+        chain = s.get('extractor_chain', '') or '-'
+        et = s.get('error_type', '') or '-'
+        st = s.get('status', '') or '-'
+        link = s.get('link_url', '') or '-'
+        qual = s.get('quality', '') or '-'
+        if len(link) > 60: link = link[:57] + '...'
+        print(f'| {chain} | {et} | {st} | {link} | {qual} |')
+  sys.exit(0)
+"
