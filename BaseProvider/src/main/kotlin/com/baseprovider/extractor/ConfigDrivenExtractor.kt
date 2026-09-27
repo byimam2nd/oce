@@ -55,6 +55,9 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
         val variables = mutableMapOf<String, String>()
         val videoUrls = mutableSetOf<String>()
 
+        /** true saat fetch membuktikan konten sudah dihapus (HTTP 404). */
+        var contentRemoved = false
+
         fun resolveTemplate(template: String): String {
             val base = runCatching {
                 val afterScheme = url.substringAfter("://")
@@ -104,7 +107,7 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
             runCatching {
                 for (step in config.steps) {
                     executeStep(step, state, subtitleCallback, callback)
-                    if (state.videoUrls.isNotEmpty()) break
+                    if (state.videoUrls.isNotEmpty() || state.contentRemoved) break
                 }
             }.onFailure { e ->
                 if (e is kotlinx.coroutines.CancellationException) throw e
@@ -120,6 +123,9 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
                 deliver(state, callback)
                 return
             }
+            // Sudah diklasifikasikan CONTENT_REMOVED di step fetch: jangan
+            // tandai juga sebagai kegagalan extractor.
+            if (state.contentRemoved) return
             logDebug(name, "Variant '${variant.name}' produced 0 links, trying next")
         }
         com.baseprovider.log.logFail(name,
@@ -156,6 +162,19 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
                 val response = app.get(target,
                     referer = state.resolveReferer(step.referer),
                     headers = state.resolveHeaders(step.headers))
+                if (response.code == 404) {
+                    // File/video dihapus upstream. Hentikan varian: sisa step
+                    // hanya akan regex di halaman error dan tetap 0 link.
+                    state.contentRemoved = true
+                    com.baseprovider.log.logFail(
+                        name,
+                        "Konten tidak tersedia di host (HTTP 404): ${target}",
+                        url = url, method = "getUrl",
+                        type = FailureType.CONTENT_REMOVED,
+                        stage = "EXTRACT", extractor = name
+                    )
+                    return
+                }
                 state.variables[step.store] = response.text
                 if (step.storeFinalUrl.isNotBlank()) {
                     state.variables[step.storeFinalUrl] = response.url
