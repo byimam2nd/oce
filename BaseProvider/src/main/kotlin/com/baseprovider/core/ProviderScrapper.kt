@@ -80,10 +80,8 @@ class ProviderScrapper(
                 document = fetchDocument(url, config, htmlCache = htmlCache)
             }
             val isHorizontal = config.isHorizontal
-            // Selector item per-daftar, fallback ke searchItems global.
-            val itemsSelector = config.mainPageItemsSelector(request.name)
-            val home = if (itemsSelector.isNotBlank()) {
-                val elements = SelectorResolver.select(document, itemsSelector,
+            val home = if (config.searchItems.isNotBlank()) {
+                val elements = SelectorResolver.select(document, config.searchItems,
                     "${config.id}:searchItems")
                 // Mapping paralel via async/await: tiap item diproses independen,
                 // hasil digabung HANYA setelah SEMUA selesai (awaitAll) → list
