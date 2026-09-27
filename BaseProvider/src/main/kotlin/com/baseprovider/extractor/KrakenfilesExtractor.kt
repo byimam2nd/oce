@@ -21,8 +21,20 @@ open class Krakenfiles : ExtractorApi() {
     ) {
         val id = Regex("/(?:view|embed-video)/([0-9a-zA-Z]+)")
             .find(url)?.groupValues?.get(1) ?: return
-        val doc = app.get("$mainUrl/embed-video/$id").document
-        val raw = doc.selectFirst("source")?.attr("src") ?: return
+        val response = app.get("$mainUrl/embed-video/$id")
+        if (response.code == 404) {
+            // File dihapus dari krakenfiles: halaman balas 404 tanpa <source>.
+            // Provider asal (samehadaku/animasu) masih menautkan URL mati, jadi
+            // ini kondisi normal, bukan kegagalan extractor yang bisa diperbaiki.
+            com.baseprovider.log.logFail(
+                this.name, "File krakenfiles tidak ada (HTTP 404)",
+                url = url, method = "getUrl",
+                type = com.baseprovider.log.FailureType.CONTENT_REMOVED,
+                stage = "EXTRACT", extractor = this.name
+            )
+            return
+        }
+        val raw = response.document.selectFirst("source")?.attr("src") ?: return
         val link = if (raw.startsWith("//")) "https:$raw" else raw
         MasterLinkGenerator.createSmartLink(
             this.name, link, null,
