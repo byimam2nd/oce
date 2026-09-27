@@ -327,7 +327,7 @@ object AdaptiveHeaderProbe {
                                 out.write(buf, 0, n)
                                 total += n
                             }
-                            val text = out.toString(Charsets.UTF_8)
+                            val text = String(out.toByteArray(), Charsets.UTF_8)
                             if (text.isNotEmpty()) {
                                 return ProbeResult.Ok(
                                     System.currentTimeMillis() - start,
