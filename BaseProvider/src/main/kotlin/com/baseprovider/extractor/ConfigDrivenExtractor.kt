@@ -169,7 +169,7 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
                     com.baseprovider.log.logFail(
                         name,
                         "Konten tidak tersedia di host (HTTP 404): ${target}",
-                        url = url, method = "getUrl",
+                        url = state.url, method = "getUrl",
                         type = FailureType.CONTENT_REMOVED,
                         stage = "EXTRACT", extractor = name
                     )
