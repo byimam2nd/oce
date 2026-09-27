@@ -130,13 +130,16 @@ class FallbackPipeline(private val config: ProviderConfig) {
         private const val PER_LINK_TIMEOUT_MS = 20_000L
     }
 
-    private suspend fun decodeRawLink(raw: String): String {
+    internal suspend fun decodeRawLink(raw: String): String {
         if (raw.startsWith("http") || raw.startsWith("//") || raw
             .startsWith("/") || !raw.safeIsBase64()) return raw
         val lk21 = decryptLk21PlayerUrl(raw)
         if (lk21 != null) return lk21
         val dec = raw.safeDecode()
-        if (dec.contains("iframe")) return Jsoup.parse(dec).selectFirst("iframe")?.attr("src") ?: ""
+        // Sebagian embed code memakai kapital (<IFRAME SRC=...>); pemeriksaan
+        // harus case-insensitive agar Morencius/StreamRuby tetap terpanggil.
+        if (dec.contains("iframe", ignoreCase = true)) return Jsoup
+            .parse(dec).selectFirst("iframe")?.attr("src") ?: ""
         if (dec.startsWith("http") || dec.startsWith("//") || dec
             .startsWith("/")) return dec
         return ""
