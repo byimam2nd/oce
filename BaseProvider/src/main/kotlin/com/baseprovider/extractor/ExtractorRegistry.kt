@@ -89,7 +89,10 @@ object ProviderExtractors {
             val config = ExtractorConfigRegistry.get(id) ?: continue
             result.add(ConfigDrivenExtractor(config))
         }
-        com.baseprovider.log.logSuccess("ExtractorRegistry",
+        // DEBUG: buildList() dipanggil tiap load provider, jadi pesan ini
+        //ceupluk tiap kali halaman dibuka. Kirim sebagai SUCCESS membuat
+        // ~45% volume Supabase cuma berisi baris yang isinya konstan.
+        com.baseprovider.log.logDebug("ExtractorRegistry",
             "buildList: ${result.size} extractor aktif " +
                 "(legacy=${legacyList.size}, configDriven=${configDrivenIds.size}, " +
                 "pureConfig=${pureConfigIds.size})")
