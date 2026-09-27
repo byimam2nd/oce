@@ -12,12 +12,12 @@
     "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"
   },
   "mainPageLists": [
+    ["https://anichin.moe/", "Rilisan Terbaru"],
     ["anime/?status=&type=&order=popular&page=", "Popular Donghua"],
     ["anime/?status=&type=&order=update&page=", "Recently Updated"],
     ["anime/?sub=&order=latest&page=", "Latest Added"],
     ["anime/?status=ongoing&type=&order=update&page=", "Ongoing"],
-    ["anime/?status=completed&type=&order=update&page=", "Completed"],
-    ["https://anichin.moe/", "Rilisan Terbaru"]
+    ["anime/?status=completed&type=&order=update&page=", "Completed"]
   ],
   "mainPageItems": {
     "Rilisan Terbaru": "div.listupd.normal div.excstf article.bs"
