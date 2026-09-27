@@ -31,13 +31,13 @@ open class Odnoklassniki : ExtractorApi() {
         val videoPageUrl = if (url.contains("/videoembed/")) {
             url.replace("/videoembed/", "/video/")
         } else url
-        var videoReq = normalize(app.get(videoPageUrl, headers = headers).text)
+        var videoReq = OkRuPayload.normalize(app.get(videoPageUrl, headers = headers).text)
         if (!videoReq.contains("hlsManifestUrl") && !videoReq.contains("\"videos\"")) {
             val embedUrl = url.replace("/video/", "/videoembed/")
-            videoReq = normalize(app.get(embedUrl, headers = headers).text)
+            videoReq = OkRuPayload.normalize(app.get(embedUrl, headers = headers).text)
         }
 
-        val hlsUrl = HLS_MANIFEST_RE
+        val hlsUrl = OkRuPayload.HLS_MANIFEST_RE
             .find(videoReq)?.groupValues?.getOrNull(1)
             ?.let { MasterLinkGenerator.decodeUnicodeEscapes(it) }
         if (!hlsUrl.isNullOrBlank()) {
@@ -83,21 +83,6 @@ open class Odnoklassniki : ExtractorApi() {
             )
         }
     }
-
-    internal val HLS_MANIFEST_RE = Regex(""""hlsManifestUrl":\s*"([^"]+)"""")
-
-    /**
-     * ok.ru meng-escape JSON payload di dalam HTML dengan HTML entity
-     * (`&quot;hlsManifestUrl&quot;:&quot;...`), bukan hanya backslash escape.
-     * Tanpa normalisasi entity, regex `"hlsManifestUrl":\s*"..."` tidak pernah
-     * match → extractor keluar tanpa memanggil callback → 0 link dan host
-     * tercatat "All extraction methods failed".
-     */
-    internal fun normalize(raw: String): String = raw
-        .replace("\\&quot;", "\"")
-        .replace("&quot;", "\"")
-        .replace("&amp;", "&")
-        .replace("\\\\", "\\")
 
     data class OkRuVideo(@JsonProperty("name") val name: String,
         @JsonProperty("url") val url: String)
