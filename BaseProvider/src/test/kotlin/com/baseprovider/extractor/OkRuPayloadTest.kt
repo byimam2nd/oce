@@ -1,6 +1,7 @@
 package com.baseprovider.extractor
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -44,5 +45,44 @@ class OkRuPayloadTest {
     @Test
     fun `payload tanpa hlsManifestUrl menghasilkan null`() {
         assertNull(OkRuPayload.extractHlsManifest("""{"movie":{"id":1}}"""))
+    }
+
+    // ── hasPlayerPayload: deteksi video yang dihapus di ok.ru ──
+
+    @Test
+    fun `halaman generic video terhapus tanpa payload terdeteksi`() {
+        // Bentuk nyata respons ok.ru untuk video yang tidak tersedia:
+        // <title>Смотрите видео в ОК. Плеер Видео</title> tanpa data player.
+        val deadPage = """
+            <!DOCTYPE html><html><head><title>Смотрите видео в ОК. Плеер Видео</title>
+            <meta property="og:image" content="https://st-ok.cdn-vk.ru/res/i/ok_logo-r.png">
+            </head><body><div id="player"></div></body></html>
+        """.trimIndent()
+        assertFalse(OkRuPayload.hasPlayerPayload(deadPage))
+    }
+
+    @Test
+    fun `halaman dengan hlsManifestUrl terdeteksi punya payload`() {
+        assertTrue(
+            OkRuPayload.hasPlayerPayload(
+                """{"movie":{"hlsManifestUrl":"https://ok6-7.vkuser.net/video.m3u8?cmd=x"}}"""
+            )
+        )
+    }
+
+    @Test
+    fun `halaman dengan daftar videos terdeteksi punya payload`() {
+        assertTrue(
+            OkRuPayload.hasPlayerPayload("""{"videos":[{"name":"480","url":"//x/y.mp4"}]}""")
+        )
+    }
+
+    @Test
+    fun `payload html-entity escaped tetap terdeteksi`() {
+        assertTrue(
+            OkRuPayload.hasPlayerPayload(
+                "&quot;hlsManifestUrl&quot;:&quot;https://ok6-7.vkuser.net/v.m3u8&quot;"
+            )
+        )
     }
 }

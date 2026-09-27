@@ -14,5 +14,6 @@ enum class FailureType(val label: String) {
     CANCELLED("CANCELLED"),
     HTTP_FAILURE("HTTP"),
     INVALID_URL("URL"),
+    CONTENT_REMOVED("REMOVED"),
     TIMEOUT("TIMEOUT")
 }

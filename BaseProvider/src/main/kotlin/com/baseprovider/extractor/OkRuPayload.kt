@@ -24,4 +24,19 @@ internal object OkRuPayload {
     /** URL HLS mentah (masih berisi escape `\u0026`) atau null bila tidak ada. */
     fun extractHlsManifest(raw: String): String? =
         HLS_MANIFEST_RE.find(normalize(raw))?.groupValues?.getOrNull(1)
+
+    /**
+     * true bila halaman masih memuat payload player (master HLS atau daftar
+     * video).
+     *
+     * ok.ru menjawab video yang dihapus/tidak tersedia dengan halaman
+     * "Плеер Видео" generik (~32KB) yang TIDAK memuat payload apa pun. Tanpa
+     * cek ini, video mati dicatat sebagai "All extraction methods failed"
+     * (FailureType.EXTRACTOR) sehingga terlihat seperti bug extractor kita,
+     * padahal tidak ada yang bisa diperbaiki di sisi OCE.
+     */
+    fun hasPlayerPayload(raw: String): Boolean {
+        val n = normalize(raw)
+        return n.contains("hlsManifestUrl") || n.contains("\"videos\"")
+    }
 }

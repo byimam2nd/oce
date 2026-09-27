@@ -6,6 +6,7 @@ import com.lagradost.cloudstream3.utils.AppUtils.tryParseJson
 import com.lagradost.api.Log
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.baseprovider.log.FailureType
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -32,9 +33,22 @@ open class Odnoklassniki : ExtractorApi() {
             url.replace("/videoembed/", "/video/")
         } else url
         var videoReq = OkRuPayload.normalize(app.get(videoPageUrl, headers = headers).text)
-        if (!videoReq.contains("hlsManifestUrl") && !videoReq.contains("\"videos\"")) {
+        if (!OkRuPayload.hasPlayerPayload(videoReq)) {
             val embedUrl = url.replace("/video/", "/videoembed/")
             videoReq = OkRuPayload.normalize(app.get(embedUrl, headers = headers).text)
+        }
+        if (!OkRuPayload.hasPlayerPayload(videoReq)) {
+            // Video dihapus/tidak tersedia: ok.ru balas halaman "Плеер Видео"
+            // generik tanpa payload. Dicatat sebagai CONTENT_REMOVED supaya
+            // tidak tercampur dengan kegagalan extractor yang bisa diperbaiki.
+            com.baseprovider.log.logFail(
+                this.name,
+                "Video tidak tersedia di ok.ru (halaman tanpa payload player)",
+                url = url, method = "getUrl",
+                type = FailureType.CONTENT_REMOVED,
+                stage = "EXTRACT", extractor = this.name
+            )
+            return
         }
 
         val hlsUrl = OkRuPayload.HLS_MANIFEST_RE
