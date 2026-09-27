@@ -121,7 +121,8 @@ suspend fun loadExtractorWithFallbackCustom(
                                     stage = "EXTRACT",
                                     extractor = extractor.name,
                                     attempt = idx + 1,
-                                    runId = runId
+                                    runId = runId,
+                                    error = e
                                 )
                             }
                         }
@@ -151,7 +152,8 @@ suspend fun loadExtractorWithFallbackCustom(
                 type = FailureType.EXTRACTOR_FAILURE,
                 selectors = callChain,
                 stage = "EXTRACT",
-                runId = runId
+                runId = runId,
+                error = e
             )
         }
     }

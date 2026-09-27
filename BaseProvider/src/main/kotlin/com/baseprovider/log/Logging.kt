@@ -197,10 +197,11 @@ fun logFail(
     selectors: String = "",
     stage: String? = null, extractor: String? = null,
     attempt: Int? = null, durationMs: Long? = null,
-    runId: String? = null
+    runId: String? = null, error: Throwable? = null
 ) = log(LogLevel.FAIL, tag, message, url = url, method = method, type =
     type, selectors = selectors, stage = stage, extractor = extractor,
-    attempt = attempt, durationMs = durationMs, runId = runId)
+    attempt = attempt, durationMs = durationMs, runId = runId,
+    error = error)
 fun logError(
     tag: String, message: String, error: Throwable? = null,
     url: String? = null, method: String? = null,
