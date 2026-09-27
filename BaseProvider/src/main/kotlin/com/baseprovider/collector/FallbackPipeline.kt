@@ -25,6 +25,9 @@ class FallbackPipeline(private val config: ProviderConfig) {
         runId: String? = null
     ) {
         val stepStartedAt = System.currentTimeMillis()
+        // Kandidat mentah sering berupa base64 embed code; simpan URL hasil
+        // decode agar scrape_steps.link_url bisa dibaca tanpa dekoding manual.
+        var resolvedUrl = raw
         val delivered = java.util.concurrent.atomic.AtomicInteger(0)
         val lastFailure = java.util.concurrent.atomic.AtomicReference<String>()
         com.lagradost.api.Log.d("FallbackPipeline",
@@ -38,10 +41,11 @@ class FallbackPipeline(private val config: ProviderConfig) {
                 val decodedRaw = decodeRawLink(raw)
                 val fixedUrl = fixUrlSmart(decodedRaw, currentUrl)
                     .safeHttpsify().substringBefore("#").fixKnownDomainAliases()
+                if (fixedUrl.isNotBlank()) resolvedUrl = fixedUrl
                 if (fixedUrl.isBlank()) {
                     SupabaseObservability.logStep(
                         runId, kind = "EXTRACT", status = "failed",
-                        linkUrl = raw, errorType = FailureType
+                        linkUrl = resolvedUrl, errorType = FailureType
                             .INVALID_URL.label,
                         durationMs = System.currentTimeMillis() - stepStartedAt
                     )
@@ -99,7 +103,7 @@ class FallbackPipeline(private val config: ProviderConfig) {
                 logDebug(config.id, "Link Processor Error on $raw: ${e.message}")
                 SupabaseObservability.logStep(
                     runId, kind = "EXTRACT", status = "failed",
-                    linkUrl = raw, errorType = FailureType
+                    linkUrl = resolvedUrl, errorType = FailureType
                         .EXTRACTOR_FAILURE.label,
                     extractorChain = (lastFailure.get() ?: e.message)
                         ?.substringBefore('\n')?.trim(),
@@ -110,7 +114,7 @@ class FallbackPipeline(private val config: ProviderConfig) {
         } ?: run {
             SupabaseObservability.logStep(
                 runId, kind = "EXTRACT", status = "timeout",
-                linkUrl = raw, errorType = FailureType.TIMEOUT.label,
+                linkUrl = resolvedUrl, errorType = FailureType.TIMEOUT.label,
                 extractorChain = lastFailure.get()?.substringBefore('\n')
                     ?.trim(),
                 durationMs = PER_LINK_TIMEOUT_MS
@@ -120,7 +124,7 @@ class FallbackPipeline(private val config: ProviderConfig) {
         if (ok) {
             SupabaseObservability.logStep(
                 runId, kind = "EXTRACT", status = "success",
-                linkUrl = raw,
+                linkUrl = resolvedUrl,
                 durationMs = System.currentTimeMillis() - stepStartedAt
             )
         }
