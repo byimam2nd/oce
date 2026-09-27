@@ -30,11 +30,11 @@
   "loadDesc": "div.bixbox.synp div.entry-content",
   "loadInfoBox": ".spe",
   "loadRecommend": ".listupd article.bs, .listupd .bsx, .related-post article, .relat article",
-  "episodeItems": ".eplister li",
-  "episodeHref": ".eplister li > a",
-  "episodeTitle": ".epl-title",
-  "episodeNum": ".epl-num",
+  "episodeItems": ".episodelist li, .eplister li",
+  "episodeHref": ".episodelist li > a, .eplister li > a",
+  "episodeTitle": ".episodelist .playinfo h3, .epl-title",
+  "episodeNum": ".episodelist .playinfo span, .epl-num",
   "linkOptions": "option[data-index], option[value]",
   "skipHosts": ["short.icu"],
-  "watchButtons": ".eplister li > a, .play-button, .watch-now, .btn-watch"
+  "watchButtons": ".episodelist li > a, .eplister li > a, .play-button, .watch-now, .btn-watch"
 }
