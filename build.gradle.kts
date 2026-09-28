@@ -202,10 +202,31 @@ gradle.projectsEvaluated {
             val ts = System.getenv("BUILD_TIMESTAMP")
             if (!ts.isNullOrBlank()) {
                 val ext = project.extensions.findByType(CloudstreamExtension::class.java)
-                ext?.description = "[Build $ts WIB] ${ext?.description ?: ""}"
+                // Stable (release.yml) menyertakan tag agar user bisa baca versi
+                // manusia; versionCode sendiri angka epoch menit, jadi tag adalah
+                // satu-satunya penanda versi yang terbaca di daftar plugin.
+                val tag = System.getenv("RELEASE_TAG")?.takeIf { it.isNotBlank() }
+                val prefix = if (tag != null) "[v$tag | $ts WIB] " else "[Build $ts WIB] "
+                ext?.description = "$prefix${ext?.description ?: ""}"
             }
 
-            val envVersion = System.getenv("OCE_VERSION")?.removePrefix("v")?.filter { it.isDigit() }?.toIntOrNull()
+            // OCE_VERSION WAJIB berupa angka monoton (epoch menit) — satu-satunya
+            // sumber versionCode, dipakai bersama oleh ci-cd.yml (beta) dan
+            // release.yml (stable). Jangan pernah pass semver: skema lama
+            // `filter { it.isDigit() }` merusaknya ("3.13.03" → 31303 vs
+            // "3.16.0" → 3160), dan tidak ada semver yang bisa mengalahkan
+            // versionCode beta (~29.8 jt) sehingga user beta tidak pernah bisa
+            // kembali ke stable. Tag release (v4.0.0) tetap dipakai sebagai
+            // nama rilis, bukan sebagai versionCode.
+            val rawVersion = System.getenv("OCE_VERSION")?.trim()
+            val envVersion = if (rawVersion.isNullOrBlank()) null else {
+                // Gagal keras kalau disalah-isi: diam-diam jatuh ke version 1
+                // akan membuat user tidak bisa update tanpa ada yang sadar.
+                requireNotNull(rawVersion.toIntOrNull()) {
+                    "OCE_VERSION harus angka monoton (epoch menit), bukan '$rawVersion'. " +
+                        "Semver tidak didukung: versionCode harus > beta (~29.8 jt)."
+                }
+            }
             if (envVersion != null) {
                 project.version = envVersion
             }
