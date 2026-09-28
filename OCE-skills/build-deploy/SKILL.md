@@ -28,7 +28,7 @@ Mengelola build pipeline, commit workflow, tag & release OCE. Skill ini memastik
 
 ## CRITICAL RULE: No Local Gradle Build
 
-**DILARANG keras** menjalankan `./gradlew` atau build gradle apapun di lingkungan lokal.
+**DILARANG keras** menjalankan `./gradlew` atau build gradle apapun di lingkungan lokal (Termux).
 
 Build & verifikasi kode dilakukan **HANYA** dengan:
 ```
@@ -41,51 +41,58 @@ Jika user meminta "build" / "verifikasi" / "cek compile":
 3. Watch CI: `gh run watch <id> --repo byimam2nd/oce-source --exit-status`
 4. Laporkan hasil ke user
 
+**Pengecualian:** commit dokumentasi/markdown saja (mis. `OCE-skills/`) **tidak memicu CI** karena path filter di bawah tidak mencakupnya. Itu normal — tidak perlu menunggu run yang tidak akan terjadi.
+
 ## CI/CD Pipeline
 
-### Build Pipeline (`ci-cd.yml`)
+### Build + Publish Beta (`ci-cd.yml`)
 
-**Trigger:** push ke `master` (paths: `*/src/**`, build files, workflows)
+**Trigger:** push ke `master`, **hanya** untuk path:
+`*/src/**`, `*/build.gradle.kts`, `build.gradle.kts`, `settings.gradle.kts`, `gradle.properties`, `gradle/**`, `.github/workflows/**`. Plus `workflow_dispatch`.
 
-**Runner:** `ubuntu-22.04`
+**Runner:** `ubuntu-22.04` (JANGAN `ubuntu-latest`)
 
 **Steps:**
 ```
-1. Checkout source (private)        → fetch-depth: 0
-2. Pre-populate JitPack artifact    → gradle.jar from jitpack.io
-3. Setup JDK 17                     → actions/setup-java@v4, adopt
-4. Setup Android SDK                → android-actions/setup-android@v4
-5. Set Build Environment:
-   - SUPABASE_URL (from secrets)
-   - SUPABASE_ANON_KEY (from secrets)
-   - BUILD_TIMESTAMP (Asia/Jakarta)
-   - OCE_VERSION = $(($(date +%s) / 60))  ← epoch minutes, monotonic
-6. Validate provider configs        → python3 scripts/validate_providers.py
-7. Run BaseProvider unit tests      → ./gradlew :BaseProvider:testDebugUnitTest
-8. Build Plugins                    → ./gradlew make makePluginsJson ensureJarCompatibility
-9. Upload artifacts                 → actions/upload-artifact@v4
+1. Checkout source (private, fetch-depth 0)
+2. Pre-populate JitPack artifact (gradle.jar dari jitpack.io)
+3. Setup JDK 17 (adopt) + Android SDK (android-actions/setup-android@v4)
+4. Env: SUPABASE_URL, SUPABASE_ANON_KEY, BUILD_TIMESTAMP (Asia/Jakarta),
+         OCE_VERSION = $(($(date +%s) / 60))   ← epoch minutes, monotonic
+5. python3 scripts/validate_providers.py
+6. ./gradlew :BaseProvider:testDebugUnitTest
+7. ./gradlew make makePluginsJson ensureJarCompatibility
+8. Upload artifacts
+9. Job "publish-beta": token GitHub App → checkout builds branch (public) →
+   download artifacts → push ke byimam2nd/oce@builds
 ```
 
-### Publish Beta (`ci-cd.yml` — job 2)
+### Health Check (`health-check.yml`)
+- **Trigger:** cron `20 22 * * *` (05:20 WIB) + `workflow_dispatch`
+- `scripts/health_check.py` → menulis issue kalau ada provider bermasalah
+- Permissions: `issues: write`
 
-**Needs:** build (harus hijau dulu)
+### Provider Test Harness (`provider-test.yml`)
+- **Trigger:** `workflow_dispatch` saja (tidak otomatis)
+- Menjalankan harness: `./gradlew :BaseProvider:testDebugUnitTest -Poce.harness=1 -Poce.harness.providers=... -Poce.harness.query=... -Poce.harness.episodes=...`
+- Output → `/tmp/harness.md` + GitHub Step Summary
+- Dipakai saat butuh reproduksi scraping tanpa perangkat.
 
-```
-1. Generate GitHub App token
-2. Checkout public distribution (builds branch)
-3. Download artifacts
-4. Deploy beta → commit + push ke builds branch
-```
+### Release (`release.yml`)
+- **Trigger:** tag `v*` (atau `workflow_dispatch`)
+- Build sama seperti `ci-cd`, patch URL untuk GitHub Release, buat release `.cs3` + `plugins.json`
 
-### Release Pipeline (`release.yml`)
+## Verifikasi Beta — Jangan Asumsikan User Sudah Update
 
-**Trigger:** tag `v*`
+`OCE_VERSION = epoch minutes`. Cara cek build mana yang dipakai user:
 
-```
-1. Build plugins (sama dengan ci-cd build)
-2. Patch URLs untuk GitHub Release
-3. Create GitHub Release → .cs3 + plugins.json
-```
+| Sumber | Cara |
+|--------|------|
+| CI run | `gh run view <id>` → cek step "Set Build Environment" |
+| Beta artifact | `byimam2nd/oce@builds` → `plugins.json` |
+| User | minta `OCE_VERSION` dari user / logcat (`logDebug`) |
+
+**Ingat:** orang berbeda update di waktu berbeda. Log produksi yang muncul **sebelum** user update masih berasal dari build lama → jangan simpulkan fix gagal (`logging`).
 
 ## Commit Rules
 

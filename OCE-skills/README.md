@@ -89,10 +89,13 @@ build-deploy (final: commit & push)
 
 ## Memperbaharui Skills
 
-1. Baca skill yang ada
-2. Cek apakah informasi masih sesuai repository
-3. Update jika ada perubahan
-4. Tandai uncertainty jika belum bisa verifikasi
+1. **Verifikasi fakta dulu** — hitung ulang angka dari kode (`grep -c`, `ls`, baca set). Jangan salin angka dari versi skill sebelumnya.
+2. Baca skill yang ada
+3. Cek apakah informasi masih sesuai repository
+4. Update, dan **pangkas duplikasi** antar skill (satu fakta satu tempat)
+5. Tandai uncertainty jika belum bisa verifikasi
+6. Cek budget: `wc -w */SKILL.md` — target total **< 7500 words**. Skill yang panjang = agent boros context, bukan lebih pintar.
+7. Facts tetap valid walau tidak ada token untuk verserbatim: sertakan nama file, fungsi, atau commit agar agent bisa cek ulang sendiri.
 
 ## Standar Kualitas
 
@@ -105,3 +108,5 @@ build-deploy (final: commit & push)
 | Failure recovery | Apa yang dilakukan saat gagal |
 | Cross-reference | Link ke skill terkait |
 | Maintainable | Dapat diupdate saat repo berubah |
+| No duplication | Detail panjang di-*link*, bukan disalin di banyak skill |
+| Token-efficient | Pangkas yang sudah bisa dibaca agent langsung dari kode |

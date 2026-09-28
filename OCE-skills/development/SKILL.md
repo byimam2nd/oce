@@ -12,242 +12,139 @@ metadata:
 
 ## Purpose
 
-Panduan development workflow OCE: debugging, testing, impact analysis, dan development practices. Skill ini membantu agent bekerja dengan benar terhadap codebase OCE.
+Workflow development OCE: locate, trace, modify, verify — dan cara mendiagnosis bug berdasarkan bukti, bukan dugaan.
 
 ## When to Use
 
-- Saat mengerjakan task development (bug fix, fitur baru, refactor)
-- Saat debugging issue
-- Sebelum melakukan perubahan signifikan
+- Task development (fix, fitur, refactor)
+- Debugging issue
+- Sebelum perubahan signifikan
 
 ## When NOT to Use
 
-- Untuk edit provider config JSON (→ `provider`)
-- Untuk verifikasi selector (→ `selector-checker`)
-- Untuk commit & deploy (→ `build-deploy`)
+- Edit config JSON (→ `provider`)
+- Verifikasi selector (→ `selector-checker`)
+- Commit & deploy (→ `build-deploy`)
+- Query log (→ `logging`)
+
+## HARD RULE: No Local Gradle
+
+`./gradlew` **dilarang keras** dijalankan lokal. Termux tidak punya resources untuk itu.
+
+**Hanya:** `commit → push → cek CI` (`build-deploy`). Unit test hanya jalan di CI: `./gradlew :BaseProvider:testDebugUnitTest` di dalam workflow, bukan di HP.
 
 ## Development Workflow
 
 ```
-UNDERSTAND → LOCATE → TRACE → MODIFY → TEST → VERIFY → REVIEW
+UNDERSTAND → LOCATE → TRACE ALL PATHS → MODIFY → CI → VERIFY
 ```
 
 ### 1. UNDERSTAND
-- Baca task description
-- Identifikasi: apa yang berubah, mengapa, dampaknya
-- Jika tidak yakin → tanya user
+Task apa, mengapa, dampaknya. Tidak yakin → tanya user.
 
 ### 2. LOCATE
-- Temukan file terkait di BaseProvider/
-- Cek `architecture` skill untuk mental model
-- Baca file SEBELUM edit
+File di `BaseProvider/`. Baca **sebelum** edit. `architecture` untuk mental model.
 
-### 3. TRACE
-- Cari callers: siapa yang memanggil function ini?
-- Cari callees: apa yang dipanggil function ini?
-- Cek impact: perubahan ini mempengaruhi subsystem lain?
+### 3. TRACE ALL PATHS ← kunci
+- **Callers:** siapa memanggil fungsi ini?
+- **Callees:** apa yang dipanggil fungsi ini?
+- **Semua entry path:** apakah ada jalur lain (loop utama, recursive iframe, variant runner, direct call) yang melewati kode ini?
+
+> Pelajaran `eb51e94`: `skipHosts` sudah dicek di loop utama `FallbackPipeline`, tapi jalur `tryManualIframeFetch` **bypass**. Bug tetap ada. Kalau guard bersifat keamanan/biaya, ia harus ada di setiap path, bukan cuma path yang terlihat di dump pertama.
 
 ### 4. MODIFY
-- Perubahan SEKECIL MUNGKIN
-- Ikuti conventions yang ada
-- Jangan tambah cleanup/abstraction di luar scope
-- Preserve formatting yang sudah ada
+Perubahan **sekecil mungkin**. Ikuti konvensi yang ada. Jangan tambah cleanup/abstraction di luar scope. Preserve formatting.
 
 ### 5. TEST
-- Jalankan unit test: `./gradlew :BaseProvider:testDebugUnitTest` (via CI only)
-- Atau: commit → push → CI build
+- Test baru: `BaseProvider/src/test/kotlin/com/baseprovider/<Class>Test.kt` — bisa di subdir (`collector/`, `core/`, `extractor/`, `settings/`, `harness/`).
+- Logika kritikal **wajib** ada test yang menguji perilaku nyata, bukan hanya yang compile.
+- Jalankan **lewat CI** saja.
 
 ### 6. VERIFY
-- [ ] Syntax valid
-- [ ] Import/reference tidak broken
-- [ ] Tidak ada dead code
-- [ ] Edge cases ter-handle
+- [ ] Syntax & import valid
+- [ ] Tidak ada dead code / duplicate logic
+- [ ] Edge case: null, empty, boundary, failure path
 - [ ] Backward compatible
-
-### 7. REVIEW
-- Review diff sendiri sebelum claim selesai
-- Cek: apakah ada perubahan unintended?
-- Cek: apakah scope terlalu luas?
+- [ ] Diff review: ada perubahan unintended?
+- [ ] CI hijau
 
 ## Debugging (Evidence-Based)
-
-**DILARANG menebak penyebab bug.** Gunakan:
 
 ```
 SYMPTOM → EVIDENCE → HYPOTHESIS → VERIFICATION → ROOT CAUSE → FIX
 ```
 
+**Dilarang menebak penyebab.** Dugaan tanpa signature log atau reproduksi = belum jadi hipotesis.
+
 ### Decision Tree
 
 ```
-Bug report diterima
-├── Apakah error muncul di CI?
-│   ├── YA → baca CI log, cari error message
-│   │   ├── Syntax error → fix syntax, commit, push
-│   │   ├── Test failure → baca assertion, fix kode
-│   │   └── Build failure → cek dependency, fix
-│   └── TIDAK → bug di runtime
-│       ├── Cek Supabase logs (→ `logging` skill)
+Bug reported
+├── Muncul di CI?
+│   ├── YA → baca `gh run view <id> --log-failed`
+│   │   ├── Syntax → fix syntax, commit, push
+│   │   ├── Test fail → baca assertion, fix kode ATAU fix test kalau test-nya salah
+│   │   └── Build fail → cek dependency dari log
+│   └── TIDAK → bug runtime
+│       ├── Query log terbaru (→ `logging`)
 │       ├── Cek selector (→ `selector-checker`)
-│       └── Cek extractor (→ `extraction`)
-├── Apakah error terjadi di semua provider?
-│   ├── YA → masalah di BaseProvider/shared code
-│   └── TIDAK → masalah di specific provider config
-└── Apakah ada error message spesifik?
-    ├── YA → grep error message di codebase
-    └── TIDAK → tambah logging dulu, reproduksi
+│       └── Cek extractor path (→ `extraction`)
+├── Semua provider kena?
+│   ├── YA → BaseProvider shared code
+│   └── TIDAK → provider config / extractor config
+└── Punya signature jelas?
+    ├── YA → grep signature itu di codebase
+    └── TIDAK → tambah logDebug lebih dulu, reproduksi
 ```
 
-### Debugging Checklist
+### Lessons yang Menghemat Waktu
 
-1. **Reproduksi** — bisa error ini diulang?
-2. **Isolasi** — di mana tepatnya error terjadi?
-3. **Evidence** — kumpulkan data (logs, stack trace, HTTP response)
-4. **Hypothesis** — buat dugaan berdasarkan evidence
-5. **Verify** — uji hypothesis dengan perubahan minimal
-6. **Fix** — perbaiki root cause, bukan symptom
-7. **Regression test** — pastikan fix tidak breaking yang lain
+| Kesalahan umum | Aturan |
+|----------------|--------|
+| Asumsi extractor config aktif padahal ID-nya tidak di `configDrivenIds` | Cek registry dulu |
+| Patch guard di satu path saja | Trace **semua** entry path |
+| Terus menebak selector saat item memang tidak ada di HTML | Cek HTML live dulu; kalau tidak ada, itu sisi situs |
+| Menuduh `AdaptiveHeaderProbe` false-negative tanpa signature | Butuh data; default-nya ia benar |
+| Menghidupkan kembali fitur yang sudah di-revert | `git log` dulu, konfirmasi ke user |
+| Menyorot SUCCESS spam sebagai bug | Pesan konstan → `logDebug` |
+| Hitung statistik dari window berbeda | Window harus identik (→ `logging`) |
+| Klaim "sudah fix" saat CI hijau | CI hijau hanya compile+test; verifikasi produksi terpisah |
+
+### Kalau ctx tidak cukup untuk patching
+Pilih bagian **paling kecil** yang bisa dibuktikan. Kalau macet >2 menit, sederhanakan scope dan lapor — jangan menebak.
 
 ## Case Study: Anichin Cloudflare + Poster (2026-09-20)
 
-**SYMPTOM:**
-- Main page lists empty
-- Poster not showing (METADATA_FAILURE)
-- User reports "broken"
-
-**EVIDENCE COLLECTION:**
-1. Supabase logs → NETWORK_FAILURE + CLOUDFLARE_FAILURE intermittent
-2. Manual curl → HTTP 403 + Cloudflare challenge HTML (challenge-platform, cf-ray)
-3. Code trace → HttpStatusException message only "HTTP 403 on URL", body NOT captured
-4. Exception handler → CLOUDFLARE_HTTP.containsMatchIn(msg) only checks message
-5. Regex audit → CLOUDFLARE_HTTP had \b403\b matching ALL 403s
-
-**HYPOTHESIS → VERIFICATION:**
-| Hypothesis | Verification | Result |
-|------------|--------------|--------|
-| CF challenge not detected | Add body to exception, check body | ✅ CF detected |
-| Plain 403 triggers CF solver | Remove \b403\b from regex | ✅ Only CF indicators trigger |
-| 30s retryAfter causes timeout | Remove retryAfter from 403 handler | ✅ UA rotation works |
-| Poster root-relative not resolved | setBaseUri + absUrl() in safeExtractImage | ✅ Poster absolute URLs |
-
-**ROOT CAUSES (2 separate issues):**
-1. **Cloudflare:** Body not captured + regex false positive → solver not called
-2. **Poster:** Document missing baseUri → absUrl() returns empty → validation fails
-
-**FIXES (minimal, targeted):**
-- NetworkUtils.kt: HttpStatusException +body, CLOUDFLARE_HTTP regex
-- HttpClient.kt: setBaseUri, 403 handler no retryAfter, check body for CF
-- ProviderParser.kt: safeExtractImage uses absUrl() with fallback
-- Tests: SelectorResolverTest covers poster resolution
-
-**VERIFICATION:**
-- CI green (build + unit tests)
-- Live curl_cffi test → 200 + 30 items
-- Regression test passes
-
-## Testing
-
-### Framework
-- **Kotlin test** (kotlin.test) — unit tests
-- **JUnit5** via Gradle test runner
-- **Location:** `BaseProvider/src/test/kotlin/com/baseprovider/`
-
-### 17 Test Files (current)
-
-| File | Tests | Coverage |
-|------|-------|----------|
-| `MovieSeriesDetectorTest.kt` | 10 | Movie vs series detection |
-| `EpisodeDetectionTest.kt` | 4 | Episode link detection |
-| `ConfigDrivenEngineTest.kt` | 9 | ExtractId, JsonPath |
-| `ExtractorConfigParserTest.kt` | 7 | Config JSON parsing |
-| `CompiledRegexPatternsTest.kt` | 5 | URL prioritization |
-| `SmartThrottleTest.kt` | 6 | Rate limiting |
-| `NetworkUtilsTest.kt` | 4 | HTTP utilities |
-| `SelectorResolverTest.kt` | 8 | Selector fallback + safeExtractImage |
-| `ProviderConfigTest.kt` | 3 | Config validation |
-| `ProviderConfigParserTest.kt` | 9 | JSON → ProviderConfig |
-| `ExpiringCacheTest.kt` | 5 | TTL cache |
-| `CircuitBreakerTest.kt` | 4 | Circuit breaker |
-| `PosterResizerTest.kt` | 10 | URL resize |
-| `SearchPaginationTest.kt` | 4 | Search hasNext |
-| `M3u8MasterVerifierTest.kt` | 7 | Master m3u8 validation |
-| `AdaptiveQualityPickerTest.kt` | 10 | Quality selection |
-| `OceSettingsTest.kt` | 7 | Settings |
-
-### Running Tests
-**Via CI only:**
-```bash
-git commit -m "test: description" && git push origin master && git push private master
-gh run watch <id> --repo byimam2nd/oce-source --exit-status
-```
-
-**Local (development only, not for verification):**
-```bash
-./gradlew :BaseProvider:testDebugUnitTest
-```
-
-### Adding Tests
-1. Buat file di `BaseProvider/src/test/kotlin/com/baseprovider/`
-2. Naming: `<Class>Test.kt`
-3. Import: `kotlin.test.*`, `org.junit.jupiter.api.*`
-4. Test methods: descriptive names (boleh spasi, BDD-style)
-5. Pastikan test independent (tidak bergantung test lain)
+- **Symptom:** main page kosong, poster tak tampil.
+- **Evidence:** Supabase `NETWORK_FAILURE` + `CLOUDFLARE_FAILURE`; live curl dapat 403 + challenge HTML; `HttpStatusException` hanya bawa message tanpa body; regex `CLOUDFLARE_HTTP` mengandung `\b403\b` sehingga semua 403 memicu solver; `Document` tanpa `baseUri` → `absUrl()` kosong untuk poster root-relative.
+- **Root cause:** body response tidak ikut exception + regex over-match; poster butuh baseUri.
+- **Fix:** `NetworkUtils.kt` (body + regex), `HttpClient.kt` (setBaseUri, hapus retryAfter di 403, cek body), `ProviderParser.kt` (`safeExtractImage` pakai `absUrl` dengan fallback raw).
+- **Verifikasi:** CI hijau, live `curl_cffi` 200 + 30 item, regression test `SelectorResolverTest`.
 
 ## Impact Analysis
 
-Sebelum perubahan signifikan, checklist:
-
-| Concern | Cek |
-|---------|-----|
-| Callers | Siapa yang panggil function ini? |
-| Consumers | Siapa yang pakai class/interface ini? |
-| Dependencies | Apa yang di-import? |
-| Tests | Ada test yang cover ini? |
-| Config | Ada config field yang terpengaruh? |
-| Runtime | Apakah ini hot path? |
-| Backwards compat | Apakah API berubah? |
-| Other providers | Apakah semua provider terpengaruh? |
-
-### Rule: Minimal Change
-- Jangan rewrite jika local fix cukup
-- Jangan tambah abstraction baru jika belum perlu
-- Jangan rename massal
-- Jangan format ulang file yang tidak sedang diubah
+Sebelum patch: cek **callers, consumers, imports, tests, config, hot path, backward compat, provider lain**.
 
 ## Common Patterns
 
-### Adding Config Field
-1. Add field ke `ProviderConfig.kt` dengan default
-2. Add JSON parsing ke `ProviderConfigParser.kt`
-3. Update `ProviderConfigTest.kt`
-4. Update `all bundled configs parse` test
-5. Use field di engine code
+**Tambah config field** → `ProviderConfig.kt` → `ProviderConfigParser.kt` → `ProviderConfigParserTest.kt` → pakai di engine → set di JSON.
 
-### Adding Selector
-1. Add field ke `ProviderConfig.kt`
-2. Add parsing ke `ProviderConfigParser.kt`
-3. Add test ke `ProviderConfigParserTest.kt`
-4. Add CSS selector ke provider JSON config
-5. Verify dengan `selector-checker` skill
+**Tambah selector** → verifikasi HTML dulu (`selector-checker`) → edit JSON dengan multi-variant → cek series **dan** episode page → CI.
 
-### Fixing Bug
-1. Cari root cause (bukan symptom)
-2. Fix di tempat yang benar (shared code, bukan per-provider)
-3. Tambah test jika tidak ada yang cover
-4. Pastikan fix backward compatible
+**Fix bug** → root cause (bukan symptom) → patch di shared code bila memengaruhi banyak provider → tambah regression test → backward compatible.
 
 ## Verification
 
-- [ ] Code trace: tahu callers dan callees
-- [ ] Impact analysis: tahu dampak perubahan
-- [ ] Diff review: tidak ada perubahan unintended
-- [ ] CI hijau setelah push
+- [ ] Tahu callers, callees, dan semua entry path
+- [ ] Impact analysis done
+- [ ] Regression test untuk logika kritikal
+- [ ] Tidak ada perubahan unintended di diff
+- [ ] CI hijau (bukan build lokal)
 
 ## Related Skills
 
 - `shared` — git rules, change safety, anti-hallucination
-- `architecture` — module structure, data flow
-- `provider` — provider-specific development
-- `extraction` — extractor-specific development
-- `logging` — debugging via Supabase logs
+- `architecture` — module & data flow
+- `provider` / `extraction` — domain-specific
+- `logging` — query log produksi
 - `build-deploy` — CI/CD, commit rules

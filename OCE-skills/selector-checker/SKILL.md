@@ -36,6 +36,12 @@ base64     # decode base64 (opsional)
 
 ## 4-Phase Verification
 
+**Rule #1: cek item ADA di HTML sebelum menulis selector.** Kalau link-nya memang tidak ada di HTML, itu masalah sisi situs — selector apa pun tidak akan menemukannya. Contoh nyata: Anichin series page hanya punya episode 1–159, sedangkan episode 160 hanya ada di episode page.
+
+**Rule #2: episode selector harus diuji di DUA halaman.** Series page (`episodeItems`) dan episode page (`linkOptions`) punya DOM berbeda. Satu selector untuk dua konteks hampir selalu salah.
+
+**Rule #3: multi-variant = satu string comma-separated.** `"h1.entry-title, h1.title"` — bukan array, bukan selector terpisah.
+
 ### Phase 1: Main Page (Search/List)
 
 **Simulates:** `getMainPage()` + `search()`
@@ -233,8 +239,11 @@ PHASE 4: Base64 decode OK ✅
 1. Cek apakah website berubah tema/struktur
 2. Inspect HTML manual: `curl -sL "$URL" | grep -c "class-name"`
 3. Cari class baru dengan grep
-4. Update selector di `config/<name>.json`
-5. Multi-variant selector: tambah fallback dengan comma
+4. **Konfirmasi item memang ada di HTML** sebelum ubah selector — kalau tidak ada, itu sisi situs
+5. Update selector di `config/<name>.json` — multi-variant comma-separated untuk dua layout
+
+### 403 / Cloudflare saat curl
+UA biasa bisa kena CF challenge sementara app berhasil (WebView solver). Selector tetap bisa diverifikasi, tapi note hasilnya sebagai keterbatasan, bukan bukti selector salah. Bypass: `curl_cffi` dengan `impersonate='chrome'`.
 
 ### Poster not found (❌)
 1. Cek apakah src pakai lazy loading (`data-src`, `data-original`)
@@ -254,16 +263,18 @@ PHASE 4: Base64 decode OK ✅
 ## Verification Checklist
 
 Per provider, pastikan:
-- [ ] Phase 1: searchItems match, items > 0
-- [ ] Phase 1: searchTitle, searchHref, searchPoster valid
-- [ ] Phase 2: loadTitle, loadPoster, loadDesc match
-- [ ] Phase 3: linkOptions match, episodeItems match
+- [ ] Phase 1: `searchItems` match, items > 0
+- [ ] Phase 1: `searchTitle`, `searchHref`, `searchPoster` valid
+- [ ] Phase 2: `loadTitle`, `loadPoster`, `loadDesc` match
+- [ ] Phase 3: `episodeItems` match di **series page**
+- [ ] Phase 3: `linkOptions` match di **episode page**
 - [ ] Phase 4: base64 decode works (if applicable)
 - [ ] Semua URL accessible (no 404, no CF block)
+- [ ] Jumlah item sesuai ekspektasi (mis. 160 episode, bukan 159) — kalau kurang, cek apakah link-nya ada di HTML
 
 ## Related Skills
 
-- `provider` — config fields reference, editing config
-- `architecture` — SelectorResolver multi-variant
-- `logging` — SELECTOR_FAILURE investigation
-- `extraction` — extractor link extraction
+- `provider` — edit config, tambah field
+- `architecture` — `SelectorResolver` multi-variant, data flow
+- `logging` — `SELECTOR_FAILURE` investigation
+- `extraction` — Phase 3 lanjutan (link → extractor)

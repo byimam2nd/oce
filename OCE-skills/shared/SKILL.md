@@ -28,8 +28,15 @@ Pattern wajib untuk semua task:
 - **DILARANG** menyatakan task berhasil sebelum melakukan verification (build, test, syntax check).
 - **DILARANG** membuat file, dependency, endpoint, atau konfigurasi berdasarkan asumsi semata.
 - **DILARANG** mengarang informasi teknis. Jika tidak yakin, TANDAI sebagai uncertainty.
+- **DILARANG** menyalin angka/konteks dari dokumentasi lama tanpa cek ulang ke kode. Doc bisa basi — hitung ulang (`ls`, `grep -c`, baca set).
 - Jika informasi penting tidak diketahui → **inspect repository/environment terlebih dahulu**.
-- Repository adalah source of truth. Dokumentasi lama bisa stale — selalu cross-check ke kode.
+- Repository adalah source of truth.
+
+## Aturan Konservatif
+
+- Fitur yang pernah di-`revert` **tidak** dihidupkan lagi tanpa konfirmasi user. Cek `git log` dulu: `revert:`, `feat:`.
+- Duplikasi konten antar skill = token sia-sia. Satu fakta = satu tempat.
+- Skill baru harus terdaftar di `INDEX.md` + `README.md` dan punya frontmatter lengkap.
 
 ## Change Safety
 
@@ -119,13 +126,15 @@ gh run watch <id> --exit-status
 ## Repository Mental Model
 
 Agent harus mampu menjawab:
-- Apa entry point? → `ProviderCloudstream` (extends `MainAPI`)
-- Bagaimana data mengalir? → Config → Engine → Scrapper → Mapper → CloudStream
-- Module boundary? → Provider*/ = thin wrapper, BaseProvider/ = shared code
-- Config? → JSON per-provider di `config/`, global fallback
-- Build? → sourceSets compile BaseProvider ke setiap provider
-- Test? → `:BaseProvider:testDebugUnitTest`
-- Deploy? → CI push → build → publish-beta ke builds branch
+- Entry point? → `ProviderCloudstream` (extends `MainAPI`)
+- Data flow? → Config → Engine → Scrapper → Mapper → CloudStream
+- Module boundary? → `Provider*/` = thin wrapper, `BaseProvider/` = shared code
+- Config? → JSON per-provider di `config/` (8 provider), `global.json` fallback
+- Extractor? → 45 aktif: 34 config-driven override + 8 pure-config + 3 legacy-only
+- Build? → sourceSets compile `BaseProvider` ke setiap provider
+- Test? → 25 file di `BaseProvider/src/test/`, hanya via CI
+- Deploy? → CI push → build → publish-beta ke branch `builds`
+- Observability? → Supabase `logs`/`scrape_runs`/`scrape_steps`
 
 ## Inter-Skill Navigation
 

@@ -1,6 +1,6 @@
 ---
 name: oce-provider
-description: OCE Provider — config-driven providers, adding/editing providers, ProviderConfig reference
+description: OCE Provider — config-driven providers, adding/editing providers, selector config
 license: MIT
 compatibility: "*"
 metadata:
@@ -12,48 +12,41 @@ metadata:
 
 ## Purpose
 
-Cara menambah, edit, dan memelihara provider OCE. Skill ini menjelaskan config-driven system, struktur provider, dan workflow untuk mengubah selector behavior.
+Menambah, edit, dan memelihara provider OCE — struktur module, config JSON, dan workflow mengubah selector behavior.
 
 ## When to Use
 
 - Menambah provider baru
-- Edit selector provider (ganti CSS selector)
-- Tambah config field baru
-- Debugging provider-specific issue
+- Mengganti CSS selector di config
+- Menambah config field baru
+- Debug issue spesifik provider
 
 ## When NOT to Use
 
-- Untuk tambah/edit extractor (→ `extraction`)
-- Untuk verifikasi selector via curl (→ `selector-checker`)
-- Untuk commit & build (→ `build-deploy`)
+- Extractor (→ `extraction`)
+- Verifikasi selector via curl (→ `selector-checker`)
+- Commit & build (→ `build-deploy`)
 
 ## Provider Structure
 
-Setiap provider HTML hanya punya 3-4 file:
+Setiap provider hanya 3-4 file:
 
 ```
 ProviderNama/
-├── build.gradle.kts              ← version + metadata SAJA
+├── build.gradle.kts              ← version + cloudstream metadata SAJA
 ├── src/main/AndroidManifest.xml  ← minimal
 └── src/main/kotlin/com/Nama/
     ├── Nama.kt                   ← class Nama : ProviderCloudstream()
-    └── NamaPlugin.kt             ← register MainAPI + extractors
+    └── NamaPlugin.kt             ← registerMainAPI + registerExtractorAPI
 ```
 
-### Contoh `Nama.kt`
 ```kotlin
+// Nama.kt
 package com.Nama
 import com.baseprovider.core.ProviderCloudstream
 class Nama : ProviderCloudstream()
-```
 
-### Contoh `NamaPlugin.kt`
-```kotlin
-package com.Nama
-import com.lagradost.cloudstream3.plugins.CloudstreamPlugin
-import com.lagradost.cloudstream3.plugins.BasePlugin
-import com.baseprovider.extractor.ProviderExtractors
-
+// NamaPlugin.kt
 @CloudstreamPlugin
 class NamaPlugin: BasePlugin() {
     override fun load() {
@@ -63,171 +56,78 @@ class NamaPlugin: BasePlugin() {
 }
 ```
 
-### Contoh `build.gradle.kts`
-```kotlin
-version = 1
-cloudstream {
-    description = "Provider description"
-    language = "id"
-    authors = listOf("AuthorName")
-    status = 1
-    tvTypes = listOf("Anime")
-    iconUrl = "https://..."
-    isCrossPlatform = false
-}
-```
-
-**DILARANG tambah sourceSets manual** — `settings.gradle.kts` auto-include.
+**Jangan tambah sourceSets manual** — `settings.gradle.kts` auto-include.
 
 ## Config System
 
-### Config Location
-`BaseProvider/src/main/kotlin/com/baseprovider/config/<name>.json`
+- Lokasi: `BaseProvider/src/main/kotlin/com/baseprovider/config/<name>.json`
+- Load: `ConfigRegistry.get(providerId)` → `classLoader.getResourceAsStream` → cache. **Bundled-only**, tidak ada remote fetch. Fallback `global.json`.
+- Terdaftar: Anichin, Animasu, Animexin, Donghuastream, Dutamovie21, IndoDrama21, LayarKaca21, Samehadaku.
 
-### Config Registry Flow
-```kotlin
-ConfigRegistry.get(providerId)
-  → providers[providerId] → fileName
-  → loadBundled(fileName) → classLoader.getResourceAsStream("$fileName.json")
-  → cache in ConcurrentHashMap
-  → fallback: globalConfig (from "global.json")
+Field `ProviderConfig` berjumlah **95**. Daftar lengkap ada di `ProviderConfig.kt` — baca file itu bila butuh field yang tidak ada di bawah.
+
+### Field yang paling sering diubah
+
+| Field | Default | Fungsi |
+|-------|---------|--------|
+| `mainUrl` | — | Base URL (wajib) |
+| `searchItems` / `searchTitle` / `searchHref` / `searchPoster` | — | Main page & search |
+| `loadTitle` / `loadPoster` / `loadDesc` | — | Detail page |
+| `episodeItems` / `episodeHref` | — | Daftar episode |
+| `linkOptions` / `downloadItems` | — | Opsi server & unduhan |
+| `attrImage` | `data-original, data-src, data-lazy-src, src, content` | Prioritas atribut gambar |
+| `attrValue` | `value, data-index, data-id, data-url, data-link` | Prioritas atribut nilai |
+| `reverseEpisodes` | `true` | Balik urutan episode |
+| `qualityStripRegex` | `\d{3,4}p\|HD\|SD\|FHD` | Buang kualitas dari judul |
+| `skipHosts` | `emptySet()` | Host yang tidak boleh diekstrak |
+| `allowedExtractors` | — | Batasi extractor per provider |
+
+### Multi-variant selector
+Satu string comma-separated, dicoba berurutan, first match:
+```json
+"loadTitle": "h1.entry-title, h1.title, .entry-title h1"
 ```
 
-**Bundled-only.** TIDAK ada remote fetch. Config harus ada di classpath.
+## Menambah Provider Baru
 
-### Current Providers
-```kotlin
-"Anichin" → "anichin"
-"Animasu" → "animasu"
-"Donghuastream" → "donghuastream"
-"Dutamovie21" → "dutamovie21"
-"IndoDrama21" → "indodrama21"
-"LayarKaca21" → "layarkaca21"
-"Samehadaku" → "samehadaku"
-"Animexin" → "animexin"
-```
+1. `mkdir -p ProviderNama/src/main/kotlin/com/Nama`
+2. Buat 4 file (lihat struktur di atas)
+3. Buat `config/nama.json` — **copy config provider yang paling mirip**, jangan dari nol
+4. Tambah `"Nama" to "nama"` di `ConfigRegistry.kt`
+5. Verifikasi selector dengan `selector-checker`
+6. Push → CI → tes di CloudStream (main page, search, detail, episode, playback)
 
-## ProviderConfig Reference (90+ Fields)
+## Menambah Config Field
 
-### Identity Fields
-| Field | Type | Default | Purpose |
-|-------|------|---------|---------|
-| `id` | String | (required) | Provider identifier |
-| `name` | String | `id` | Display name |
-| `mainUrl` | String | `"https://example.com"` | Base URL |
-| `seriesUrl` | String? | `null` | Fallback: mainUrl |
-| `searchUrl` | String? | `null` | Fallback: mainUrl |
-| `lang` | String | `"id"` | Language code |
+1. Field + default di `ProviderConfig.kt`
+2. Parsing di `ProviderConfigParser.kt`
+3. Test di `ProviderConfigParserTest.kt` (dan test "all bundled configs parse")
+4. Pakai di engine code
+5. Set di JSON provider bila perlu
 
-### Selector Fields (CSS selectors)
-| Field | Purpose | Example |
-|-------|---------|---------|
-| `searchItems` | Container per item | `div.listupd article.bs` |
-| `searchTitle` | Title element | `h2` |
-| `searchHref` | Link element | `a` |
-| `searchPoster` | Poster image | `div.bsx img` |
-| `searchRating` | Rating badge | `.rating` |
-| `searchEpText` | Episode badge | `.epx` |
-| `loadTitle` | Series title | `h1.entry-title` |
-| `loadPoster` | Series poster | `div.thumb img` |
-| `loadBanner` | Banner image | `.banner img` |
-| `loadDesc` | Synopsis | `.entry-content` |
-| `loadInfoBox` | Info box | `.spe` |
-| `loadTags` | Genre tags | `.genxed a` |
-| `loadRating` | Rating | `.rating` |
-| `loadStatus` | Status | `Status:</b>` |
-| `loadTrailer` | Trailer | `iframe[src*='youtube']` |
-| `loadRecommend` | Recommendations | `div.listupd article.bs` |
-| `episodeItems` | Episode list | `.eplister li` |
-| `episodeHref` | Episode link | `a` |
-| `linkOptions` | Server options | `option[value]` |
-| `downloadItems` | Download links | `#downloadb` |
+## Menambah Selector
 
-**Multi-variant:** comma-separated, e.g. `"h1.entry-title, h1.title, .entry-title h1"` — SelectorResolver tries each.
+1. Pastikan selector benar-benar ada di HTML — verifikasi dengan `selector-checker` **sebelum** edit
+2. Edit `config/<name>.json`, pakai multi-variant untuk dua layout
+3. **Verifikasi dua halaman** bila selector episode: series page (daftar episode) dan episode page (opsi server). Keduanya punya DOM berbeda.
+4. Push → CI
 
-### URL Pattern Fields
-| Field | Default | Purpose |
-|-------|---------|---------|
-| `searchPathPattern` | `{baseUrl}/page/{page}/?s={query}` | Search URL template |
-| `mainPagePathPattern` | `{baseUrl}/{data}{page}` | Main page URL template |
-| `episodeDataUrlPattern` | `{url}` | Episode data URL |
-
-### Attribute Fields
-| Field | Default | Purpose |
-|-------|---------|---------|
-| `attrImage` | `["data-original","data-src","data-lazy-src","src","content"]` | Image source priority |
-| `attrValue` | `["value","data-index","data-id","data-url","data-link"]` | Value attribute priority |
-| `iframeSources` | `["src","data-src","data-link"]` | Iframe src priority |
-
-### Behavior Flags
-| Field | Default | Purpose |
-|-------|---------|---------|
-| `reverseEpisodes` | `true` | Reverse episode order |
-| `isJsonSearch` | `false` | JSON API search |
-| `mainPageCacheBuster` | `false` | Add cache buster to main page |
-| `selfExtract` | `false` | Self-extract video |
-
-### Filter/Clean
-| Field | Default | Purpose |
-|-------|---------|---------|
-| `bloatRegex` | see code | Remove bloat from titles |
-| `qualityStripRegex` | `\d{3,4}p\|HD\|SD\|FHD` | Strip quality from names |
-| `hrefCleanRegex` | `""` | Clean href URLs |
-
-## Adding New Provider
-
-### Step 1: Create Provider Module
-```bash
-mkdir -p ProviderNama/src/main/kotlin/com/Nama
-```
-
-### Step 2: Create Files
-- `ProviderNama/build.gradle.kts`
-- `ProviderNama/src/main/AndroidManifest.xml`
-- `ProviderNama/src/main/kotlin/com/Nama/Nama.kt`
-- `ProviderNama/src/main/kotlin/com/Nama/NamaPlugin.kt`
-
-### Step 3: Create Config
-Buat `BaseProvider/.../config/nama.json` dengan selectors.
-
-### Step 4: Register
-Tambah entry di `ConfigRegistry.kt`:
-```kotlin
-"Nama" to "nama"
-```
-
-### Step 5: Test
-1. Push ke CI → build
-2. Install plugin di CloudStream
-3. Test: main page, search, detail, episode, playback
-4. Verify selectors (→ `selector-checker`)
-
-## Editing Provider Config
-
-### Change Selector
-1. Edit `BaseProvider/.../config/<name>.json`
-2. Update selector field
-3. Push → CI → test
-
-### Add Config Field
-1. Add field ke `ProviderConfig.kt` dengan default
-2. Add parsing ke `ProviderConfigParser.kt`
-3. Add test ke `ProviderConfigParserTest.kt`
-4. Use field di engine code
-5. Update provider JSON config
+### Kalau item tidak ada di HTML
+Selector bukan penyebabnya. Contoh nyata: Anichin series page hanya berisi episode 1–159, sementara episode 160 hanya ada di episode page — link-nya memang tidak ada di HTML series page. Tidak ada selector yang bisa menemukannya; itu masalah sisi situs. Jangan ajouter selector berulang.
 
 ## Verification
 
-- [ ] Provider module exists dengan 3-4 file
-- [ ] Config JSON parseable (validate_providers.py)
-- [ ] ConfigRegistry has provider entry
-- [ ] All selectors match live website (→ `selector-checker`)
-- [ ] Main page, search, detail, episodes work
+- [ ] Module punya 3-4 file
+- [ ] `ConfigRegistry` punya entry
+- [ ] JSON parseable (`scripts/validate_providers.py` via CI)
+- [ ] Selector match di HTML live (`selector-checker`)
+- [ ] Series page **dan** episode page diverifikasi
+- [ ] Main page, search, detail, episode, playback berfungsi
 
 ## Related Skills
 
-- `selector-checker` — verifikasi selector 4 phase
-- `extraction` — how extractors integrate
-- `logging` — debug provider failures
+- `selector-checker` — verifikasi selector live
+- `extraction` — `skipHosts`, extractor per provider
 - `architecture` — config system, sourceSets
-- `build-deploy` — how to build/test
+- `logging` — `SELECTOR_FAILURE` investigation
+- `build-deploy` — CI, validate_providers.py

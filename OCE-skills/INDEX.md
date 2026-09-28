@@ -18,28 +18,34 @@ Map seluruh OCE Skills. Gunakan untuk menemukan skill yang tepat.
 ## Navigation by Task
 
 ### "Saya mau tambah provider baru"
-→ `provider` ( Adding New Provider) → `selector-checker` (verifikasi) → `build-deploy` (commit & push)
+→ `provider` (Menambah Provider) → `selector-checker` (verifikasi) → `build-deploy` (commit & push)
 
 ### "Saya mau fix extractor yang broken"
-→ `extraction` (Config-Driven Extractors) → `logging` (cek error logs) → `build-deploy`
+→ `extraction` (Registry Priority dulu) → `logging` (log terbaru) → `build-deploy`
 
 ### "Selector tidak match"
-→ `selector-checker` (4-phase test) → `provider` (edit config) → `build-deploy`
+→ `selector-checker` (3 rules + 4 phase) → `provider` (edit config) → `build-deploy`
 
 ### "Video gagal playback (3002)"
-→ `extraction` (3002 Protection) → `logging` (cek logs)
+→ `extraction` (MasterLinkGenerator) → `logging`
 
-### "Saya mau commit & push"
-→ `build-deploy` (Commit Rules) — WAJIB cek CI
+### "Extractor 404 / konten hilang"
+→ `extraction` (CONTENT_REMOVED) — **ini bukan bug OCE**, jangan laporkan ke user
 
-### "Saya mau debug error"
-→ `development` (Debugging) → `logging` (query logs) → `extraction` atau `provider`
+### "Commit & push"
+→ `build-deploy` (Commit Rules) — WAJIB cek CI. Docs-only (`OCE-skills/`) tidak trigger CI.
 
-### "Saya mau pahami arsitektur OCE"
-→ `architecture` (Repository Structure, Data Flow)
+### "Debug error"
+→ `development` (Debugging) → `logging` (query log **terbaru**) → `extraction` / `provider`
 
-### "Saya mau tambah config field baru"
-→ `provider` (Adding Config Field) → `development` (Impact Analysis)
+### "Log lama masih muncul setelah fix"
+→ `logging` (Aturan Golden + verifikasi beta adoption) — belum tentu bug aktif
+
+### "Paham arsitektur OCE"
+→ `architecture`
+
+### "Tambah config field baru"
+→ `provider` (Menambah Config Field) → `development` (Impact Analysis)
 
 ## Skill Relationships
 
@@ -55,6 +61,15 @@ development ←→ logging
 build-deploy (SETELAH semua)
 ```
 
+## Aturan Wajib (berlaku untuk semua skill)
+
+1. **Hanya log terbaru** — log lama bukan bukti bug aktif (`logging`)
+2. **Trace semua entry path** sebelum patch guard (`development`)
+3. **Cek registry** sebelum menyebut extractor aktif (`extraction`)
+4. **Cek HTML live** sebelum menulis selector (`selector-checker`)
+5. **No local gradle** — verifikasi hanya via CI (`build-deploy`)
+6. **Jangan hidupkan fitur yang sudah di-revert** tanpa konfirmasi user (`shared`)
+
 ## Quality Standards
 
 Setiap skill harus:
@@ -64,3 +79,14 @@ Setiap skill harus:
 4. **Verification** — cara buktikan task berhasil
 5. **Failure recovery** — apa yang dilakukan saat gagal
 6. **Cross-referenced** — link ke skill terkait
+7. **Tanpa duplikasi** — satu fakta satu tempat; yang perlu detail panjang di-*link*, bukan disalin
+
+## Maintenance
+
+Saat proyek berubah, cek skill mana yang jadi basi:
+- Jumlah provider / extractor berubah → `architecture`, `provider`, `shared`
+- `FailureType` atau config field berubah → `logging`, `provider`
+- Registry / step type berubah → `extraction`
+- Workflow CI berubah → `build-deploy`
+
+Setelah update: cek `wc -w */SKILL.md` — target total < 7500 words. Skill yang panjang = agent boros context.
