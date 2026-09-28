@@ -73,8 +73,21 @@ jobs:
                   API, data=json.dumps({"query": sql}).encode(),
                   headers={"Authorization": f"Bearer {token}",
                            "Content-Type": "application/json"})
-              with urllib.request.urlopen(req, timeout=120) as r:
-                  return json.loads(r.read().decode())
+              try:
+                  with urllib.request.urlopen(req, timeout=120) as r:
+                      return json.loads(r.read().decode())
+              except urllib.error.HTTPError as e:
+                  detail = e.read().decode()[:300]
+                  if e.code in (401, 403):
+                      sys.exit(
+                          f"HTTP {e.code} dari Management API — SUPABASE_ACCESS_TOKEN "
+                          f"tidak valid / kedaluwarsa / tidak punya akses ke project "
+                          f"{ref}.\n  body: {detail}\n"
+                          f"  Perbaiki: regenerate personal access token di "
+                          f"Supabase Dashboard (token lama dicabut/tidak pernah diisi).")
+                  sys.exit(f"HTTP {e.code} dari Management API: {detail}")
+              except urllib.error.URLError as e:
+                  sys.exit(f"gagal konek ke Management API: {e.reason}")
 
           TRACK = "oce_schema_migrations"
           q(f"""create table if not exists public.{TRACK} (
