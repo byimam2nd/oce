@@ -75,4 +75,20 @@ class SourceUrlSyncTest {
         assertFalse(SupabaseObservability.sourceUrlDrifted(
             "https://anichin.moe", ""))
     }
+
+    @Test
+    fun `perubahan config saat runtime terdeteksi oleh cek yang sama`() {
+        // Cabang cache-id memakai fungsi yang sama: kalau config berubah sejak
+        // lookup terakhir, row DB dicek ulang, bukan langsung dipakai.
+        val cachedConfig = "https://anichin.moe"
+        val newConfig = "https://anichin.moe/film"
+        assertTrue(SupabaseObservability.sourceUrlDrifted(cachedConfig, newConfig))
+    }
+
+    @Test
+    fun `config tidak berubah membuat cache id tetap terpakai`() {
+        val cachedConfig = "https://anichin.moe/"
+        assertFalse(SupabaseObservability.sourceUrlDrifted(
+            cachedConfig, "https://anichin.moe"))
+    }
 }
