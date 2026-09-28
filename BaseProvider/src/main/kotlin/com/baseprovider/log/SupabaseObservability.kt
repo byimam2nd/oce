@@ -127,7 +127,7 @@ object SupabaseObservability {
     private suspend fun postOrStrip(
         path: String, body: org.json.JSONObject
     ): Boolean {
-        if (attemptWrite(path) { post(path, it) }) return true
+        if (attemptWrite(path) { post(path, body) }) return true
         if (!pluginVersionSupported || !body.has("plugin_version")) return false
         pluginVersionSupported = false
         body.remove("plugin_version")
