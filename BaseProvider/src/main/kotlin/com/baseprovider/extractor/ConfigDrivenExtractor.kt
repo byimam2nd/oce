@@ -131,7 +131,9 @@ class ConfigDrivenExtractor(private val config: ExtractorConfig) : CachedExtract
         com.baseprovider.log.logFail(name,
             "semua ${config.variants.size} varian gagal menghasilkan link " +
                 "(${System.currentTimeMillis() - __t0} ms)",
-            url = url, extractor = name,
+            url = url, method = "getUrl",
+            type = FailureType.EXTRACTOR_FAILURE,
+            stage = "EXTRACT", extractor = name,
             durationMs = System.currentTimeMillis() - __t0)
     }
 
