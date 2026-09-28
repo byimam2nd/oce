@@ -103,9 +103,12 @@ object MasterLinkGenerator {
             if (!decision.valid) {
                 // Link gagal test (non-2xx/3xx) di semua combo header.
                 // Jangan kirim link rusak ke player (avoid error 2004).
+                // Label carries HTTP status supaya 403 (diblokir) vs 404
+                // (link mati) vs 5xx (server error) bisa dibedakan.
                 com.baseprovider.log.logFail(
                     providerTag,
-                    "AdaptiveHeaderProbe rejected link (non-2xx/3xx on all combos): $url",
+                    "AdaptiveHeaderProbe rejected link (" +
+                        "${AdaptiveHeaderProbe.rejectLabel(decision)}): $url",
                     url = url,
                     method = "createSmartLink",
                     type = com.baseprovider.log.FailureType.HTTP_FAILURE,

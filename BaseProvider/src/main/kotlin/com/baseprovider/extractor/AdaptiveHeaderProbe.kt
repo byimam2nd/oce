@@ -57,8 +57,27 @@ object AdaptiveHeaderProbe {
         val capturedBody: String? = null,
         // true = body terpotong di PROBE_READ_BYTES (master >1MB sangat
         // langka) -> caller harus fetch penuh untuk verifikasi.
-        val bodyTruncated: Boolean = false
+        val bodyTruncated: Boolean = false,
+        // Kode HTTP yang menolak link (distinct). Tanpa ini, log "rejected
+        // link" tidak bisa membedakan 403 (diblokir) dari 404 (link mati)
+        // dari 5xx (server error) — semuanya terlihat sama.
+        val rejectedStatuses: List<Int> = emptyList(),
+        // Penyebab network error pertama (kelas exception + pesan). Terisi
+        // hanya kalau link ditolak karena jaringan, bukan HTTP.
+        val networkError: String? = null
     )
+
+    /**
+     * Label singkat untuk log "rejected link". Dipisah dari [probe] supaya
+     * bisa diuji tanpa jaringan — pemisahan ini menjaga diagnosis tetap
+     * benar walau formatnya diubah.
+     */
+    internal fun rejectLabel(d: Decision): String = when {
+        d.rejectedStatuses.isNotEmpty() ->
+            "HTTP " + d.rejectedStatuses.joinToString("/")
+        d.networkError != null -> "network: $d.networkError"
+        else -> "no response"
+    }
 
     private data class Combo(
         val mode: Mode,
@@ -74,8 +93,8 @@ object AdaptiveHeaderProbe {
     private sealed class ProbeResult {
         data class Ok(val ms: Long, val bytesRead: Long = 0L,
                       val captured: Captured? = null) : ProbeResult()
-        data object HttpReject : ProbeResult()
-        data object NetworkError : ProbeResult()
+        data class HttpReject(val code: Int) : ProbeResult()
+        data class NetworkError(val cause: String?) : ProbeResult()
     }
 
     /** Body pemenang + penanda terpotong di batas baca probe. */
@@ -159,8 +178,9 @@ object AdaptiveHeaderProbe {
         captureBody: Boolean = false
     ): Decision {
         val host = runCatching { URI(url).host }.getOrNull()
-            ?: return Decision(Mode.BARE, null, minimalHeaders, valid = false)
-        // Single-flight: satu probe per host, pemanggil lain menunggu hasil yang sama.
+            ?: return Decision(Mode.BARE, null, minimalHeaders, valid = false,
+                networkError = "unparseable url: " + url.take(60))
+        // Single-flight: satu probe per host, pemanggil lain menerima hasil yang sama.
         while (true) {
             inFlight[host]?.let { deferred ->
                 // Waiter: hasil probe milik URL lain — body tidak ikut dipakai.
@@ -174,12 +194,15 @@ object AdaptiveHeaderProbe {
                     } catch (e: kotlinx.coroutines.CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        Decision(Mode.BARE, null, minimalHeaders, valid = false)
+                        Decision(Mode.BARE, null, minimalHeaders, valid = false,
+                            networkError = e.javaClass.simpleName + ": " +
+                                (e.message ?: "?"))
                     }
                     deferred.complete(decision)
                 } catch (e: Throwable) {
                     // Owner dibatalkan: pastikan waiter tidak hang, lalu teruskan.
-                    deferred.complete(Decision(Mode.BARE, null, minimalHeaders, valid = false))
+                    deferred.complete(Decision(Mode.BARE, null, minimalHeaders,
+                        valid = false, networkError = "probe cancelled"))
                     throw e
                 } finally {
                     inFlight.remove(host)
@@ -219,6 +242,8 @@ object AdaptiveHeaderProbe {
         }.toMutableList()
         val host = runCatching { URI(url).host }.getOrNull() ?: url.take(60)
         var anyNetworkError = false
+        var networkErrorCause: String? = null
+        val rejectedStatuses = sortedSetOf<Int>()
         data class Cand(val combo: Combo, val res: ProbeResult.Ok) {
             // KB/s sejati: bytes -> KB lalu bagi durasi detik
             fun kbps(): Double =
@@ -243,11 +268,18 @@ object AdaptiveHeaderProbe {
                             "${result.bytesRead}B")
                     oks.add(Cand(combo, result))
                 }
-                is ProbeResult.HttpReject ->
-                    Log.d("AdaptiveProbe", "$host: ${combo.mode} HTTP-reject")
-                ProbeResult.NetworkError -> {
+                is ProbeResult.HttpReject -> {
+                    rejectedStatuses.add(result.code)
+                    Log.d("AdaptiveProbe",
+                        "$host: ${combo.mode} HTTP ${result.code}")
+                }
+                is ProbeResult.NetworkError -> {
                     anyNetworkError = true
-                    Log.d("AdaptiveProbe", "$host: ${combo.mode} network-error")
+                    if (networkErrorCause == null) {
+                        networkErrorCause = result.cause
+                    }
+                    Log.d("AdaptiveProbe",
+                        "$host: ${combo.mode} network-error ${result.cause}")
                 }
             }
         }
@@ -289,11 +321,14 @@ object AdaptiveHeaderProbe {
             // valid. Saat internet pulih, extractor berikutnya memprobe ulang.
             return@coroutineScope Decision(
                 Mode.BARE, null, minimalHeaders,
-                valid = true, networkBlocked = true
+                valid = true, networkBlocked = true,
+                networkError = networkErrorCause
             )
         }
         // Semua combo ditolak server via HTTP non-2xx -> link rusak.
-        Decision(Mode.BARE, null, minimalHeaders, valid = false)
+        Decision(Mode.BARE, null, minimalHeaders, valid = false,
+            rejectedStatuses = rejectedStatuses.toList(),
+            networkError = networkErrorCause)
     }
 
     private suspend fun probeOnce(url: String, combo: Combo, captureBody: Boolean): ProbeResult =
@@ -306,7 +341,7 @@ object AdaptiveHeaderProbe {
                 timeout = PROBE_TIMEOUT
             )
             if (r.code !in 200..399) {
-                ProbeResult.HttpReject
+                ProbeResult.HttpReject(r.code)
             } else {
                 // Baca body sungguhan hingga batas agar pemenang = combo dengan
                 // throughput terbaik (latency + transfer), bukan latency murni.
@@ -354,6 +389,7 @@ object AdaptiveHeaderProbe {
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
-            ProbeResult.NetworkError
+            ProbeResult.NetworkError(
+                e.javaClass.simpleName + ": " + (e.message ?: "?"))
         }
 }
