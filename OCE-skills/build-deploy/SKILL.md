@@ -80,19 +80,61 @@ Jika user meminta "build" / "verifikasi" / "cek compile":
 
 ### Release (`release.yml`)
 - **Trigger:** tag `v*` (atau `workflow_dispatch`)
+- `OCE_VERSION` = epoch menit (sama seperti beta) + `RELEASE_TAG` untuk description
 - Build sama seperti `ci-cd`, patch URL untuk GitHub Release, buat release `.cs3` + `plugins.json`
+- Job `release` butuh secret `OCE_DISTRIBUTOR_APP_ID` + `OCE_DISTRIBUTOR_APP_PEM`; kalau kosong, artefak tetap ter-build tapi GitHub Release tidak dibuat.
+
+## CRITICAL: Skema versionCode
+
+`OCE_VERSION` = **epoch menit**, mis. `29843182`. Satu ruang versionCode dipakai bersama oleh `ci-cd.yml` (beta) dan `release.yml` (stable).
+
+```kotlin
+// build.gradle.kts
+val rawVersion = System.getenv("OCE_VERSION")?.trim()
+val envVersion = if (rawVersion.isNullOrBlank()) null else
+    requireNotNull(rawVersion.toIntOrNull()) { "OCE_VERSION harus angka monoton, bukan '$rawVersion'..." }
+```
+
+**Jangan pernah pass semver.** Skema lama (`filter { it.isDigit() }`) merusaknya:
+
+| Tag | Skema lama | Akibat |
+|-----|-----------|--------|
+| v3.13.03 | `31303` | — |
+| v3.16.0 | `3160` | lebih kecil dari v3.13.03, non-monoton |
+| v3.9.1 | `391` | user di v3.16.0 tidak pernah ditawari update |
+
+Karena beta sudah menempati ~29.8 jt, **tidak ada semver yang bisa mengalahkannya** — user beta tidak akan pernah bisa kembali ke stable. Karena itu tag (`v4.0.0`) hanya nama rilis; versionCode tetap angka. Tag tampil di description plugin: `[v4.0.0 | 2026-09-28 17:22 WIB]`.
+
+`requireNotNull` dipakai agar salah-isi **gagal keras** — diam-diam jatuh ke `version 1` akan membuat user tidak bisa update tanpa ada yang sadar.
+
+## Release vs Beta
+
+| | Beta | Stable |
+|---|------|--------|
+| Trigger | push ke `master` (path filter) | tag `v*` |
+| Workflow | `ci-cd.yml` | `release.yml` |
+| Output | branch `builds` | GitHub Release (`.cs3` + `plugins.json`) |
+| VERSION | epoch menit | epoch menit |
+
+Latest tag = kode yang **sudah tersebar ke user**. `git rev-list --count <tag>..HEAD` = berapa commit yang belum rilis — kalau besar, user stable belum dapat fix terbaru. Ini penyebab paling umum "fix tapi tidak berefek" (lihat `logging`).
+
+Cek Ordering sebelum tag:
+```bash
+git fetch origin +refs/heads/builds:refs/remotes/origin/builds --force -q
+git show origin/builds:plugins.json | python3 -c "import json,sys; print(sorted({e['version'] for e in json.load(sys.stdin)}))"
+```
+Pastikan versi beta terakhir < epoch menit saat tag dipotong (otomatis true, karena keduanya `date +%s`).
 
 ## Verifikasi Beta — Jangan Asumsikan User Sudah Update
 
-`OCE_VERSION = epoch minutes`. Cara cek build mana yang dipakai user:
-
 | Sumber | Cara |
 |--------|------|
-| CI run | `gh run view <id>` → cek step "Set Build Environment" |
+| CI run | `gh run view <id>` → step "Set Build Environment" |
 | Beta artifact | `byimam2nd/oce@builds` → `plugins.json` |
-| User | minta `OCE_VERSION` dari user / logcat (`logDebug`) |
+| Release artifact | `gh release view <tag> --repo byimam2nd/oce` |
+| User | minta versi dari user / logcat (`logDebug`) |
 
-**Ingat:** orang berbeda update di waktu berbeda. Log produksi yang muncul **sebelum** user update masih berasal dari build lama → jangan simpulkan fix gagal (`logging`).
+**Ingat:** orang berbeda update di waktu berbeda. Log produksi sebelum user update masih berasal dari build lama → jangan simpulkan fix gagal (`logging`).
 
 ## Commit Rules
 
@@ -129,13 +171,24 @@ gh run watch <run-id> --repo byimam2nd/oce-source --exit-status
 
 ## Version & Tag Rules
 
-### Bump ditentukan oleh DAMPAK, bukan urutan
+### Bump tag ditentukan oleh DAMPAK
 
 | Dampak | Contoh | Bump |
 |--------|--------|------|
 | Kecil | bug fix, perf, refactor, chore | `vX.Y.(Z+1)` |
 | Sedang | fitur baru, provider/extractor baru | `vX.(Y+1).0` |
-| Besar | arsitektur berubah, API/config break | `v(X+1).0.0` |
+| Besar | arsitektur berubah, versioning break | `v(X+1).0.0` |
+
+**Nomor tag TIDAK menjadi versionCode** (lihat skema versionCode di atas). Jadi nomor tag boleh "mundur" secara semver — yang penting unik. Tetap lebih baik monoton untuk keterbacaan.
+
+### Before Tag: cek berapa commit yang tertahan
+
+```bash
+LT=$(git describe --tags --abbrev=0)
+echo "commits sejak $LT: $(git rev-list --count $LT..HEAD)"
+```
+
+Angka besar = banyak fix yang belum sampai ke user stable. Kalau itulah yang terjadi, **itulah alasan utama** laporan "sudah fix tapi masih error" (lihat `logging`).
 
 ### Tag Workflow
 
@@ -144,14 +197,21 @@ gh run watch <run-id> --repo byimam2nd/oce-source --exit-status
 gh run watch <id> --repo byimam2nd/oce-source --exit-status
 
 # 2. Tag di HEAD (setelah CI hijau)
-git tag -a v3.16.1 -m "fix: deskripsi singkat"
+git tag -a v4.0.1 -m "fix: deskripsi singkat"
 
 # 3. Push ke kedua remote
-git push origin v3.16.1
-git push private v3.16.1
+git push origin v4.0.1
+git push private v4.0.1
+
+# 4. Watch release
+gh run list --repo byimam2nd/oce-source --workflow=release.yml --limit 1
+gh run watch <id> --repo byimam2nd/oce-source --exit-status
+
+# 5. Verifikasi artefak benar-benar publik
+gh release view v4.0.1 --repo byimam2nd/oce --json tagName,isDraft,assets
 ```
 
-**Tag men-trigger release pipeline.** Jangan tag sebelum CI hijau.
+**Tag men-trigger release pipeline.** Jangan tag sebelum CI hijau. Release sukses ≠ release ada: cek `isDraft=false` dan asset `.cs3` + `plugins.json` benar-benar ada.
 
 ## Branch Structure
 
@@ -194,8 +254,9 @@ Failed to find package 'tools'
 - [ ] Commit message sesuai format (`fix:`/`feat:`/`refactor:`/`chore:`)
 - [ ] Push ke kedua remote (origin + private)
 - [ ] CI build hijau (`gh run watch`)
-- [ ] Beta artifacts ter-deploy ke builds branch
-- [ ] Jika release: tag di HEAD, release pipeline hijau
+- [ ] Beta artifacts ter-deploy ke builds branch, versionCode naik
+- [ ] Jika release: tag di HEAD, release pipeline hijau, `isDraft=false`, asset `.cs3` + `plugins.json` ada
+- [ ] Kalau `OCE_VERSION` diubah: cek ordering vs beta terakhir sebelum tag
 
 ## Recovery
 
