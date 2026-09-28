@@ -90,12 +90,33 @@ object SupabaseObservability {
         }
     }
 
+    /**
+     * Turunkan `error_type` run dari step-nya (pure — bisa diuji). Step pertama
+     * yang punya error type adalah penyebab pertama, jadi itu yang dilaporkan.
+     * `null` kalau tidak ada step yang gagal: run yang benar-benar sukses tidak
+     * boleh dapat error type, dan string kosong dianggap "tidak ada".
+     */
+    internal fun deriveRunErrorType(steps: List<String?>): String? =
+        steps.firstOrNull { !it.isNullOrBlank() }
+
     private fun tallyStep(runId: String, kind: String, status: String) {
         val m = runStepCounts.computeIfAbsent(runId) {
             ConcurrentHashMap()
         }
         val k = "$kind:$status"
         m[k] = (m[k] ?: 0) + 1
+    }
+
+    /**
+     * Error type per step, urut kronologis. Dipakai endRun untuk mengisi
+     * `scrape_runs.error_type` yang tadinya tidak pernah terisi.
+     */
+    private val runStepErrors =
+        ConcurrentHashMap<String, MutableList<String?>>()
+
+    private fun tallyStepError(runId: String, errorType: String?) {
+        runStepErrors.computeIfAbsent(runId) { mutableListOf() }
+            .add(errorType)
     }
 
     private fun enabled(): Boolean = URL.isNotBlank() && ANON_KEY.isNotBlank()
@@ -244,6 +265,7 @@ object SupabaseObservability {
             if (!created) return@launch
             val st: Map<String, Int> = runStepCounts.remove(runId)
                 ?: emptyMap()
+            val stepErrors = runStepErrors.remove(runId).orEmpty()
             val resolution = if (deriveFromSteps) deriveRunEndStatus(
                 collectCount = st["COLLECT:success"] ?: 0,
                 extractSuccess = st["EXTRACT:success"] ?: 0,
@@ -255,7 +277,8 @@ object SupabaseObservability {
                 put("status", resolution.status)
                 put("returned_early", returnedEarly)
                 durationMs?.let { put("duration_ms", it.toInt()) }
-                errorType?.let { put("error_type", it) }
+                (errorType ?: deriveRunErrorType(stepErrors))
+                    ?.let { put("error_type", it) }
                 (resolution.summary ?: errorMessage)?.let {
                     put("error_message", it)
                 }
@@ -265,7 +288,11 @@ object SupabaseObservability {
                 }.format(java.util.Date()))
             }
             runCatching {
-                patch("/rest/v1/scrape_runs?id=eq.$runId", body)
+                val code = patch("/rest/v1/scrape_runs?id=eq.$runId", body)
+                if (!isWriteOk(code)) {
+                    Log.e("OCE", "Observability: endRun ditolak HTTP $code — " +
+                        "run $runId tetap running di DB")
+                }
             }.onFailure { e ->
                 Log.w("OCE", "Observability: endRun failed: ${e.message}")
             }
@@ -287,6 +314,7 @@ object SupabaseObservability {
     ) {
         if (!enabled() || runId.isNullOrBlank()) return
         tallyStep(runId, kind, status)
+        tallyStepError(runId, errorType)
         val body = withPluginVersion(org.json.JSONObject().apply {
             put("run_id", runId)
             put("kind", kind)

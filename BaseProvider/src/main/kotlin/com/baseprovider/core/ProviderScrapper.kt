@@ -420,6 +420,7 @@ class ProviderScrapper(
                     runId,
                     status = "failed",
                     durationMs = System.currentTimeMillis() - startedAt,
+                    errorType = FailureType.CANCELLED.label,
                     deriveFromSteps = false
                 )
                 throw e
