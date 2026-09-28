@@ -67,19 +67,67 @@ Telegram sudah dihapus. Jangan menambahkannya kembali.
 | url | text | Request URL |
 | selectors | text | Selector yang dipakai |
 | traceback | text | Stack trace JSON |
-| stage | text | `SCRAPE`, `EXTRACT`, `VERIFY` |
-| extractor | text | Nama extractor |
+| stage | text | `SCRAPE`, `SEARCH`, `COLLECT`, `EXTRACT`, `SELECT`, `PROBE`, `VERIFY` |
+| extractor | text | Domain extractor (lihat "Atribusi Versi") |
+| plugin_version | text | versionCode plugin = epoch menit |
 | attempt | int | Nomor retry |
 | duration_ms | int | Durasi |
 | created_at | timestamptz | Waktu |
 
+> `stage` = **fase kerja**, bukan nama provider. Urutan: `SCRAPE` (load halaman)
+> → `SEARCH` (cari), `COLLECT` (kumpulkan link dari halaman episode),
+> `SELECT` (pilih & playlist), `EXTRACT` (ambil URL video), `PROBE` (cek
+> header/3002), `VERIFY` (validasi link). `NULL` = call site lupa mengisinya —
+> cek `grep -rn 'stage = "' BaseProvider/` untuk daftar call site yang sudah
+> benar.
+
 ### `scrape_runs`
-`id` (uuid), `source_id` (**UUID sumber data, bukan provider slug**), `series_id`, `episode_id`, `context` (`SCRAPE`/`LOAD`/`SEARCH`), `triggered_by`, `start_url`, `status` (`success`/`failed`/`partial`), `returned_early`, `started_at`, `finished_at`, `duration_ms`, `error_type`, `error_message`.
+`id` (uuid), `source_id` (**UUID sumber data, bukan provider slug**), `series_id`, `episode_id`, `context` (`SCRAPE`/`LOAD`/`SEARCH`), `triggered_by`, `start_url`, `status` (`success`/`failed`/`partial`), `returned_early`, `started_at`, `finished_at`, `duration_ms`, `error_type`, `error_message`, `plugin_version`.
 
 > Untuk tahu provider mana, join `scrape_runs.start_url` atau `logs.tag` — `source_id` bukan slug.
 
 ### `scrape_steps`
-`id` (uuid), `run_id`, `kind` (`SCRAPE`/`EXTRACT`/`VERIFY`), `link_url`, `extractor_chain`, `status` (`success`/`failed`/`timeout`), `duration_ms`, `links_found`, `error_type`, `created_at`.
+`id` (uuid), `run_id`, `kind` (`COLLECT`/`EXTRACT`), `link_url`, `extractor_chain`, `status` (`success`/`failed`/`timeout`), `duration_ms`, `links_found`, `error_type`, `created_at`, `plugin_version`.
+
+## Atribusi Versi: "fix tidak berefek" atau "user belum update?"
+
+`plugin_version` = versionCode plugin = `OCE_VERSION` = **epoch menit** (mis. `29843214`),
+identik dengan versionCode di `ci-cd.yml` (beta) dan `release.yml` (stable). Ditempel
+ke `SupabaseBakedConfig.PLUGIN_VERSION` oleh `generateSupabaseConfig`, lalu dikirim
+ke ketiga tabel di atas. Kolomnya **NULL** untuk log dari build lama (sebelum 83a6d8a).
+
+```sql
+-- Adoption: build mana yang aktif, berapa run, kapan terakhir terlihat?
+select plugin_version, count(*) as runs, max(started_at) as last_seen
+  from scrape_runs where plugin_version is not null
+ group by 1 order by 3 desc;
+
+-- Error milik satu build tertentu
+select created_at, level, tag, failure_type, message
+  from logs where plugin_version = '29843214' and level <> 'SUCCESS'
+ order by created_at desc limit 30;
+```
+
+**Selalu cross-check ini sebelum menyimpulkan "fix saya tidak bekerja".** Kasus nyata
+(2026-09-28): fix `a8a20c3` (06:16 UTC) & `c4b9579` (09-27) sudah hijau di CI, tapi
+signature log-nya masih muncul di produksi 3,5 jam kemudian — penyebabnya tag release
+tertinggal 59 commit di `v3.9.1`, bukan fix-nya salah. Tanpa `plugin_version` itu baru
+ketahuan lewat investigasi manual.
+
+> Auto-detect project ref via `sb.py` sudah **mati**: `SupabaseBakedConfig.kt`
+> di-check-in dengan string kosong (nilainya secret CI), jadi tidak ada
+> `*.supabase.co` yang bisa ditemukan → `IndexError`. Pakai ref eksplisit
+> `cjjopuwhpcuoaoifhcfj`, atau set `SB_REF` di environment.
+
+### Migration & degradasi (penting)
+
+Kolom `plugin_version` ada di `supabase/migrations/0005_logs_plugin_version.sql`
+(harus di-apply manual via dashboard; anon key tidak bisa DDL). Karena **PostgREST
+menolak seluruh payload kalau satu kolom tidak ada** — yang berarti observability
+buta total, bukan cuma kehilangan satu field — plugin punya fallback: kalau post
+gagal dan payload punya `plugin_version`, kirim ulang sekali tanpa kolom itu, lalu
+stop mencoba selama proses hidup. Gejalanya di logcat: `ok tanpa plugin_version`.
+Artinya **DDL-nya belum di-apply**, bukan log-nya rusak.
 
 ## FailureType Classification
 
@@ -105,7 +153,15 @@ enum class FailureType(val label: String) {
 
 - **`N/A` = `UNKNOWN`** — muncul saat `log()` tidak menerima `type =`. Bukan SQL NULL, bukan nilai khusus. Selalu isi `type`, `method`, `stage`, `extractor` saat logging failure.
 - **`REMOVED` = `CONTENT_REMOVED`** — konten hilang di upstream (404), **bukan** bug OCE. Jangan Contact User dengan ini.
-- `extractor=None` pada log = field tidak diisi di call site itu, bukan extractor tidak ada.
+- **`extractor` = domain, bukan nama extractor.** DeepScan/global fallback isi
+  `urlDomain` (mis. `fembed`), bukan `callChain` default `"-"`. NULL = call site
+  lupa mengisinya.
+- **Error sebelum extractor jalan → `extractor` NULL itu benar.** Contoh: iframe
+  error di `FallbackPipeline` → `stage="COLLECT"`, `extractor` NULL. Jangan diisi
+  karangan; yang penting `stage` dan `message` akurat.
+- Sekitar 87% log lama punya `stage` NULL dan 71% `extractor` NULL karena call site
+  tidak mengisinya — sudah ditutup sebagian di C1 (`bf3e413`), **bukan** indikasi
+  malfunction.
 
 ## Log Functions
 
@@ -211,6 +267,9 @@ GROUP BY tag;
 - [ ] Tahu cara query logs (PostgREST / Management API)
 - [ ] Bisa bedakan FailureType (`REMOVED` bukan bug, `N/A` = missing `type=`)
 - [ ] Selalu query dengan window `created_at` eksplisit + pagination aware
+- [ ] **Sudah cek `plugin_version` sebelum menyimpulkan "fix tidak berefek"**
+- [ ] Tahu bedakan `stage` NULL (call site lupa) vs stage yang salah
+- [ ] Kalau lihat `ok tanpa plugin_version` di logcat → migration 0005 belum di-apply
 - [ ] Bisa identifikasi health provider dari pattern log terbaru
 
 ## Related Skills
@@ -219,3 +278,4 @@ GROUP BY tag;
 - `extraction` — `EXTRACTOR_FAILURE`, `CONTENT_REMOVED`, `INVALID_URL`
 - `selector-checker` — `SELECTOR_FAILURE` investigation
 - `architecture` — module `log/`
+- `build-deploy` — versionCode epoch menit (nilai yang muncul di `plugin_version`)
