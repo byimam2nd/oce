@@ -33,6 +33,16 @@ Workflow development OCE: locate, trace, modify, verify — dan cara mendiagnosi
 
 **Hanya:** `commit → push → cek CI` (`build-deploy`). Unit test hanya jalan di CI: `./gradlew :BaseProvider:testDebugUnitTest` di dalam workflow, bukan di HP.
 
+Konsekuensi yang harus disadari: **Tidak ada compiler lokal** — kesalahan yang hanya ketahuan saat compile baru muncul ~5 menit kemudian lewat CI, setelah push. Jadi:
+- Tulis unit test untuk setiap logika string/format murni. Ini jaring pengaman termurah: pada 2026-09-28 testlah yang menangkap bug `"$d.networkError"` (lihat di bawah), bukan review manual.
+- Kalau memang tidak bisa diuji, pilih sintaks yang tidak ambigu.
+- Scan idiom yang rapuh sebelum push:
+  ```bash
+  # Kotlin hanya menginterpolasi identifier setelah "$"; "$d.x" = toString(d) + ".x"
+  grep -rnP '\$[A-Za-z_][A-Za-z0-9_]*\.[a-z]' --include='*.kt' BaseProvider/src/main/kotlin/ | grep -vP '\$\{'
+  ```
+  Hit yang tersisa harus memang literal yang disengaja (`"$fileName.json"`), bukan akses property. Bentuk yang aman: `"$d" + d.x` atau `"${d.x}"`.
+
 ## Development Workflow
 
 ```
