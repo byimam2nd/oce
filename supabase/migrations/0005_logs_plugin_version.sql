@@ -16,10 +16,17 @@
 --   Nilai = versionCode plugin = OCE_VERSION = epoch menit (mis. 29843203),
 --   sama dengan yang dipakai ci-cd.yml (beta) dan release.yml (stable).
 --
--- ORDEN PENERAPAN — WAJIB:
---   1. Terapkan migration ini DULU (dashboard Supabase → SQL Editor).
---   2. Baru pakai build yang mengirim plugin_version.
---   Kalau dibalik, INSERT log akan gagal total (bukan partial).
+-- CARA MENJALANKAN (pilih salah satu):
+--   1. SQL Editor  — tempel seluruh file ini di Dashboard → SQL Editor → Run.
+--   2. Workflow     — `gh workflow run apply-migrations.yml -f dry_run=false`
+--                     (memakai secret SUPABASE_ACCESS_TOKEN).
+--   Dua jalur ini sengaja memakai DDL yang sama + tabel pelacak yang sama,
+--   jadi hasilnya identik dan tidak akan saling menimpa atau applies dua kali.
+--
+-- ORDEN — WAJIB: migration ini dulu, baru ada build yang memakai
+-- plugin_version. Kalau dibalik, INSERT log akan gagal total (bukan partial)
+-- — dan plugin punya fallback retry-tanpa-kolom, jadi log tetap masuk
+-- tanpa versi.
 --
 -- Kolom `text` (bukan integer) supaya aman walau suatu saat scheme version
 -- berubah; query tetap bisa membandingkan sebagai string karena epoch menit
@@ -30,6 +37,21 @@
 -- paling akurat (satu run = satu perangkat); `logs` dipakai untuk query
 -- ad-hoc cepat tanpa join.
 -- ============================================================================
+
+-- Pelacak OCE sendiri. Sengaja BUKAN supabase_migrations.schema_migrations
+-- milik Supabase CLI, supaya `supabase db push` di kemudian hari tidak rusak.
+create table if not exists public.oce_schema_migrations (
+    name        text primary key,
+    applied_at  timestamptz not null default now(),
+    applied_by  text        not null
+);
+
+-- WAJIB: ini tabel internal. Anon key terkunci di dalam setiap .cs3, jadi
+-- tanpa lockdown di bawah, siapa pun yang punya APK bisa membaca dan menulis
+-- bookkeeping ini lewat PostgREST. RLS tanpa policy = tidak ada yang boleh
+-- akses kecuali service_role/postgres. Plugin tidak pernah menyentuh tabel ini.
+alter table public.oce_schema_migrations enable row level security;
+revoke all on public.oce_schema_migrations from anon, authenticated;
 
 alter table public.logs
     add column if not exists plugin_version text;   -- versionCode / OCE_VERSION
@@ -55,6 +77,12 @@ create index if not exists logs_plugin_version_created_idx
 create index if not exists scrape_runs_plugin_version_idx
     on public.scrape_runs (plugin_version, started_at desc)
     where plugin_version is not null;
+
+-- Tandai sudah diterapkan supaya workflow tidak mengulang (aman juga kalau
+-- file ini dijalankan dua kali).
+insert into public.oce_schema_migrations (name, applied_by)
+values ('0005_logs_plugin_version.sql', 'sql-editor / apply-migrations.yml')
+on conflict (name) do nothing;
 
 -- ---------------------------------------------------------------------------
 -- Verifikasi setelah menerapkan (jalankan di SQL Editor):
