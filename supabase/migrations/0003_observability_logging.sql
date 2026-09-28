@@ -15,7 +15,10 @@
 -- 1. logs: kolom observability baru
 -- ---------------------------------------------------------------------------
 alter table public.logs
-    add column if not exists stage       text,   -- HOME_LIST/SEARCH/DETAIL/EPISODE/COLLECT/EXTRACT/PROBE
+    -- Nilai stage yang BENAR-BENAR dipakai kode (lihat grep 'stage = "' di
+    -- BaseProvider/src/main/kotlin/): SEARCH, SELECT, COLLECT, EXTRACT,
+    -- PROBE, VERIFY, CF_SOLVER_ATTEMPT/SUCCESS/FAILED.
+    add column if not exists stage       text,
     add column if not exists extractor   text,   -- nama extractor/selector/iframe-chain
     add column if not exists attempt     integer,-- percobaan ke-n (retry/paralel)
     add column if not exists duration_ms integer;

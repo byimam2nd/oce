@@ -168,7 +168,8 @@ class ProviderScrapper(
                     url = url,
                     method = "search",
                     type = FailureType.NETWORK_FAILURE,
-                    selectors = "searchItems"
+                    selectors = "searchItems",
+                    stage = "SEARCH"
                 )
                 emptyList()
             }
@@ -185,7 +186,8 @@ class ProviderScrapper(
                 url = primaryUrl,
                 method = "search",
                 type = FailureType.NETWORK_FAILURE,
-                selectors = "searchItems"
+                selectors = "searchItems",
+                stage = "SEARCH"
             )
             emptyList()
         }
@@ -269,7 +271,7 @@ class ProviderScrapper(
             com.baseprovider.log.logSuccess(config.id,
                 "Search '$query' p$page: ${filtered.size} hasil dalam " +
                     "${System.currentTimeMillis() - __st0} ms",
-                url = url, method = "search",
+                url = url, method = "search", stage = "SEARCH",
                 durationMs = System.currentTimeMillis() - __st0)
             return filtered
         }

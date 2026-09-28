@@ -204,11 +204,14 @@ class FallbackPipeline(private val config: ProviderConfig) {
         val iframeEl = if (iframeSelectors.isNotBlank()) playerDoc
             .selectFirst(iframeSelectors) else null
         if (iframeEl == null) {
+            // stage=COLLECT: gagal sebelum extractor sempat jalan, jadi `extractor`
+            // sengaja dibiarkan null (tidak ada extractor yang bisa disalahkan).
             logFail(
                 config.id, "No iframe found",
                 url = currentUrl, method = "loadLinks",
                 type = FailureType.INVALID_IFRAME,
-                selectors = iframeSelectors
+                selectors = iframeSelectors,
+                stage = "COLLECT"
             )
             SupabaseObservability.logStep(
                 runId, kind = "EXTRACT", status = "failed",
@@ -224,11 +227,14 @@ class FallbackPipeline(private val config: ProviderConfig) {
         val iframeSrc = iframeAttributes.firstNotNullOfOrNull { iframeEl
             .attr(it).takeIf { v -> v.isNotBlank() && v != "about:blank" } }
         if (iframeSrc == null) {
+            // stage=COLLECT: element iframe ada tapi tanpa src — belum ada
+            // extractor yang dijalankan, jadi `extractor` tetap null.
             logFail(
                 config.id, "Iframe has no src",
                 url = currentUrl, method = "loadLinks",
                 type = FailureType.INVALID_IFRAME,
-                selectors = iframeAttributes.joinToString(", ")
+                selectors = iframeAttributes.joinToString(", "),
+                stage = "COLLECT"
             )
             SupabaseObservability.logStep(
                 runId, kind = "EXTRACT", status = "failed",

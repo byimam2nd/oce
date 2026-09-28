@@ -152,6 +152,7 @@ suspend fun loadExtractorWithFallbackCustom(
                 type = FailureType.EXTRACTOR_FAILURE,
                 selectors = callChain,
                 stage = "EXTRACT",
+                extractor = urlDomain,
                 runId = runId,
                 error = e
             )
@@ -191,12 +192,17 @@ suspend fun loadExtractorWithFallbackCustom(
                 }
             } else {
                 diag(failureDetail, "DeepScan: no video URLs in HTML source")
+                // DeepScan = fallback terakhir, jadi tidak ada extractor
+                // spesifik yang bisa disalahkan. Pakai host (urlDomain) —
+                // konsisten dengan site "All extraction methods failed" —
+                // supaya query "host mana yang selalu gagal" tetap jalan.
                 logFail(
                     providerId, "DeepScan found no video URLs in HTML source of $url",
                     url = url, method = "extractLinks",
                     type = FailureType.EMPTY_RESPONSE,
                     selectors = callChain,
                     stage = "EXTRACT",
+                    extractor = urlDomain,
                     runId = runId
                 )
             }
@@ -211,6 +217,7 @@ suspend fun loadExtractorWithFallbackCustom(
                 type = FailureType.NETWORK_FAILURE,
                 selectors = callChain,
                 stage = "EXTRACT",
+                extractor = urlDomain,
                 runId = runId
             )
         }
