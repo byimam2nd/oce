@@ -94,7 +94,7 @@ build-deploy (final: commit & push)
 3. Cek apakah informasi masih sesuai repository
 4. Update, dan **pangkas duplikasi** antar skill (satu fakta satu tempat)
 5. Tandai uncertainty jika belum bisa verifikasi
-6. Cek budget: `wc -w */SKILL.md` — target total **< 7500 words**. Skill yang panjang = agent boros context, bukan lebih pintar.
+6. Cek `wc -w */SKILL.md` supaya ketahuan kalau ada skill yang membengkak, tapi **jangan memangkas demi jatah kata**. Knowledge yang sudah diverifikasi mahal dicari ulang; context boros lebih murah dibanding agent salah karena fakta hilang. Memangkas untuk mengejar angka ditolak 2026-09-28 (total saat itu 8783, tetap dipertahankan). Yang tetap wajib: pangkas duplikasi (langkah 4).
 7. Facts tetap valid walau tidak ada token untuk verserbatim: sertakan nama file, fungsi, atau commit agar agent bisa cek ulang sendiri.
 
 ## Standar Kualitas
