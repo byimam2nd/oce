@@ -38,7 +38,7 @@ class TrackedRunBoundTest {
 
     @Test
     fun `jumlah yang di-evict dibatasi`() {
-        val touched = (1..10).associateBy { "run$it" } { it * 100L }
+        val touched = (1..10).map { "run$it" to it * 100L }.toMap()
         val victims = SupabaseObservability.evictVictims(touched, cap = 5, count = 3)
         assertEquals(3, victims.size)
         assertEquals(listOf("run1", "run2", "run3"), victims)
