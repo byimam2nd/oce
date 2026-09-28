@@ -186,16 +186,22 @@ object ProviderLog {
                     if (postBatch(stripped)) {
                         Log.w("OCE", "Supabase log ok tanpa plugin_version — " +
                             "jalankan supabase/migrations/0005_logs_plugin_version.sql")
+                    } else {
+                        Log.e("OCE", "Observability: ${batch.size} baris log hilang — " +
+                            "batch ditolak 2x (periksa key, RLS, atau jaringan)")
                     }
+                } else if (!pluginVersionSupported) {
+                    Log.e("OCE", "Observability: ${batch.size} baris log hilang — " +
+                        "batch ditolak (plugin_version tidak didukung DB)")
                 }
             }
         }
     }
 
-    private suspend fun postBatch(rows: List<org.json.JSONObject>): Boolean =
-        runCatching {
+    private suspend fun postBatch(rows: List<org.json.JSONObject>): Boolean {
+        return try {
             val body = org.json.JSONArray().apply { rows.forEach { put(it) } }
-            com.lagradost.cloudstream3.app.post(
+            val response = com.lagradost.cloudstream3.app.post(
                 "$SUPABASE_URL/rest/v1/logs",
                 headers = mapOf(
                     "apikey" to SUPABASE_ANON_KEY,
@@ -205,13 +211,29 @@ object ProviderLog {
                 ),
                 requestBody = body.toString().toRequestBody(
                     "application/json".toMediaType())
-            ).text
-            true
-        }.getOrElse { e ->
+            )
+            if (isWriteOk(response.code)) {
+                true
+            } else {
+                Log.e("OCE", "Supabase log insert ditolak HTTP ${response.code}: " +
+                    "batch ${rows.size} baris hilang")
+                false
+            }
+        } catch (e: Exception) {
             Log.e("OCE", "Supabase log insert failed: ${e.message}")
             false
         }
+    }
 }
+
+/**
+ * PostgREST tidak melempar exception pada status error — balasannya tetap
+ * punya body yang terbaca dengan `.code` >= 400. Prinsip yang sama sudah dipakai
+ * di `network/HttpClient.kt`: "NiceHttp tidak throw pada status error — cek
+ * secara eksplisit". Tanpa cek ini, batch yang ditolak dilaporkan sukses dan
+ * tidak pernah di-retry.
+ */
+internal fun isWriteOk(code: Int): Boolean = code in 200..299
 
 fun log(
     level: LogLevel, tag: String, message: String,

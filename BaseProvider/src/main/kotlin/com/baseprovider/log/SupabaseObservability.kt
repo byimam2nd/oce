@@ -110,31 +110,42 @@ object SupabaseObservability {
     @Volatile private var pluginVersionSupported = true
 
     /** Tempel plugin_version ke payload, atau kembalikan body apa adanya. */
-    private fun withPluginVersion(body: org.json.JSONObject): org.json.JSONObject {
+    internal fun withPluginVersion(body: org.json.JSONObject): org.json.JSONObject {
         if (!pluginVersionSupported) return body
         if (SupabaseBakedConfig.PLUGIN_VERSION.isBlank()) return body
         return body.put("plugin_version", SupabaseBakedConfig.PLUGIN_VERSION)
     }
 
     /**
-     * POST dengan fallback: kalau gagal & payload punya `plugin_version`, kirim
+     * POST dengan fallback: kalau ditolak & payload punya `plugin_version`, kirim
      * ulang sekali tanpa kolom itu (DB belum di-migrate), lalu stop mencoba
      * selama proses ini hidup. Return true bila akhirnya tersimpan.
-     * [post] mengembalikan Unit, jadi sukses judged lewat isSuccess.
+     *
+     * [post] mengembalikan HTTP status, bukan Unit — NiceHttp tidak melempar pada
+     * status error, jadi `isSuccess` lama berarti "selalu sukses".
      */
     private suspend fun postOrStrip(
         path: String, body: org.json.JSONObject
     ): Boolean {
-        if (runCatching { post(path, body) }.isSuccess) return true
+        if (attemptWrite(path) { post(path, it) }) return true
         if (!pluginVersionSupported || !body.has("plugin_version")) return false
         pluginVersionSupported = false
         body.remove("plugin_version")
-        val ok = runCatching { post(path, body) }.isSuccess
+        val ok = attemptWrite(path) { post(path, body) }
         if (ok) {
             Log.w("OCE", "Observability: $path ok tanpa plugin_version — " +
                 "jalankan supabase/migrations/0005_logs_plugin_version.sql")
         }
         return ok
+    }
+
+    private suspend fun attemptWrite(
+        path: String, write: suspend () -> Int
+    ): Boolean = try {
+        isWriteOk(write())
+    } catch (e: Exception) {
+        Log.e("OCE", "Observability: $path gagal: ${e.message}")
+        false
     }
 
     private fun headers(prefer: String? = null) = buildMap {
@@ -344,25 +355,22 @@ object SupabaseObservability {
     private suspend fun post(
         path: String, body: org.json.JSONObject,
         prefer: String? = null
-    ) {
-        com.lagradost.cloudstream3.app.post(
-            "$URL$path",
-            headers = headers(prefer),
-            requestBody = body.toString().toRequestBody(
-                "application/json".toMediaType()),
-            timeout = OBS_TIMEOUT_SECONDS
-        ).text
-    }
+    ): Int = com.lagradost.cloudstream3.app.post(
+        "$URL$path",
+        headers = headers(prefer),
+        requestBody = body.toString().toRequestBody(
+            "application/json".toMediaType()),
+        timeout = OBS_TIMEOUT_SECONDS
+    ).code
 
-    private suspend fun patch(path: String, body: org.json.JSONObject) {
+    private suspend fun patch(path: String, body: org.json.JSONObject): Int =
         com.lagradost.cloudstream3.app.patch(
             "$URL$path",
             headers = headers(),
             requestBody = body.toString().toRequestBody(
                 "application/json".toMediaType()),
             timeout = OBS_TIMEOUT_SECONDS
-        ).text
-    }
+        ).code
 
     // ── P3: batch insert scrape_steps ─────────────────────────────────────
     // Step di-queue in-memory lalu di-flush sebagai SATU bulk request (JSON
@@ -420,8 +428,8 @@ object SupabaseObservability {
             entries.forEach { (_, body) -> steps.put(body) }
         }
         if (steps.length() == 0) return
-        if (runCatching { postArray("/rest/v1/scrape_steps", steps) }
-                .isSuccess) return
+        if (attemptWrite("scrape_steps") { postArray("/rest/v1/scrape_steps", steps) })
+            return
         // Sama seperti postOrStrip: kolom plugin_version belum ada di DB
         // (migration 0005). Tanpa retry ini, SEMUA step hilang — bukan cuma
         // kolom versinya — karena PostgREST menolak seluruh array.
@@ -436,27 +444,24 @@ object SupabaseObservability {
             stripped.put((steps.get(i) as org.json.JSONObject)
                 .remove("plugin_version"))
         }
-        runCatching { postArray("/rest/v1/scrape_steps", stripped) }
-            .onSuccess {
-                Log.w("OCE", "Observability: step ok tanpa plugin_version — "
-                    + "jalankan supabase/migrations/0005_logs_plugin_version.sql")
-            }
-            .onFailure { e ->
-                Log.w("OCE", "Observability: batch logStep failed: ${e.message}")
-            }
+        if (attemptWrite("scrape_steps") { postArray("/rest/v1/scrape_steps", stripped) }) {
+            Log.w("OCE", "Observability: step ok tanpa plugin_version — "
+                + "jalankan supabase/migrations/0005_logs_plugin_version.sql")
+        } else {
+            Log.e("OCE", "Observability: ${steps.length()} step hilang — "
+                + "batch ditolak 2x (periksa key, RLS, atau jaringan)")
+        }
     }
 
     private suspend fun postArray(
         path: String, body: org.json.JSONArray
-    ) {
-        com.lagradost.cloudstream3.app.post(
-            "$URL$path",
-            headers = headers(),
-            requestBody = body.toString().toRequestBody(
-                "application/json".toMediaType()),
-            timeout = OBS_TIMEOUT_SECONDS
-        ).text
-    }
+    ): Int = com.lagradost.cloudstream3.app.post(
+        "$URL$path",
+        headers = headers(),
+        requestBody = body.toString().toRequestBody(
+            "application/json".toMediaType()),
+        timeout = OBS_TIMEOUT_SECONDS
+    ).code
 
     private const val OBS_TIMEOUT_SECONDS = 4L
     private const val RUN_WAIT_TIMEOUT_MS = 5_000L
