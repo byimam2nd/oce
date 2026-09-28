@@ -71,11 +71,15 @@ object AdaptiveHeaderProbe {
      * Label singkat untuk log "rejected link". Dipisah dari [probe] supaya
      * bisa diuji tanpa jaringan — pemisahan ini menjaga diagnosis tetap
      * benar walau formatnya diubah.
+     *
+     * concatenation, bukan "$d.x": string template Kotlin hanya menginterpolasi
+     * identifier setelah `$`, jadi "$d.networkError" menghasilkan toString(d)
+     * diikuti teks ".networkError". Sudah pernah salah di sini.
      */
     internal fun rejectLabel(d: Decision): String = when {
         d.rejectedStatuses.isNotEmpty() ->
             "HTTP " + d.rejectedStatuses.joinToString("/")
-        d.networkError != null -> "network: $d.networkError"
+        d.networkError != null -> "network: " + d.networkError
         else -> "no response"
     }
 
