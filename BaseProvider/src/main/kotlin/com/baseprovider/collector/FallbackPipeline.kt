@@ -244,6 +244,19 @@ class FallbackPipeline(private val config: ProviderConfig) {
         val finalIframe = fixUrlSmart(iframeSrc, fixedUrl)
         val refererForExtractor = getBaseUrl(fixedUrl)
 
+        // Skip check untuk iframe recursive — iframe samehadaku sering
+        // menunjuk ke host yang sudah di-skip (acefile/gofile), dan path
+        // ini tidak lewat skip check di loop utama.
+        val iframeHost = runCatching { URI(finalIframe).host }
+            .getOrNull()?.lowercase() ?: ""
+        if (config.skipHosts.any { h ->
+                h.isNotBlank() && (iframeHost == h.lowercase()
+                    || iframeHost.endsWith(".${h.lowercase()}"))
+            }) {
+            logDebug(config.id, "Skipping skipped host (iframe) $iframeHost: $finalIframe")
+            return
+        }
+
         logDebug(config.id, "Found iframe: $finalIframe, extracting...")
 
         val okRecursive = runCatching {
