@@ -1,0 +1,120 @@
+# Terapkan migration SQL OCE ke Supabase lewat Management API.
+#
+# Kenapa workflow ini ada: DDL butuh kredensial postgres/service_role, sedangkan
+# plugin hanya memegang anon key (role `anon`) yang memang tidak boleh DDL.
+# `SUPABASE_ACCESS_TOKEN` (personal access token) sudah tersedia sebagai secret
+# repo ini, tapi GitHub secret bersifat write-only — tidak bisa dibaca dari shell
+# lokal. Jadi satu-satunya jalur otomatis adalah lewat runner.
+#
+# Keamanan:
+# - Hanya jalan manual (workflow_dispatch), tidak dipanggil dari push/PR.
+# - Default dry-run: hanya melaporkan migration yang akan diterapkan.
+# - Tabel pelacak milik OCE (`oce_schema_migrations`), sengaja terpisah dari
+#   `supabase_migrations.schema_migrations` milik Supabase CLI supaya tidak
+#   mengacaukan bookkeeping `supabase db push` di kemudian hari.
+# - Hanya file yang sudah ter-commit di repo yang dijalankan (checkout dulu).
+# - Migration wajib idempotent (`add column if not exists`,
+#   `create index if not exists`) supayaaman kalau dijalankan ulang.
+name: Apply Migrations
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "true = hanya laporkan, tidak mengubah DB"
+        type: boolean
+        default: true
+      migration:
+        description: "Terapkan HANYA file ini (default: semua yang pending)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apply-migrations
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source (private)
+        uses: actions/checkout@v4
+
+      - name: Terapkan migration
+        env:
+          SB_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SB_URL: ${{ secrets.SUPABASE_URL }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          ONLY: ${{ inputs.migration }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, pathlib, re, sys, urllib.request
+
+          token = os.environ["SB_TOKEN"]
+          url = os.environ["SB_URL"].rstrip("/")
+          dry = os.environ.get("DRY_RUN", "true").lower() == "true"
+          only = os.environ.get("ONLY", "").strip()
+
+          m = re.search(r"https://([a-z0-9]+)\.supabase\.", url)
+          if not m:
+              sys.exit(f"SUPABASE_URL tidak bisa di-parse untuk project ref: {url}")
+          ref = m.group(1)
+          print(f"project ref : {ref}")
+          print(f"mode        : {'DRY-RUN (tidak ada perubahan)' if dry else 'APPLY'}")
+
+          API = f"https://api.supabase.com/v1/projects/{ref}/database/query"
+
+          def q(sql):
+              req = urllib.request.Request(
+                  API, data=json.dumps({"query": sql}).encode(),
+                  headers={"Authorization": f"Bearer {token}",
+                           "Content-Type": "application/json"})
+              with urllib.request.urlopen(req, timeout=120) as r:
+                  return json.loads(r.read().decode())
+
+          TRACK = "oce_schema_migrations"
+          q(f"""create table if not exists public.{TRACK} (
+                name text primary key,
+                applied_at timestamptz not null default now(),
+                applied_by text not null)""")
+          applied = {r["name"] for r in q(f"select name from public.{TRACK}")}
+
+          files = sorted(pathlib.Path("supabase/migrations").glob("*.sql"))
+          if only:
+              files = [f for f in files if f.name == only]
+              if not files:
+                  sys.exit(f"migration '{only}' tidak ada di supabase/migrations/")
+
+          pending = [f for f in files if f.name not in applied]
+          print(f"total file : {len(files)}  |  sudah pernah: {len(applied)}  |  pending: {len(pending)}")
+          if not pending:
+              print("tidak ada migration pending — DB sudah sinkron")
+              raise SystemExit(0)
+          for f in pending:
+              print(f"  pending: {f.name}")
+
+          if dry:
+              print("\nDRY-RUN selesai. Tidak ada yang diubah.")
+              print("Untuk menerapkan: jalankan workflow ini dengan dry_run=false")
+              raise SystemExit(0)
+
+          for f in pending:
+              print(f"\n--- {f.name} ---")
+              q(f.read_text())  # satu string; Management API eksekusi multi-statement
+              q(f"insert into public.{TRACK}(name, applied_by) "
+                f"values ('{f.name}', 'gh-actions:{os.environ.get('GITHUB_ACTOR','?')}')")
+              print("OK")
+
+          print("\n=== verifikasi ===")
+          cols = q("""select table_name, column_name, data_type
+                        from information_schema.columns
+                       where table_name in ('logs','scrape_runs','scrape_steps')
+                         and column_name = 'plugin_version'
+                       order by table_name""")
+          print(json.dumps(cols, indent=2))
+          print("tercatat di pelacak:", [f.name for f in pending])
+          PY
