@@ -100,6 +100,43 @@ object SupabaseObservability {
 
     private fun enabled(): Boolean = URL.isNotBlank() && ANON_KEY.isNotBlank()
 
+    /**
+     * Sama seperti [com.baseprovider.log.ProviderLog]: `plugin_version` hanya
+     * ada setelah migration 0005, dan PostgREST menolak seluruh payload kalau
+     * kolomnya belum ada — yang di sini berarti `beginRun` gagal → seluruh
+     * run tracking mati. Coba sekali, lalu kirim ulang tanpa kolom itu dan
+     * tandai supaya request berikutnya langsung skip.
+     */
+    @Volatile private var pluginVersionSupported = true
+
+    /** Tempel plugin_version ke payload, atau kembalikan body apa adanya. */
+    private fun withPluginVersion(body: org.json.JSONObject): org.json.JSONObject {
+        if (!pluginVersionSupported) return body
+        if (SupabaseBakedConfig.PLUGIN_VERSION.isBlank()) return body
+        return body.put("plugin_version", SupabaseBakedConfig.PLUGIN_VERSION)
+    }
+
+    /**
+     * POST dengan fallback: kalau gagal & payload punya `plugin_version`, kirim
+     * ulang sekali tanpa kolom itu (DB belum di-migrate), lalu stop mencoba
+     * selama proses ini hidup. Return true bila akhirnya tersimpan.
+     * [post] mengembalikan Unit, jadi sukses judged lewat isSuccess.
+     */
+    private suspend fun postOrStrip(
+        path: String, body: org.json.JSONObject
+    ): Boolean {
+        if (runCatching { post(path, body) }.isSuccess) return true
+        if (!pluginVersionSupported || !body.has("plugin_version")) return false
+        pluginVersionSupported = false
+        body.remove("plugin_version")
+        val ok = runCatching { post(path, body) }.isSuccess
+        if (ok) {
+            Log.w("OCE", "Observability: $path ok tanpa plugin_version — " +
+                "jalankan supabase/migrations/0005_logs_plugin_version.sql")
+        }
+        return ok
+    }
+
     private fun headers(prefer: String? = null) = buildMap {
         put("apikey", ANON_KEY)
         put("Authorization", "Bearer $ANON_KEY")
@@ -129,16 +166,18 @@ object SupabaseObservability {
                     Log.w("OCE", "Observability: source resolve failed, run skipped")
                     false
                 } else {
-                    val body = org.json.JSONObject().apply {
-                        put("id", runId)
-                        put("source_id", sourceId)
-                        put("context", context)
-                        put("triggered_by", triggeredBy)
-                        put("start_url", startUrl)
-                        put("status", "running")
-                    }
-                    post("/rest/v1/scrape_runs", body)
-                    true
+                    val body = withPluginVersion(
+                        org.json.JSONObject().apply {
+                            put("id", runId)
+                            put("source_id", sourceId)
+                            put("context", context)
+                            put("triggered_by", triggeredBy)
+                            put("start_url", startUrl)
+                            put("status", "running")
+                        })
+                    // false = gagal (dan retry tanpa kolom juga gagal),
+                    // supaya step-nya tidak dikirim & FK tidak violated.
+                    postOrStrip("/rest/v1/scrape_runs", body)
                 }
             }.getOrElse { e ->
                 Log.w("OCE", "Observability: beginRun failed: ${e.message}")
@@ -234,7 +273,7 @@ object SupabaseObservability {
     ) {
         if (!enabled() || runId.isNullOrBlank()) return
         tallyStep(runId, kind, status)
-        val body = org.json.JSONObject().apply {
+        val body = withPluginVersion(org.json.JSONObject().apply {
             put("run_id", runId)
             put("kind", kind)
             put("status", status)
@@ -243,7 +282,7 @@ object SupabaseObservability {
             durationMs?.let { put("duration_ms", it.toInt()) }
             linksFound?.let { put("links_found", it) }
             errorType?.let { put("error_type", it) }
-        }
+        })
         enqueueStep(runId, body)
     }
 
@@ -381,11 +420,30 @@ object SupabaseObservability {
             entries.forEach { (_, body) -> steps.put(body) }
         }
         if (steps.length() == 0) return
-        runCatching {
-            postArray("/rest/v1/scrape_steps", steps)
-        }.onFailure { e ->
-            Log.w("OCE", "Observability: batch logStep failed: ${e.message}")
+        if (runCatching { postArray("/rest/v1/scrape_steps", steps) }
+                .isSuccess) return
+        // Sama seperti postOrStrip: kolom plugin_version belum ada di DB
+        // (migration 0005). Tanpa retry ini, SEMUA step hilang — bukan cuma
+        // kolom versinya — karena PostgREST menolak seluruh array.
+        if (!pluginVersionSupported) {
+            Log.w("OCE", "Observability: batch logStep gagal "
+                + "(plugin_version tidak didukung DB)")
+            return
         }
+        pluginVersionSupported = false
+        val stripped = org.json.JSONArray()
+        for (i in 0 until steps.length()) {
+            stripped.put((steps.get(i) as org.json.JSONObject)
+                .remove("plugin_version"))
+        }
+        runCatching { postArray("/rest/v1/scrape_steps", stripped) }
+            .onSuccess {
+                Log.w("OCE", "Observability: step ok tanpa plugin_version — "
+                    + "jalankan supabase/migrations/0005_logs_plugin_version.sql")
+            }
+            .onFailure { e ->
+                Log.w("OCE", "Observability: batch logStep failed: ${e.message}")
+            }
     }
 
     private suspend fun postArray(

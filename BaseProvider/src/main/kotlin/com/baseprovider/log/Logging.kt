@@ -36,6 +36,15 @@ object ProviderLog {
     private val supabaseFlushScheduled = java.util.concurrent.atomic
         .AtomicBoolean(false)
 
+    /**
+     * `plugin_version` hanya ada di DB setelah migration 0005. Kalau DB belum
+     * di-migrate, PostgREST menolak **seluruh batch** (bukan per kolom), yang
+     * berarti observability buta total. Karena itu: coba kirim sekali, kalau
+     * gagal kirim ulang tanpa kolom itu, lalu tandai supaya batch berikutnya
+     * langsung skip — retry tidak berulang tiap flush.
+     */
+    @Volatile private var pluginVersionSupported = true
+
     fun log(
         level: LogLevel, tag: String, message: String,
         error: Throwable? = null, url: String? = null,
@@ -131,6 +140,13 @@ object ProviderLog {
             put("duration_ms", durationMs ?: org.json.JSONObject.NULL)
             put("run_id", runId ?: org.json.JSONObject.NULL)
             put("traceback", traceback ?: org.json.JSONObject.NULL)
+            if (pluginVersionSupported) {
+                // Kosong di build lokal (OCE_VERSION tidak diset) → kolomnya
+                // dilewati saja, tidak meledak.
+                SupabaseBakedConfig.PLUGIN_VERSION
+                    .takeIf { it.isNotBlank() }
+                    ?.let { put("plugin_version", it) }
+            }
         }
         supabaseBuffer.add(row)
         if (supabaseBuffer.size >= SUPABASE_BATCH_SIZE) {
@@ -155,28 +171,46 @@ object ProviderLog {
             }
             if (batch.isEmpty()) return
             logScope.launch(sbJob) {
-                runCatching {
-                    val body = org.json.JSONArray().apply {
-                        batch.forEach { put(it) }
-                    }
-                    com.lagradost.cloudstream3.app.post(
-                        "$SUPABASE_URL/rest/v1/logs",
-                        headers = mapOf(
-                            "apikey" to SUPABASE_ANON_KEY,
-                            "Authorization" to "Bearer $SUPABASE_ANON_KEY",
-                            "Content-Type" to "application/json",
-                            "Prefer" to "return=minimal"
-                        ),
-                        requestBody = body.toString().toRequestBody(
-                            "application/json".toMediaType())
-                    ).text
+                if (postBatch(batch)) {
                     Log.d("OCE", "Supabase log insert ok: ${batch.size} rows")
-                }.onFailure { e ->
-                    Log.e("OCE", "Supabase log insert failed: ${e.message}")
+                    return@launch
+                }
+                // Degradasi mulus: DB belum punya kolom plugin_version
+                // (migration 0005 belum diterapkan). Kirim ulang tanpa kolom
+                // itu sekali, lalu stop mencoba selama proses ini hidup.
+                if (pluginVersionSupported && batch.any { it.has("plugin_version") }) {
+                    pluginVersionSupported = false
+                    val stripped = batch.map { row ->
+                        row.apply { remove("plugin_version") }
+                    }
+                    if (postBatch(stripped)) {
+                        Log.w("OCE", "Supabase log ok tanpa plugin_version — " +
+                            "jalankan supabase/migrations/0005_logs_plugin_version.sql")
+                    }
                 }
             }
         }
     }
+
+    private suspend fun postBatch(rows: List<org.json.JSONObject>): Boolean =
+        runCatching {
+            val body = org.json.JSONArray().apply { rows.forEach { put(it) } }
+            com.lagradost.cloudstream3.app.post(
+                "$SUPABASE_URL/rest/v1/logs",
+                headers = mapOf(
+                    "apikey" to SUPABASE_ANON_KEY,
+                    "Authorization" to "Bearer $SUPABASE_ANON_KEY",
+                    "Content-Type" to "application/json",
+                    "Prefer" to "return=minimal"
+                ),
+                requestBody = body.toString().toRequestBody(
+                    "application/json".toMediaType())
+            ).text
+            true
+        }.getOrElse { e ->
+            Log.e("OCE", "Supabase log insert failed: ${e.message}")
+            false
+        }
 }
 
 fun log(

@@ -259,8 +259,14 @@ val supabaseConfigFile = rootProject.file(
 val generateSupabaseConfig = tasks.register("generateSupabaseConfig") {
     val supabaseUrl = providers.environmentVariable("SUPABASE_URL").orElse("")
     val supabaseAnonKey = providers.environmentVariable("SUPABASE_ANON_KEY").orElse("")
+    // PLUGIN_VERSION = OCE_VERSION yang sudah divalidasi (epoch menit) di blok
+    // projectsEvaluated. Dibaca lagi di sini (trim sama) supaya value yang
+    // ter-bake ke dalam .cs3 persis sama dengan versionCode plugin.
+    val pluginVersion = providers.environmentVariable("OCE_VERSION")
+        .map { it.trim() }.orElse("")
     inputs.property("supabaseUrl", supabaseUrl)
     inputs.property("supabaseAnonKey", supabaseAnonKey)
+    inputs.property("pluginVersion", pluginVersion)
     outputs.file(supabaseConfigFile)
     doLast {
         supabaseConfigFile.writeText(
@@ -270,6 +276,7 @@ val generateSupabaseConfig = tasks.register("generateSupabaseConfig") {
             |object SupabaseBakedConfig {
             |    const val URL: String = "${supabaseUrl.get()}"
             |    const val ANON_KEY: String = "${supabaseAnonKey.get()}"
+            |    const val PLUGIN_VERSION: String = "${pluginVersion.get()}"
             |}
             """.trimMargin()
         )
