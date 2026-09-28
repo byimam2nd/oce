@@ -212,7 +212,7 @@ object ProviderLog {
                 requestBody = body.toString().toRequestBody(
                     "application/json".toMediaType())
             )
-            if (isWriteOk(response.code)) {
+            if (isHttpOk(response.code)) {
                 true
             } else {
                 Log.e("OCE", "Supabase log insert ditolak HTTP ${response.code}: " +
@@ -232,8 +232,11 @@ object ProviderLog {
  * di `network/HttpClient.kt`: "NiceHttp tidak throw pada status error — cek
  * secara eksplisit". Tanpa cek ini, batch yang ditolak dilaporkan sukses dan
  * tidak pernah di-retry.
+ *
+ * Berlaku untuk request maupun response: PostgREST menjawab dengan status
+ * error plus body, jadi `resp.text` sendiri selalu "berhasil" dibaca.
  */
-internal fun isWriteOk(code: Int): Boolean = code in 200..299
+internal fun isHttpOk(code: Int): Boolean = code in 200..299
 
 fun log(
     level: LogLevel, tag: String, message: String,

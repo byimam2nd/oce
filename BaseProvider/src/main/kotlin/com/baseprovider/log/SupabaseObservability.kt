@@ -42,10 +42,16 @@ object SupabaseObservability {
         ?: SupabaseBakedConfig.ANON_KEY
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val sourceIdCache = ConcurrentHashMap<String, String>()
+
+    /** Config URL yang terakhir disinkronkan per code, untuk mendeteksi
+     *  perubahan config saat cache ID masih ada. */
+    private val sourceUrlCache = ConcurrentHashMap<String, String>()
     private val pendingRuns =
         ConcurrentHashMap<String, CompletableDeferred<Boolean>>()
     private val failedRuns = java.util.Collections
         .newSetFromMap(ConcurrentHashMap<String, Boolean>())
+    private val runLastTouched = ConcurrentHashMap<String, Long>()
+    private val trackedRunLock = Any()
 
     /**
      * Statistik step per run, di-tally sinkron di jalur pemanggil (logStep)
@@ -100,6 +106,7 @@ object SupabaseObservability {
         steps.firstOrNull { !it.isNullOrBlank() }
 
     private fun tallyStep(runId: String, kind: String, status: String) {
+        touchRun(runId)
         val m = runStepCounts.computeIfAbsent(runId) {
             ConcurrentHashMap()
         }
@@ -117,6 +124,49 @@ object SupabaseObservability {
     private fun tallyStepError(runId: String, errorType: String?) {
         runStepErrors.computeIfAbsent(runId) { mutableListOf() }
             .add(errorType)
+    }
+
+    /**
+     * Batas entry run yang ditahan per proses.
+     *
+     * Map per-run idealnya dibuang oleh endRun, tapi itu tidak bisa
+     * diandalkan: pada cancellation endRun dipanggil dari cabang yang
+     * melempar ulang, dan kalau `awaitRunCreated` menyerah, entry tidak pernah
+     * dibuang. `failedRuns` bahkan tidak pernah dibuang sama sekali. Tanpa
+     * batas, proses yang hidup lama menahan entry terus sampai OOM.
+     *
+     * Evict berbasis run yang terlama tidak disentuh, jadi run yang sedang
+     * diproses tidak kehilangan statistik saat triggernya.
+     */
+    private fun touchRun(runId: String) {
+        runLastTouched[runId] = System.currentTimeMillis()
+        if (runLastTouched.size <= MAX_TRACKED_RUNS) return
+        synchronized(trackedRunLock) {
+            val victims = evictVictims(
+                runLastTouched, MAX_TRACKED_RUNS, EVICT_TRACKED_RUNS)
+            victims.forEach { forgetRun(it) }
+        }
+    }
+
+    /** Buang semua jejak satu run. Tidak menyentuh [pendingRuns]. */
+    private fun forgetRun(runId: String) {
+        runStepCounts.remove(runId)
+        runStepErrors.remove(runId)
+        failedRuns.remove(runId)
+        runLastTouched.remove(runId)
+    }
+
+    /**
+     * Pilih run mana yang harus dibuang saat ukuran melewati [cap]: yang
+     * terlama tidak disentuh, sebanyak [count] (pure — bisa diuji).
+     */
+    internal fun evictVictims(
+        lastTouched: Map<String, Long>, cap: Int, count: Int
+    ): List<String> {
+        if (lastTouched.size <= cap || count <= 0) return emptyList()
+        return lastTouched.entries.sortedBy { it.value }
+            .take(count.coerceAtMost(lastTouched.size - cap))
+            .map { it.key }
     }
 
     private fun enabled(): Boolean = URL.isNotBlank() && ANON_KEY.isNotBlank()
@@ -166,7 +216,7 @@ object SupabaseObservability {
     private suspend fun attemptWrite(
         path: String, write: suspend () -> Int
     ): Boolean = try {
-        isWriteOk(write())
+        isHttpOk(write())
     } catch (e: Exception) {
         Log.e("OCE", "Observability: $path gagal: ${e.message}")
         false
@@ -262,10 +312,17 @@ object SupabaseObservability {
                 created = awaitRunCreated(runId)
                 attempt++
             }
-            if (!created) return@launch
-            val st: Map<String, Int> = runStepCounts.remove(runId)
-                ?: emptyMap()
-            val stepErrors = runStepErrors.remove(runId).orEmpty()
+            // Row-nya tidak pernah ada, jadi tidak ada yang bisa di-patch. Entry
+            // lokal tetap harus dibuang, kalau tidak ia tertahan sampai proses
+            // berikutnya — beginRun sudah menyerah, jadi tidak akan diloq.
+            if (!created) {
+                forgetRun(runId)
+                Log.w("OCE", "Observability: endRun menyerah untuk $runId — " +
+                    "run row tidak pernah dibuat")
+                return@launch
+            }
+            val st: Map<String, Int> = runStepCounts[runId] ?: emptyMap()
+            val stepErrors = runStepErrors[runId].orEmpty()
             val resolution = if (deriveFromSteps) deriveRunEndStatus(
                 collectCount = st["COLLECT:success"] ?: 0,
                 extractSuccess = st["EXTRACT:success"] ?: 0,
@@ -289,13 +346,14 @@ object SupabaseObservability {
             }
             runCatching {
                 val code = patch("/rest/v1/scrape_runs?id=eq.$runId", body)
-                if (!isWriteOk(code)) {
+                if (!isHttpOk(code)) {
                     Log.e("OCE", "Observability: endRun ditolak HTTP $code — " +
                         "run $runId tetap running di DB")
                 }
             }.onFailure { e ->
                 Log.w("OCE", "Observability: endRun failed: ${e.message}")
             }
+            forgetRun(runId)
         }
         // P3: endRun = titik akhir run → flush sisa step segera, jangan
         // menunggu interval flusher berikutnya.
@@ -380,17 +438,24 @@ object SupabaseObservability {
         return "$scheme://$host$path".trimEnd('/')
     }
 
+    /**
+     * ID row `sources` untuk [code], atau null kalau tidak bisa dipastikan.
+     *
+     * `main_url` ikut diambil supaya drift URL mati di DB bisa diperbaiki di
+     * tempat. Cache ID tidak langsung dikembalikan: kalau config JSON berubah
+     * sejak lookup terakhir, row DB masih menyimpan URL lama dan harus dicek
+     * ulang. Config yang tidak berubah tetap dilayani dari cache, jadi tidak
+     * ada round-trip tambahan pada jalur panas.
+     */
     private suspend fun resolveSourceId(
         code: String, name: String, mainUrl: String
     ): String? {
-        sourceIdCache[code]?.let { return it }
+        sourceIdCache[code]?.let { cachedId ->
+            if (!sourceUrlDrifted(sourceUrlCache[code], mainUrl)) return cachedId
+        }
         val encodedCode = java.net.URLEncoder.encode(code, "UTF-8")
             .replace("+", "%20")
 
-        // main_url ikut diambil supaya drift URL mati di DB bisa diperbaiki di
-        // tempat. Catatan: cache di baris pertama membuat pemeriksaan ini
-        // happen sekali per proses per provider — cukup untuk menuliskan
-        // perbaikan ke DB, karena sesudah itu row-nya sudah benar.
         val existing = runCatching {
             get("/rest/v1/sources?select=id,main_url&code=eq.$encodedCode")
         }.getOrNull()
@@ -402,6 +467,7 @@ object SupabaseObservability {
                     refreshSourceUrl(id, mainUrl)
                 }
                 sourceIdCache[code] = id
+                sourceUrlCache[code] = mainUrl
                 return id
             }
         }
@@ -420,7 +486,10 @@ object SupabaseObservability {
         }.getOrNull()
         val id = fresh?.let { org.json.JSONArray(it).optJSONObject(0)
             ?.optString("id")?.takeIf { it.isNotBlank() } }
-        if (id != null) sourceIdCache[code] = id
+        if (id != null) {
+            sourceIdCache[code] = id
+            sourceUrlCache[code] = mainUrl
+        }
         return id
     }
 
@@ -438,7 +507,7 @@ object SupabaseObservability {
         when {
             code == null ->
                 Log.w("OCE", "Observability: sync main_url $id gagal (exception)")
-            isWriteOk(code) ->
+            isHttpOk(code) ->
                 Log.w("OCE", "Observability: sources $id main_url disinkronkan " +
                     "ke $mainUrl")
             else ->
@@ -447,9 +516,21 @@ object SupabaseObservability {
         }
     }
 
-    private suspend fun get(path: String): String {
+    /**
+     * Baca JSON dari PostgREST. `null` kalau statusnya bukan 2xx.
+     *
+     * NiceHttp tidak melempar pada status error, dan PostgREST menjawab 4xx/5xx
+     * dengan body JSON yang tetap terbaca — termasuk pesan error. Tanpa cek
+     * status, `JSONArray(body)` akan dipakai seolah-olah itu hasil query, dan
+     * caller bisa salah mengambil kolom dari objek error.
+     */
+    private suspend fun get(path: String): String? {
         val resp = com.lagradost.cloudstream3.app.get("$URL$path",
             headers = headers(), timeout = OBS_TIMEOUT_SECONDS)
+        if (!isHttpOk(resp.code)) {
+            Log.w("OCE", "Observability: GET $path -> HTTP ${resp.code}")
+            return null
+        }
         return resp.text
     }
 
@@ -571,4 +652,6 @@ object SupabaseObservability {
     private const val STEP_BATCH_SIZE = 50
     private const val STEP_FLUSH_INTERVAL_MS = 3_000L
     private const val MAX_STEP_QUEUE = 200
+    private const val MAX_TRACKED_RUNS = 128
+    private const val EVICT_TRACKED_RUNS = 32
 }
