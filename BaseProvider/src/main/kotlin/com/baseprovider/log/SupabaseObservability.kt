@@ -110,10 +110,13 @@ object SupabaseObservability {
     @Volatile private var pluginVersionSupported = true
 
     /** Tempel plugin_version ke payload, atau kembalikan body apa adanya. */
-    internal fun withPluginVersion(body: org.json.JSONObject): org.json.JSONObject {
+    internal fun withPluginVersion(
+        body: org.json.JSONObject,
+        version: String = SupabaseBakedConfig.PLUGIN_VERSION
+    ): org.json.JSONObject {
         if (!pluginVersionSupported) return body
-        if (SupabaseBakedConfig.PLUGIN_VERSION.isBlank()) return body
-        return body.put("plugin_version", SupabaseBakedConfig.PLUGIN_VERSION)
+        if (version.isBlank()) return body
+        return body.put("plugin_version", version)
     }
 
     /**

@@ -2,6 +2,7 @@ package com.baseprovider
 
 import com.baseprovider.log.SupabaseObservability.withPluginVersion
 import com.baseprovider.log.isWriteOk
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -37,11 +38,19 @@ class SupabaseWriteOutcomeTest {
     }
 
     @Test
-    fun `PLUGIN_VERSION kosong tidak menambahkan kolom plugin_version`() {
-        // Build lokal/CI tidak meng-set OCE_VERSION. Kalau payload tetap
+    fun `versi kosong tidak menambahkan kolom plugin_version`() {
+        // OCE_VERSION tidak di-set (build lokal). Kalau payload tetap
         // membawa plugin_version kosong, PostgREST menolak seluruh batch dan
         // fallback sempat menyalakan diri karena alasan yang salah.
-        val body = withPluginVersion(org.json.JSONObject().put("level", "FAIL"))
+        val body = withPluginVersion(
+            org.json.JSONObject().put("level", "FAIL"), version = "")
         assertFalse(body.has("plugin_version"))
+    }
+
+    @Test
+    fun `versi terisi menambahkan kolom plugin_version`() {
+        val body = withPluginVersion(
+            org.json.JSONObject().put("level", "FAIL"), version = "29843383")
+        assertEquals("29843383", body.getString("plugin_version"))
     }
 }
