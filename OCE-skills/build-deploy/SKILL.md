@@ -138,36 +138,10 @@ Pastikan versi beta terakhir < epoch menit saat tag dipotong (otomatis true, kar
 
 ## Commit Rules
 
-### 1. Jangan commit sebelum diperintah user
-
-### 2. Commit Message Format
-```
-fix:     bug fix, perf improvement, refactor internal
-feat:    new feature, provider baru, extractor baru
-refactor: restructuring tanpa behavioral change
-chore:   CI, docs, config maintenance
-```
-
-### 3. Satu commit = satu perubahan logis
-
-### 4. Setelah commit, push ke kedua remote
-```bash
-git push origin master && git push private master
-```
-
-### 5. WAJIB cek CI setelah push
-```bash
-# Tunggu ~15 detik untuk CI trigger
-sleep 15
-
-# Cek run terbaru
-gh run list --repo byimam2nd/oce-source --limit 1
-
-# Watch sampai selesai
-gh run watch <run-id> --repo byimam2nd/oce-source --exit-status
-```
-
-### 6. Jangan anggap selesai sebelum CI hijau
+Aturan git (remote, format pesan, WAJIB cek CI, larangan force-push) ada di
+`shared`. Yang khas build-deploy: **path filter** — perubahan hanya di
+`OCE-skills/` atau `scripts/` tidak memicu CI, jadi run tidak akan muncul.
+Satu-satunya yang perlu dicek: apakah commit menyentuh kode yang perlu dibangun.
 
 ## Version & Tag Rules
 
@@ -184,11 +158,8 @@ gh run watch <run-id> --repo byimam2nd/oce-source --exit-status
 ### Before Tag: cek berapa commit yang tertahan
 
 ```bash
-LT=$(git describe --tags --abbrev=0)
-echo "commits sejak $LT: $(git rev-list --count $LT..HEAD)"
+LT=$(git describe --tags --abbrev=0); echo "commits sejak $LT: $(git rev-list --count $LT..HEAD)"
 ```
-
-Angka besar = banyak fix yang belum sampai ke user stable. Kalau itulah yang terjadi, **itulah alasan utama** laporan "sudah fix tapi masih error" (lihat `logging`).
 
 ### Tag Workflow
 
@@ -213,24 +184,43 @@ gh release view v4.0.1 --repo byimam2nd/oce --json tagName,isDraft,assets
 
 **Tag men-trigger release pipeline.** Jangan tag sebelum CI hijau. Release sukses ≠ release ada: cek `isDraft=false` dan asset `.cs3` + `plugins.json` benar-benar ada.
 
-## Branch Structure
+## Migration SQL ke Supabase (DDL)
 
-| Branch | Purpose |
-|--------|---------|
-| `master` | Source code |
-| `builds` | Beta artifacts (.cs3, plugins.json) |
-| GitHub Releases | Stable artifacts |
+Plugin hanya memegang **anon key** (role PostgREST `anon`) — boleh `SELECT`/`INSERT`,
+tidak boleh `ALTER TABLE`. Jadi DDL observability **tidak bisa** dikirim dari plugin.
+Jalurnya: `apply-migrations.yml` (Management API) memakai secret `SUPABASE_ACCESS_TOKEN`.
 
-## Remote Setup
-
+```bash
+# Dry-run dulu — hanya melaporkan yang pending, tidak mengubah apa pun
+gh workflow run apply-migrations.yml --repo byimam2nd/oce-source \
+  -f dry_run=true -f migration=0005_logs_plugin_version.sql
+# Terapkan
+gh workflow run apply-migrations.yml --repo byimam2nd/oce-source -f dry_run=false
 ```
-origin  = byimam2nd/oce         (public, release)
-private = byimam2nd/oce-source  (source, CI trigger)
-```
 
-## versionCode Convention
+Aturan workflow: `workflow_dispatch` saja (tidak auto saat push), default dry-run,
+hanya file `.sql` yang sudah ter-commit, pelacak sendiri `oce_schema_migrations`
+(jangan pakai `supabase_migrations.schema_migrations` milik Supabase CLI — akan
+merusak `db push` nanti). Migration wajib **idempotent** (`if not exists`) supaya
+aman dijalankan ulang.
 
-`OCE_VERSION = $(($(date +%s) / 60))` — epoch minutes. Monotonic, tidak perlu manual bump.
+### GitHub secret = write-only
+
+`gh secret list` hanya menampilkan **nama**; nilainya tidak pernah bisa dibaca dari
+shell lokal. Satu-satunya cara memakai secret dari luar adalah menjalankannya di
+runner. Jadi "secret ada di repo" ≠ "saya bisa memakainya" — dan sebaliknya,
+keterbacaan secret **bukan alasan untuk menolak tugas**: buat workflow-nya, lalu
+trigger sendiri dengan `gh workflow run`.
+
+### 401 = token-nya salah, bukan mekanismenya
+
+Kalau run gagal `HTTP 401/403` dari `api.supabase.com/v1/projects/<ref>/database/query`:
+`SUPABASE_ACCESS_TOKEN` tidak valid / kedaluwarsa / tidak punya akses ke project.
+Gejalanya: project ref tetap tercetak benar (berarti parsing URL & workflow sehat).
+Diagnosis cepat: `grep -rn SUPABASE_ACCESS_TOKEN .github/` — kalau tidak ada yang
+memakainya, secret itu diisi spekulatif lalu mati, dan hanya bisa diperbaiki dengan
+PAT baru dari Dashboard (Account → Access Tokens) — **satu-satunya bagian yang
+benar-benar butuh user**, karena itu aksi terautentikasi di akun mereka.
 
 ## Common CI Failures
 

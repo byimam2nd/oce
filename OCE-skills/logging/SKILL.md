@@ -109,10 +109,10 @@ select created_at, level, tag, failure_type, message
 ```
 
 **Selalu cross-check ini sebelum menyimpulkan "fix saya tidak bekerja".** Kasus nyata
-(2026-09-28): fix `a8a20c3` (06:16 UTC) & `c4b9579` (09-27) sudah hijau di CI, tapi
-signature log-nya masih muncul di produksi 3,5 jam kemudian — penyebabnya tag release
-tertinggal 59 commit di `v3.9.1`, bukan fix-nya salah. Tanpa `plugin_version` itu baru
-ketahuan lewat investigasi manual.
+(2026-09-28): fix sudah hijau di CI, tapi signature log-nya masih muncul di produksi
+3,5 jam kemudian — penyebabnya tag release tertinggal 59 commit, bukan fix-nya salah
+(konteksnya di `build-deploy`). Tanpa `plugin_version` itu baru ketahuan lewat
+investigasi manual.
 
 > Auto-detect project ref via `sb.py` sudah **mati**: `SupabaseBakedConfig.kt`
 > di-check-in dengan string kosong (nilainya secret CI), jadi tidak ada
@@ -121,12 +121,13 @@ ketahuan lewat investigasi manual.
 
 ### Migration & degradasi (penting)
 
-Kolom `plugin_version` ada di `supabase/migrations/0005_logs_plugin_version.sql`
-(harus di-apply manual via dashboard; anon key tidak bisa DDL). Karena **PostgREST
-menolak seluruh payload kalau satu kolom tidak ada** — yang berarti observability
-buta total, bukan cuma kehilangan satu field — plugin punya fallback: kalau post
-gagal dan payload punya `plugin_version`, kirim ulang sekali tanpa kolom itu, lalu
-stop mencoba selama proses hidup. Gejalanya di logcat: `ok tanpa plugin_version`.
+Skema: `supabase/migrations/0005_logs_plugin_version.sql`. Cara apply: workflow
+`apply-migrations.yml` (bukan paste manual) — detail & aturan secret di `build-deploy`.
+
+Karena **PostgREST menolak seluruh payload kalau satu kolom tidak ada** — itu berarti
+observability buta total, bukan kehilangan satu field — plugin punya fallback: kalau
+post gagal dan payload punya `plugin_version`, kirim ulang sekali tanpa kolom itu,
+lalu stop mencoba selama proses hidup. Gejalanya di logcat: `ok tanpa plugin_version`.
 Artinya **DDL-nya belum di-apply**, bukan log-nya rusak.
 
 ## FailureType Classification
@@ -159,9 +160,16 @@ enum class FailureType(val label: String) {
 - **Error sebelum extractor jalan → `extractor` NULL itu benar.** Contoh: iframe
   error di `FallbackPipeline` → `stage="COLLECT"`, `extractor` NULL. Jangan diisi
   karangan; yang penting `stage` dan `message` akurat.
-- Sekitar 87% log lama punya `stage` NULL dan 71% `extractor` NULL karena call site
-  tidak mengisinya — sudah ditutup sebagian di C1 (`bf3e413`), **bukan** indikasi
-  malfunction.
+- **Jangan laporkan "X% kolom NULL" tanpa segmentasi dulu.** Angka agregat menyesatkan
+  karena baris `SUCCESS` sering memang tidak punya `stage`/`extractor` (mis. `buildList`
+  yang DEBUG-only, atau `Search ... p1: N hasil`). Contoh nyata: "80% `stage` NULL"
+  ternyata 770 dari 797 barisnya `SUCCESS`, dan sebagian besar justru `buildList`/
+  `Search` yang memang by-design kosong di build lama — bukan evidence defect.
+  Selalu pecah menurut `level` dan `message` dulu, baru putuskan apakah itu gap.
+- **Sepadan dengan `DEBUG` yang tidak masuk Supabase**: `buildList` masih `SUCCESS`
+  di produksi = masih ada user di build lama, karena `c4b9579` menurunkannya ke
+  `DEBUG`. `traceback` terisi `0` = belum ada build yang membawa `4f8e17f`. Ini
+  marker adopsi gratis, bahkan sebelum `plugin_version` ada.
 
 ## Log Functions
 
@@ -278,4 +286,5 @@ GROUP BY tag;
 - `extraction` — `EXTRACTOR_FAILURE`, `CONTENT_REMOVED`, `INVALID_URL`
 - `selector-checker` — `SELECTOR_FAILURE` investigation
 - `architecture` — module `log/`
-- `build-deploy` — versionCode epoch menit (nilai yang muncul di `plugin_version`)
+- `build-deploy` — versionCode epoch menit (nilai `plugin_version`) + cara apply
+  migration SQL via `apply-migrations.yml`

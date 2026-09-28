@@ -30,6 +30,8 @@ Pattern wajib untuk semua task:
 - **DILARANG** mengarang informasi teknis. Jika tidak yakin, TANDAI sebagai uncertainty.
 - **DILARANG** menyalin angka/konteks dari dokumentasi lama tanpa cek ulang ke kode. Doc bisa basi — hitung ulang (`ls`, `grep -c`, baca set).
 - Jika informasi penting tidak diketahui → **inspect repository/environment terlebih dahulu**.
+- **DILARANG** menyatakan "saya tidak bisa" atau "harus user yang melakukan" tanpa sudah mencoba jalur otomatis yang ada. Batas nyata (permission DB, sandbox, tidak ada akses jaringan) berbeda dari "belum sadar ada tool". Urutan: cek tool/secret/workflow yang sudah ada → coba → baru tanya.
+- **DILARANG** mengklaim sesuatu mustahil berdasarkan asumsi arsitektur. Uji dulu, lalu laporkan hasilnya — termasuk kalau ternyata asumsi itu salah.
 - Repository adalah source of truth.
 
 ## Aturan Konservatif
