@@ -340,6 +340,46 @@ object SupabaseObservability {
      * Resolve id source dari katalog (cache per proses). Self-register bila
      * belum ada: POST INSERT on_conflict=code DO NOTHING, lalu re-GET.
      */
+    /**
+     * Apakah `sources.main_url` di DB sudah menyimpang dari config JSON?
+     *
+     * Config JSON adalah sumber kebenaran; DB hanya cache metadata untuk
+     * analitik. Tanpa sinkronisasi, analitik ikut analyzing URL mati — itulah
+     * yang membuat anichin.cafe dan vikingsgab.com bertahan berbulan-bulan.
+     *
+     * Yang dianggap TIDAK drift: spasi, huruf besar, trailing slash, port
+     * default (:80 http / :443 https). Yang dianggap drift: host, skema, path,
+     * atau port lain. `dbMainUrl` kosong bukan drift — kasus itu ditangani
+     * jalur insert, dan `configMainUrl` kosong tidak ada yang bisa disinkronkan.
+     */
+    internal fun sourceUrlDrifted(dbMainUrl: String?, configMainUrl: String): Boolean {
+        if (configMainUrl.isBlank()) return false
+        if (dbMainUrl.isNullOrBlank()) return false
+        return normalizeSourceUrl(dbMainUrl) != normalizeSourceUrl(configMainUrl)
+    }
+
+    private fun normalizeSourceUrl(raw: String): String {
+        val s = raw.trim().lowercase()
+        val scheme = when {
+            s.startsWith("https://") -> "https"
+            s.startsWith("http://") -> "http"
+            else -> ""
+        }
+        val rest = if (scheme.isEmpty()) s else s.removePrefix("$scheme://")
+        val slash = rest.indexOf('/')
+        val hostPort = if (slash < 0) rest else rest.substring(0, slash)
+        val path = if (slash < 0) "" else rest.substring(slash)
+        val host = when {
+            hostPort.startsWith("[") -> hostPort
+            scheme == "https" && hostPort.endsWith(":443") ->
+                hostPort.dropLast(4)
+            scheme == "http" && hostPort.endsWith(":80") ->
+                hostPort.dropLast(3)
+            else -> hostPort
+        }
+        return "$scheme://$host$path".trimEnd('/')
+    }
+
     private suspend fun resolveSourceId(
         code: String, name: String, mainUrl: String
     ): String? {
@@ -347,13 +387,20 @@ object SupabaseObservability {
         val encodedCode = java.net.URLEncoder.encode(code, "UTF-8")
             .replace("+", "%20")
 
+        // main_url ikut diambil supaya drift URL mati di DB bisa diperbaiki di
+        // tempat. Catatan: cache di baris pertama membuat pemeriksaan ini
+        // happen sekali per proses per provider — cukup untuk menuliskan
+        // perbaikan ke DB, karena sesudah itu row-nya sudah benar.
         val existing = runCatching {
-            get("/rest/v1/sources?select=id&code=eq.$encodedCode")
+            get("/rest/v1/sources?select=id,main_url&code=eq.$encodedCode")
         }.getOrNull()
         if (existing != null && existing != "[]") {
-            val id = org.json.JSONArray(existing).optJSONObject(0)
-                ?.optString("id")?.takeIf { it.isNotBlank() }
+            val row = org.json.JSONArray(existing).optJSONObject(0)
+            val id = row?.optString("id")?.takeIf { it.isNotBlank() }
             if (id != null) {
+                if (sourceUrlDrifted(row.optString("main_url"), mainUrl)) {
+                    refreshSourceUrl(id, mainUrl)
+                }
                 sourceIdCache[code] = id
                 return id
             }
@@ -375,6 +422,29 @@ object SupabaseObservability {
             ?.optString("id")?.takeIf { it.isNotBlank() } }
         if (id != null) sourceIdCache[code] = id
         return id
+    }
+
+    /**
+     * Tulis ulang `sources.main_url` ke nilai config terbaru. Status PATCH
+     * wajib diperiksa: NiceHttp tidak melempar pada 4xx/5xx, jadi penolakan
+     * PostgREST akan terlihat "sukses" dan DB diam-diam tetap menyimpan URL
+     * mati — persis masalah yang diperbaiki tugas ini.
+     */
+    private suspend fun refreshSourceUrl(id: String, mainUrl: String) {
+        val code = runCatching {
+            patch("/rest/v1/sources?id=eq.$id",
+                org.json.JSONObject().put("main_url", mainUrl))
+        }.getOrNull()
+        when {
+            code == null ->
+                Log.w("OCE", "Observability: sync main_url $id gagal (exception)")
+            isWriteOk(code) ->
+                Log.w("OCE", "Observability: sources $id main_url disinkronkan " +
+                    "ke $mainUrl")
+            else ->
+                Log.w("OCE", "Observability: sources $id main_url ditolak " +
+                    "HTTP $code — DB masih menyimpan URL lama")
+        }
     }
 
     private suspend fun get(path: String): String {
