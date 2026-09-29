@@ -28,14 +28,17 @@ alter table public.logs
 --    Natural key unik (sources.code, extractors.name) mencegah duplikat;
 --    tanpa UPDATE/DELETE policy baris existing aman.
 -- ---------------------------------------------------------------------------
+drop policy if exists sources_insert on public.sources;
 create policy sources_insert on public.sources
     for insert to anon, authenticated
     with check (true);
 
+drop policy if exists extractors_insert on public.extractors;
 create policy extractors_insert on public.extractors
     for insert to anon, authenticated
     with check (true);
 
+drop policy if exists scrape_runs_select on public.scrape_runs;
 create policy scrape_runs_select on public.scrape_runs
     for select to anon, authenticated
     using (true);
@@ -53,6 +56,7 @@ begin
 end;
 $$;
 
+drop trigger if exists scrape_runs_redact_row on public.scrape_runs;
 create trigger scrape_runs_redact_row
     before insert or update of start_url
     on public.scrape_runs
@@ -68,6 +72,7 @@ begin
 end;
 $$;
 
+drop trigger if exists scrape_steps_redact_row on public.scrape_steps;
 create trigger scrape_steps_redact_row
     before insert or update of link_url
     on public.scrape_steps

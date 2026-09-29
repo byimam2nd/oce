@@ -24,10 +24,12 @@
 -- logs: ganti policy insert-only menjadi insert + select
 -- ---------------------------------------------------------------------------
 drop policy if exists logs_insert on public.logs;
+drop policy if exists logs_insert on public.logs;
 create policy logs_insert on public.logs
     for insert to anon, authenticated
     with check (true);
 
+drop policy if exists logs_select on public.logs;
 drop policy if exists logs_select on public.logs;
 create policy logs_select on public.logs
     for select to anon, authenticated
@@ -37,10 +39,12 @@ create policy logs_select on public.logs
 -- scrape_steps: ganti policy insert-only menjadi insert + select
 -- ---------------------------------------------------------------------------
 drop policy if exists scrape_steps_insert on public.scrape_steps;
+drop policy if exists scrape_steps_insert on public.scrape_steps;
 create policy scrape_steps_insert on public.scrape_steps
     for insert to anon, authenticated
     with check (true);
 
+drop policy if exists scrape_steps_select on public.scrape_steps;
 drop policy if exists scrape_steps_select on public.scrape_steps;
 create policy scrape_steps_select on public.scrape_steps
     for select to anon, authenticated

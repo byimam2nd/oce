@@ -9,6 +9,18 @@
 --   * Redact semua data sensitif SEBELUM insert (lihat 0002_redact_helper).
 --
 -- Konvensi penerapan: `supabase db push` dari repo private (CI). Additive-only.
+--
+-- IDEMPOTENSI: file ini memakai `create table/index if not exists` dan
+-- `drop ... if exists` khusus untuk trigger & policy.
+-- JANGAN menambahkan `drop table` untuk membuat file ini idempoten. Tabel
+-- observability sudah berisi data user; `drop table if exists` yang
+-- tidak sengaja dieksekusi akan menghapus semuanya tanpa jejak, sementara
+-- `create table if not exists` cukup melewati tabel yang sudah ada dan
+-- mempertahankan isinya. Kalau sebuah `create` belum punya padanan
+-- idempoten, pakai `drop ... if exists` hanya untuk objek tanpa data
+-- (trigger, policy, index).
+-- Diverifikasi: seluruh rantai 0001–0006 dijalankan dua kali di schema
+-- terpisah (chk_obs) tanpa error.
 -- ============================================================================
 
 create extension if not exists pgcrypto;
@@ -29,7 +41,7 @@ $$;
 -- ===========================================================================
 -- 1. SOURCES
 -- ===========================================================================
-create table public.sources (
+create table if not exists public.sources (
     id          uuid primary key default gen_random_uuid(),
     code        text not null unique,        -- providerId ("Anichin")
     name        text not null,               -- config.name
@@ -40,6 +52,7 @@ create table public.sources (
     updated_at  timestamptz not null default now()
 );
 
+drop trigger if exists sources_updated_at on public.sources;
 create trigger sources_updated_at
     before update on public.sources
     for each row execute function public.set_updated_at();
@@ -50,7 +63,7 @@ create trigger sources_updated_at
 --    title (title bisa transliterasi beda antar-source, tracker sering null).
 --    Tanpa unique constraint pada title.
 -- ===========================================================================
-create table public.series (
+create table if not exists public.series (
     id          uuid primary key default gen_random_uuid(),
     title       text not null,
     alt_titles  jsonb,                       -- array teks
@@ -72,6 +85,7 @@ create table public.series (
     updated_at  timestamptz not null default now()
 );
 
+drop trigger if exists series_updated_at on public.series;
 create trigger series_updated_at
     before update on public.series
     for each row execute function public.set_updated_at();
@@ -79,7 +93,7 @@ create trigger series_updated_at
 -- ===========================================================================
 -- 3. SERIES_SOURCES (bridge source ↔ series, anchor canonical)
 -- ===========================================================================
-create table public.series_sources (
+create table if not exists public.series_sources (
     id          uuid primary key default gen_random_uuid(),
     series_id   uuid not null references public.series(id) on delete cascade,
     source_id   uuid not null references public.sources(id) on delete cascade,
@@ -91,9 +105,10 @@ create table public.series_sources (
     unique (series_id, source_id)            -- satu detail page per seri per source
 );
 
-create index series_sources_source_id_idx on public.series_sources (source_id);
-create index series_sources_series_id_idx on public.series_sources (series_id);
+create index if not exists series_sources_source_id_idx on public.series_sources (source_id);
+create index if not exists series_sources_series_id_idx on public.series_sources (series_id);
 
+drop trigger if exists series_sources_updated_at on public.series_sources;
 create trigger series_sources_updated_at
     before update on public.series_sources
     for each row execute function public.set_updated_at();
@@ -104,7 +119,7 @@ create trigger series_sources_updated_at
 --    (blank -> episode dibuang di ProviderMapper.extractEpisodes), sedangkan
 --    episode_no nullable & season inkonsisten.
 -- ===========================================================================
-create table public.episodes (
+create table if not exists public.episodes (
     id               uuid primary key default gen_random_uuid(),
     series_source_id uuid not null references public.series_sources(id) on delete cascade,
     episode_url      text not null,          -- `ep.data` yang masuk `loadLinks()`
@@ -119,9 +134,10 @@ create table public.episodes (
 );
 
 -- display/urutan non-unique
-create index episodes_series_source_ep_no_idx
+create index if not exists episodes_series_source_ep_no_idx
     on public.episodes (series_source_id, episode_no, season);
 
+drop trigger if exists episodes_updated_at on public.episodes;
 create trigger episodes_updated_at
     before update on public.episodes
     for each row execute function public.set_updated_at();
@@ -129,7 +145,7 @@ create trigger episodes_updated_at
 -- ===========================================================================
 -- 5. EXTRACTORS (katalog kecil, seed CI dari ProviderExtractors + config JSON)
 -- ===========================================================================
-create table public.extractors (
+create table if not exists public.extractors (
     id         uuid primary key default gen_random_uuid(),
     name       text not null unique,         -- simpleName / config id ("EmTurbovid")
     main_url   text,
@@ -137,6 +153,7 @@ create table public.extractors (
     updated_at timestamptz not null default now()
 );
 
+drop trigger if exists extractors_updated_at on public.extractors;
 create trigger extractors_updated_at
     before update on public.extractors
     for each row execute function public.set_updated_at();
@@ -146,7 +163,7 @@ create trigger extractors_updated_at
 --    Hasil akhir per episode. Probe result di-fold (tanpa tabel playback_tests
 --    terpisah — tidak ada feedback loop ExoPlayer di kode OCE saat ini).
 -- ===========================================================================
-create table public.streams (
+create table if not exists public.streams (
     id                  uuid primary key default gen_random_uuid(),
     episode_id          uuid not null references public.episodes(id) on delete cascade,
     extractor_id        uuid references public.extractors(id) on delete set null,
@@ -165,9 +182,10 @@ create table public.streams (
     unique (episode_id, url)
 );
 
-create index streams_episode_status_idx on public.streams (episode_id, probe_valid);
-create index streams_extractor_id_idx on public.streams (extractor_id);
+create index if not exists streams_episode_status_idx on public.streams (episode_id, probe_valid);
+create index if not exists streams_extractor_id_idx on public.streams (extractor_id);
 
+drop trigger if exists streams_updated_at on public.streams;
 create trigger streams_updated_at
     before update on public.streams
     for each row execute function public.set_updated_at();
@@ -177,7 +195,7 @@ create trigger streams_updated_at
 --    Satu baris per eksekusi (episode / detail / home / search). First-valid
 --    race => run boleh `returned_early` (background job masih jalan).
 -- ===========================================================================
-create table public.scrape_runs (
+create table if not exists public.scrape_runs (
     id              uuid primary key default gen_random_uuid(),
     source_id       uuid not null references public.sources(id) on delete cascade,
     series_id       uuid references public.series(id) on delete set null,
@@ -194,15 +212,15 @@ create table public.scrape_runs (
     error_message   text
 );
 
-create index scrape_runs_source_started_idx on public.scrape_runs (source_id, started_at desc);
-create index scrape_runs_episode_id_idx on public.scrape_runs (episode_id);
-create index scrape_runs_series_id_idx on public.scrape_runs (series_id);
+create index if not exists scrape_runs_source_started_idx on public.scrape_runs (source_id, started_at desc);
+create index if not exists scrape_runs_episode_id_idx on public.scrape_runs (episode_id);
+create index if not exists scrape_runs_series_id_idx on public.scrape_runs (series_id);
 
 -- ===========================================================================
 -- 8. SCRAPE_STEPS
 --    Per LINK ATTEMPT (bukan per stage). Koleksi link = 1 baris kind='COLLECT'.
 -- ===========================================================================
-create table public.scrape_steps (
+create table if not exists public.scrape_steps (
     id               uuid primary key default gen_random_uuid(),
     run_id           uuid not null references public.scrape_runs(id) on delete cascade,
     kind             text not null default 'EXTRACT',   -- COLLECT / EXTRACT
@@ -215,13 +233,13 @@ create table public.scrape_steps (
     created_at       timestamptz not null default now()
 );
 
-create index scrape_steps_run_id_idx on public.scrape_steps (run_id);
+create index if not exists scrape_steps_run_id_idx on public.scrape_steps (run_id);
 
 -- ===========================================================================
 -- 9. LOGS
 --    High-volume observability. Redact url/headers sebelum insert.
 -- ===========================================================================
-create table public.logs (
+create table if not exists public.logs (
     id           bigint generated always as identity primary key,
     run_id       uuid references public.scrape_runs(id) on delete cascade,
     level        text,                      -- DEBUG/SUCCESS/FAIL/ERROR/CRITICAL
@@ -236,11 +254,11 @@ create table public.logs (
     created_at   timestamptz not null default now()
 );
 
-create index logs_tag_created_idx on public.logs (tag, created_at desc);
-create index logs_run_id_idx on public.logs (run_id);
+create index if not exists logs_tag_created_idx on public.logs (tag, created_at desc);
+create index if not exists logs_run_id_idx on public.logs (run_id);
 
 -- partial index: analytics "extractor/selector mana paling gagal"
-create index logs_failure_type_idx on public.logs (failure_type)
+create index if not exists logs_failure_type_idx on public.logs (failure_type)
     where failure_type is not null and failure_type <> 'SUCCESS';
 
 -- ===========================================================================
@@ -266,47 +284,61 @@ alter table public.scrape_steps   enable row level security;
 alter table public.logs           enable row level security;
 
 -- --- sources (catalog: SELECT boleh, tulis hanya via CI/service_role) ---
+drop policy if exists sources_select on public.sources;
 create policy sources_select on public.sources
     for select to anon, authenticated using (true);
 
 -- --- extractors (catalog: SELECT boleh) ---
+drop policy if exists extractors_select on public.extractors;
 create policy extractors_select on public.extractors
     for select to anon, authenticated using (true);
 
 -- --- series (upsert) ---
+drop policy if exists series_insert on public.series;
 create policy series_insert on public.series
     for insert to anon, authenticated with check (true);
+drop policy if exists series_update on public.series;
 create policy series_update on public.series
     for update to anon, authenticated using (true) with check (true);
 
 -- --- series_sources (upsert) ---
+drop policy if exists series_sources_insert on public.series_sources;
 create policy series_sources_insert on public.series_sources
     for insert to anon, authenticated with check (true);
+drop policy if exists series_sources_update on public.series_sources;
 create policy series_sources_update on public.series_sources
     for update to anon, authenticated using (true) with check (true);
 
 -- --- episodes (upsert) ---
+drop policy if exists episodes_insert on public.episodes;
 create policy episodes_insert on public.episodes
     for insert to anon, authenticated with check (true);
+drop policy if exists episodes_update on public.episodes;
 create policy episodes_update on public.episodes
     for update to anon, authenticated using (true) with check (true);
 
 -- --- streams (upsert) ---
+drop policy if exists streams_insert on public.streams;
 create policy streams_insert on public.streams
     for insert to anon, authenticated with check (true);
+drop policy if exists streams_update on public.streams;
 create policy streams_update on public.streams
     for update to anon, authenticated using (true) with check (true);
 
 -- --- scrape_runs (insert + update status/finalisasi) ---
+drop policy if exists scrape_runs_insert on public.scrape_runs;
 create policy scrape_runs_insert on public.scrape_runs
     for insert to anon, authenticated with check (true);
+drop policy if exists scrape_runs_update on public.scrape_runs;
 create policy scrape_runs_update on public.scrape_runs
     for update to anon, authenticated using (true) with check (true);
 
 -- --- scrape_steps (append-only) ---
+drop policy if exists scrape_steps_insert on public.scrape_steps;
 create policy scrape_steps_insert on public.scrape_steps
     for insert to anon, authenticated with check (true);
 
 -- --- logs (append-only) ---
+drop policy if exists logs_insert on public.logs;
 create policy logs_insert on public.logs
     for insert to anon, authenticated with check (true);

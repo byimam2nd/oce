@@ -90,6 +90,7 @@ begin
 end;
 $$;
 
+drop trigger if exists streams_redact_row on public.streams;
 create trigger streams_redact_row
     before insert or update of url, source_url, referer, headers
     on public.streams
@@ -119,6 +120,7 @@ begin
 end;
 $$;
 
+drop trigger if exists logs_redact_row on public.logs;
 create trigger logs_redact_row
     before insert or update of url, traceback
     on public.logs
