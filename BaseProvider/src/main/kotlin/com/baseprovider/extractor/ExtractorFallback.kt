@@ -6,43 +6,13 @@ import com.lagradost.cloudstream3.extractors.*
 import com.lagradost.cloudstream3.utils.*
 
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.cancelChildren
-import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicReference
-
-// Batas total waktu untuk blok extractor paralel (local extractor) supaya
-// satu extractor yang lambat tidak menahan jalur fallback ke global/direct.
-//
-// DINAHKAN 20s -> 30s. Ini harus tetap DI BAWAH PER_LINK_TIMEOUT_MS (40s di
-// FallbackPipeline) supaya global/direct/deep-scan tetap sempat jalan setelah
-// blok ini habis. Lihat ExtractionBudgetTest.
-internal const val EXTRACTOR_BLOCK_TIMEOUT_MS = 30_000L
-
-/**
- * Selesai pada hasil pertama: jika link pertama terkumpul, cancel extractor
- * lain yang masih jalan (latency = extractor tercepat, bukan terlambat).
- * Jika semua selesai tanpa link (allDone), lanjut fallback. Caller tidak
- * memblokir menunggu extractor yang lambat.
- */
-private suspend fun selectFirstOf(
-    firstLink: CompletableDeferred<Unit>,
-    allDone: CompletableDeferred<Unit>
-) {
-    select<Unit> {
-        firstLink.onAwait {
-            // Link pertama ditemukan — hentikan extractor lain yang menunggu.
-            currentCoroutineContext().cancelChildren()
-        }
-        allDone.onAwait { Unit }
-    }
-}
 
 /**
  * Catat pesan diagnostik kegagalan PERTAMA (compareAndSet-null). Fallback
@@ -88,56 +58,57 @@ suspend fun loadExtractorWithFallbackCustom(
     }
 
     if (matchingExtractors.isNotEmpty()) {
-        // Jalankan extractor paralel (sem 3) tapi SELESAI saat link pertama
-        // ditemukan — jangan menunggu extractor terlambat. Job lain di-cancel.
-        val firstLink = CompletableDeferred<Unit>()
-        val allDone = CompletableDeferred<Unit>()
-        val firstCallback: (ExtractorLink) -> Unit = { link ->
-            internalCallback(link)
-            firstLink.complete(Unit)
-        }
-        withTimeoutOrNull(EXTRACTOR_BLOCK_TIMEOUT_MS) {
-            coroutineScope {
-                val semaphore = Semaphore(3)
-                val extractorJobs = matchingExtractors.mapIndexed { idx, extractor ->
-                    launch {
-                        semaphore.withPermit {
-                            runCatching {
-                                extractor.getUrl(url, referer, subtitleCallback,
-                                    firstCallback)
-                            }.onFailure { e ->
-                                // Cancellation (dari cancel-on-first-success atau
-                                // timeout blok) WAJIB diteruskan, bukan ditelan —
-                                // kalau ditelan, extractor lambat tidak berhenti dan
-                                // coroutineScope menunggu sampai timeout alaminya.
-                                if (e is kotlinx.coroutines.CancellationException) {
-                                    throw e
+        // Jalankan extractor paralel (sem 3). TANPA budget wall-clock — batas
+        // hanya per-request alami (NiceHttp, probe 5s, master fetch 20s, plus
+        // envelope 120s bawaan APIRepository di app). Saat extractor pertama
+        // mengirim source, CANCEL hanya extractor LAINNYA. Extractor pemenang
+        // TIDAK di-cancel agar selesai mengirim SEMUA sourcenya (config-driven
+        // seperti abyssplayer mem-probe 3 source berurutan — cancel di link
+        // pertama membuat source 2/3 hilang).
+        val firstWinner = CompletableDeferred<Int>()
+        val extractorJobs = java.util.Collections
+            .synchronizedList(mutableListOf<Job>())
+        coroutineScope {
+            val semaphore = Semaphore(3)
+            matchingExtractors.forEachIndexed { idx, extractor ->
+                extractorJobs.add(launch {
+                    semaphore.withPermit {
+                        runCatching {
+                            extractor.getUrl(url, referer, subtitleCallback) { link ->
+                                internalCallback(link)
+                                // Pemenang pertama: cancel extractor lain, biarkan
+                                // pemenang menyelesaikan semua source-nya.
+                                if (firstWinner.tryComplete(idx)) {
+                                    extractorJobs.forEachIndexed { j, job ->
+                                        if (j != idx) job.cancel()
+                                    }
                                 }
-                                diag(failureDetail, "${extractor.name}: " +
-                                    (e.message?.substringBefore('\n')?.trim()
-                                        ?: e.javaClass.simpleName))
-                                logFail(
-                                    providerId,
-                                    "Local Extractor (${extractor.name}) failed for $url: ${e.message}",
-                                    url = url, method = "extractLinks",
-                                    type = FailureType.EXTRACTOR_FAILURE,
-                                    selectors = extractor.name,
-                                    stage = "EXTRACT",
-                                    extractor = extractor.name,
-                                    attempt = idx + 1,
-                                    runId = runId,
-                                    error = e
-                                )
                             }
+                        }.onFailure { e ->
+                            // Cancellation (dari pemenang lain) WAJIB diteruskan,
+                            // bukan ditelan — kalau ditelan extractor lambat tidak
+                            // berhenti dan coroutineScope menunggu lama.
+                            if (e is kotlinx.coroutines.CancellationException) {
+                                throw e
+                            }
+                            diag(failureDetail, "${extractor.name}: " +
+                                (e.message?.substringBefore('\n')?.trim()
+                                    ?: e.javaClass.simpleName))
+                            logFail(
+                                providerId,
+                                "Local Extractor (${extractor.name}) failed for $url: ${e.message}",
+                                url = url, method = "extractLinks",
+                                type = FailureType.EXTRACTOR_FAILURE,
+                                selectors = extractor.name,
+                                stage = "EXTRACT",
+                                extractor = extractor.name,
+                                attempt = idx + 1,
+                                runId = runId,
+                                error = e
+                            )
                         }
                     }
-                }
-                launch {
-                    extractorJobs.forEach { it.join() }
-                    allDone.complete(Unit)
-                }
-                // Selesai saat link pertama terkumpul — ekstraktor lain di-cancel.
-                selectFirstOf(firstLink, allDone)
+                })
             }
         }
     }

@@ -7,16 +7,21 @@ import com.baseprovider.model.*
 import com.baseprovider.network.*
 import com.lagradost.cloudstream3.*
 import com.lagradost.cloudstream3.utils.*
-import kotlinx.coroutines.withTimeoutOrNull
 import org.jsoup.Jsoup
 import java.net.URI
 
 class FallbackPipeline(private val config: ProviderConfig) {
 
     /**
-     * Per-link timeout budget: chain extractor lokal → global → direct →
-     * deep-scan → manual iframe tidak boleh menghabiskan 60-90s per link
-     * rusak. Timeout → link dianggap gagal, lanjut link berikutnya.
+     * Proses satu kandidat link sampai tuntas TANPA budget wall-clock.
+     *
+     * Link yang hidup TIDAK boleh terbunuh oleh timeout buatan, dan kandidat
+     * yang gagal secara alami tidak memproduksi link apa pun. Batas waktu
+     * tetap ada di level request tunggal (NiceHttp timeout, probe 5s, master
+     * fetch 20s) plus envelope 120s bawaan app CloudStream di
+     * APIRepository.loadLinks (withTimeout), jadi tidak ada yang menggantung
+     * selamanya. Link yang ter-deliver selagi loadLinks masih berjalan tampil
+     * live di daftar sumber player (stream-in, lihat PlayerGeneratorViewModel).
      */
     suspend fun processLink(
         raw: String, label: String?, currentUrl: String,
@@ -36,8 +41,7 @@ class FallbackPipeline(private val config: ProviderConfig) {
             delivered.incrementAndGet()
             wrappedCallback(link)
         }
-        val ok = withTimeoutOrNull(PER_LINK_TIMEOUT_MS) {
-            runCatching {
+        val ok = runCatching {
                 val decodedRaw = decodeRawLink(raw)
                 val fixedUrl = fixUrlSmart(decodedRaw, currentUrl)
                     .safeHttpsify().substringBefore("#").fixKnownDomainAliases()
@@ -112,16 +116,6 @@ class FallbackPipeline(private val config: ProviderConfig) {
                 )
                 false
             }
-        } ?: run {
-            SupabaseObservability.logStep(
-                runId, kind = "EXTRACT", status = "timeout",
-                linkUrl = resolvedUrl, errorType = FailureType.TIMEOUT.label,
-                extractorChain = lastFailure.get()?.substringBefore('\n')
-                    ?.trim(),
-                durationMs = PER_LINK_TIMEOUT_MS
-            )
-            false
-        }
         if (ok) {
             SupabaseObservability.logStep(
                 runId, kind = "EXTRACT", status = "success",
@@ -129,25 +123,6 @@ class FallbackPipeline(private val config: ProviderConfig) {
                 durationMs = System.currentTimeMillis() - stepStartedAt
             )
         }
-    }
-
-    companion object {
-        /**
-         * Budget per link. DINAHKAN 20s -> 40s.
-         *
-         * Root cause "no link" di Anichin: satu link abyssplayer =
-         * fetch halaman + POST decrypt ke enc-dec.app + `deliver()` yang
-         * mem-probe source SEQUENTIAL (`forEach`, ConfigDrivenExtractor:484).
-         * Satu episode punya 3+ source, jadi 3 probe berurutan saja sudah
-         * bisa 15s; ditambah fetch+decrypt total ~20s dan link diproses
-         * paralel (linkSemaphore=5) sehingga kontensi menambah tunda.
-         * Dengan budget 20s link yang hidup sering di-timeout sebelum
-         * decrypt selesai.
-         *
-         * Sisa lifecycle (global/direct/deep-scan) tetap punya ruang karena
-         * EXTRACTOR_BLOCK_TIMEOUT_MS (30s) < budget ini (40s).
-         */
-        internal const val PER_LINK_TIMEOUT_MS = 40_000L
     }
 
     internal fun isUnusableCandidate(raw: String, resolved: String, currentUrl: String): Boolean {

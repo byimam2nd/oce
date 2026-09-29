@@ -31,7 +31,8 @@ class ProviderScrapper(
     private val mapper: ProviderMapper
 ) {
     // Semaphore untuk ekstraksi paralel link (banyak sumber diproses
-    // bersamaan, tiap link dibatasi PER_LINK_TIMEOUT_MS oleh FallbackPipeline).
+    // bersamaan; tidak ada budget wall-clock per link — batas hanya
+    // per-request alami + envelope 120s bawaan APIRepository di app).
     private val linkSemaphore = Semaphore(5)
     // Post-filter kategori (search): fetch halaman detail tiap hasil terjadi
     // paralel — batasi concurrency agar tidak membebani host sekaligus.
@@ -377,12 +378,15 @@ class ProviderScrapper(
                 .filter { it.first.isNotBlank() && !it.first.startsWith("#") }
                 .sortedByDescending { priorityOf(it.first) }
 
-            // Collect-all: tunggu SEMUA ekstraktor selesai, lalu semua sumber
-            // dikumpulkan sekaligus ke player. ExoPlayer hanya mengambil sumber
-            // sekali — link yang datang setelah loadLinks return tidak muncul,
-            // jadi daftar sumber harus lengkap sebelum video diputar.
-            // Tiap link dibatasi PER_LINK_TIMEOUT_MS (40s) oleh FallbackPipeline,
-            // sehingga wait-all tidak menggantung tanpa batas.
+            // Collect-all + stream-in: loadLinks TIDAK boleh return sebelum
+            // semua kandidat tuntas. PlayerGeneratorViewModel di app hanya
+            // menambahkan ExtractorLink yang datang SELAGI loadLinks berjalan
+            // (callback dicek `if (isActive)`); link yang datang setelah return
+            // dibuang. Karena itu kita tunggu semua selesai — link yang hidup
+            // tampil live satu per satu di daftar sumber (stream-in didukung
+            // oleh VM), dan yang gagal tidak memproduksi apa pun. Tidak ada
+            // budget wall-clock di sini; kandidat rusak tetap berhenti karena
+            // tiap request punya timeout sendiri (NiceHttp/probe/master fetch).
             // B4: scope dibuat per-run dan job run sebelumnya di-cancel saat
             // loadLinks baru dimulai (ekstraksi basi tidak membuang resource).
             // Deferreds run lama ikut diselesaikan agar call loadLinks yang

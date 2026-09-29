@@ -117,6 +117,21 @@ class FallbackPipelineTest {
     }
 
     @Test
+    fun `kandidat sampah diproses tanpa jaringan dan menghasilkan 0 video`() = runBlocking {
+        // Regression stream-in: kandidat junk (token "all_comment") harus
+        // berhenti di guard isUnusableCandidate SEBELUM menyentuh jaringan,
+        // dan tidak memproduksi link apa pun — tidak ada budget wall-clock
+        // yang menutupinya lagi, jadi guard ini adalah satu-satunya benteng.
+        val delivered = java.util.concurrent.atomic.AtomicInteger(0)
+        pipeline.processLink(
+            "all_comment", "label", page,
+            subtitleCallback = {},
+            wrappedCallback = { delivered.incrementAndGet() }
+        )
+        assertEquals(0, delivered.get())
+    }
+
+    @Test
     fun `currentUrl kosong tidak menyebabkan penolakan`() {
         assertFalse(
             pipeline.isUnusableCandidate("https://ok.ru/v/1", "https://ok.ru/v/1", "")
