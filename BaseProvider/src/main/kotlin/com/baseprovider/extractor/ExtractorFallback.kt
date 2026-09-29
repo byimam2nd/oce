@@ -78,7 +78,7 @@ suspend fun loadExtractorWithFallbackCustom(
                                 internalCallback(link)
                                 // Pemenang pertama: cancel extractor lain, biarkan
                                 // pemenang menyelesaikan semua source-nya.
-                                if (firstWinner.tryComplete(idx)) {
+                                if (firstWinner.complete(idx)) {
                                     extractorJobs.forEachIndexed { j, job ->
                                         if (j != idx) job.cancel()
                                     }
