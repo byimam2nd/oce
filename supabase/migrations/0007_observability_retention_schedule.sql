@@ -7,7 +7,7 @@
 --   Supabase tidak memberi notifikasi sebelum project kena batas.
 --
 --   Fungsi `prune_observability(days)` sudah ada di 0006. Yang belum ada
---   adalah pemanggil terjadwal. sebelumnya satu-satunya pilihan adalah cron
+--   adalah pemanggil terjadwal. Sebelumnya satu-satunya pilihan adalah cron
 --   dari luar repo; sekarang jadwalnya hidup DI DALAM database lewat pg_cron,
 --   jadi tidak bergantung pada mesin, GitHub Actions, atau repo ini tetap hidup.
 --
