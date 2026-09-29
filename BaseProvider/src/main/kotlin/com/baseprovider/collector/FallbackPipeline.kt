@@ -49,18 +49,24 @@ class FallbackPipeline(private val config: ProviderConfig) {
                     .safeHttpsify().substringBefore("#").fixKnownDomainAliases()
                 if (fixedUrl.isNotBlank()) resolvedUrl = fixedUrl
                 val guardHit = isUnusableCandidate(raw, fixedUrl, currentUrl)
-                // DIAG (TEMPORARY): hapus setelah investigasi guard INVALID_URL selesai.
-                SupabaseObservability.logStep(
-                    runId, kind = "DIAG", status = "info",
-                    linkUrl = resolvedUrl,
-                    extractorChain = "n=${config.id} rawHttp=${raw
-                        .startsWith("http")} rawB64=${raw.safeIsBase64()} " +
-                        "rawLen=${raw.length} decodeMs=$decodeMs decLen=${decodedRaw
-                        .length} decHead=${decodedRaw.take(50)} " +
-                        "fixed=${fixedUrl.take(70)} guard=$guardHit " +
-                        "elapsed=${System.currentTimeMillis() - stepStartedAt}ms"
-                )
                 if (guardHit) {
+                    // DIAG (TEMPORARY): hapus setelah investigasi guard selesai.
+                    // Ditulis ke tabel `logs` (bukan scrape_steps) karena
+                    // batch step sering hilang, sedangkan baris `logs` terbukti
+                    // konsisten tersimpan.
+                    logFail(
+                        config.id,
+                        "DIAG-GUARD unusable rawHttp=${raw
+                            .startsWith("http")} rawB64=${raw
+                            .safeIsBase64()} rawLen=${raw.length} " +
+                            "decodeMs=$decodeMs decLen=${decodedRaw
+                            .length} decHead=${decodedRaw.take(50)} " +
+                            "fixed=${fixedUrl.take(70)} cur=${currentUrl.take(60)}",
+                        url = resolvedUrl, method = "processLink",
+                        type = FailureType.INVALID_URL, stage = "EXTRACT",
+                        extractor = config.id, runId = runId,
+                        durationMs = System.currentTimeMillis() - stepStartedAt
+                    )
                     logDebug(config.id, "Skipping unusable candidate: $raw")
                     SupabaseObservability.logStep(
                         runId, kind = "EXTRACT", status = "failed",
