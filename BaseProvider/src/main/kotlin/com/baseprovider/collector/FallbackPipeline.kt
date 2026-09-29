@@ -42,11 +42,25 @@ class FallbackPipeline(private val config: ProviderConfig) {
             wrappedCallback(link)
         }
         val ok = runCatching {
+                val decodeStart = System.currentTimeMillis()
                 val decodedRaw = decodeRawLink(raw)
+                val decodeMs = System.currentTimeMillis() - decodeStart
                 val fixedUrl = fixUrlSmart(decodedRaw, currentUrl)
                     .safeHttpsify().substringBefore("#").fixKnownDomainAliases()
                 if (fixedUrl.isNotBlank()) resolvedUrl = fixedUrl
-                if (isUnusableCandidate(raw, fixedUrl, currentUrl)) {
+                val guardHit = isUnusableCandidate(raw, fixedUrl, currentUrl)
+                // DIAG (TEMPORARY): hapus setelah investigasi guard INVALID_URL selesai.
+                SupabaseObservability.logStep(
+                    runId, kind = "DIAG", status = "info",
+                    linkUrl = resolvedUrl,
+                    extractorChain = "n=${config.id} rawHttp=${raw
+                        .startsWith("http")} rawB64=${raw.safeIsBase64()} " +
+                        "rawLen=${raw.length} decodeMs=$decodeMs decLen=${decodedRaw
+                        .length} decHead=${decodedRaw.take(50)} " +
+                        "fixed=${fixedUrl.take(70)} guard=$guardHit " +
+                        "elapsed=${System.currentTimeMillis() - stepStartedAt}ms"
+                )
+                if (guardHit) {
                     logDebug(config.id, "Skipping unusable candidate: $raw")
                     SupabaseObservability.logStep(
                         runId, kind = "EXTRACT", status = "failed",
