@@ -49,7 +49,10 @@ object M3u8MasterVerifier {
 
     private val BANDWIDTH_RE = Regex("""BANDWIDTH=(\d+)""")
     private val RESOLUTION_RE = Regex("""RESOLUTION=\d+x(\d+)""")
-    private const val FETCH_TIMEOUT_MS = 8000L
+    // Dinaikkan 8s -> 20s. Verifikasi master dijalankan di dalam budget per
+    // link; pada koneksi seluler lambat playlist besar butuh >8s, dan timeout
+    // di sini membuang variant yang sebenarnya valid (error 3002 di player).
+    internal const val FETCH_TIMEOUT_MS = 20_000L
 
     /**
      * Parse baris #EXT-X-STREAM-INF + URI baris berikutnya. Variant dianggap

@@ -19,7 +19,11 @@ import java.util.concurrent.atomic.AtomicReference
 
 // Batas total waktu untuk blok extractor paralel (local extractor) supaya
 // satu extractor yang lambat tidak menahan jalur fallback ke global/direct.
-private const val EXTRACTOR_BLOCK_TIMEOUT_MS = 20_000L
+//
+// DINAHKAN 20s -> 30s. Ini harus tetap DI BAWAH PER_LINK_TIMEOUT_MS (40s di
+// FallbackPipeline) supaya global/direct/deep-scan tetap sempat jalan setelah
+// blok ini habis. Lihat ExtractionBudgetTest.
+internal const val EXTRACTOR_BLOCK_TIMEOUT_MS = 30_000L
 
 /**
  * Selesai pada hasil pertama: jika link pertama terkumpul, cancel extractor

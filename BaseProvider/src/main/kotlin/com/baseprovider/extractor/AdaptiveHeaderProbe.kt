@@ -106,7 +106,7 @@ object AdaptiveHeaderProbe {
 
     private val inFlight = ConcurrentHashMap<String, CompletableDeferred<Decision>>()
     // NiceHttp timeout dalam DETIK (callTimeout/connectTimeout TimeUnit.SECONDS).
-    private const val PROBE_TIMEOUT = 5L
+    internal const val PROBE_TIMEOUT_SECONDS = 5L
     // Probe baca body sungguhan hingga batas ini agar pemenang = combo dengan
     // throughput terbaik (bukan sekadar latency). Playlist kecil tetap selesai
     // cepat; direct video mengukur throughput nyata. Server yang tidak support
@@ -342,7 +342,7 @@ object AdaptiveHeaderProbe {
                 url,
                 referer = combo.referer,
                 headers = combo.headers + mapOf("Range" to "bytes=0-$PROBE_RANGE_END"),
-                timeout = PROBE_TIMEOUT
+                timeout = PROBE_TIMEOUT_SECONDS
             )
             if (r.code !in 200..399) {
                 ProbeResult.HttpReject(r.code)

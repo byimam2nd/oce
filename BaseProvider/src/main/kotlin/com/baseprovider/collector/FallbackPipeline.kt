@@ -132,7 +132,22 @@ class FallbackPipeline(private val config: ProviderConfig) {
     }
 
     companion object {
-        private const val PER_LINK_TIMEOUT_MS = 20_000L
+        /**
+         * Budget per link. DINAHKAN 20s -> 40s.
+         *
+         * Root cause "no link" di Anichin: satu link abyssplayer =
+         * fetch halaman + POST decrypt ke enc-dec.app + `deliver()` yang
+         * mem-probe source SEQUENTIAL (`forEach`, ConfigDrivenExtractor:484).
+         * Satu episode punya 3+ source, jadi 3 probe berurutan saja sudah
+         * bisa 15s; ditambah fetch+decrypt total ~20s dan link diproses
+         * paralel (linkSemaphore=5) sehingga kontensi menambah tunda.
+         * Dengan budget 20s link yang hidup sering di-timeout sebelum
+         * decrypt selesai.
+         *
+         * Sisa lifecycle (global/direct/deep-scan) tetap punya ruang karena
+         * EXTRACTOR_BLOCK_TIMEOUT_MS (30s) < budget ini (40s).
+         */
+        internal const val PER_LINK_TIMEOUT_MS = 40_000L
     }
 
     internal fun isUnusableCandidate(raw: String, resolved: String, currentUrl: String): Boolean {

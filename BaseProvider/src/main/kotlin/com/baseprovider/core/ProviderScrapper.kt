@@ -381,7 +381,7 @@ class ProviderScrapper(
             // dikumpulkan sekaligus ke player. ExoPlayer hanya mengambil sumber
             // sekali — link yang datang setelah loadLinks return tidak muncul,
             // jadi daftar sumber harus lengkap sebelum video diputar.
-            // Tiap link dibatasi PER_LINK_TIMEOUT_MS (20s) oleh FallbackPipeline,
+            // Tiap link dibatasi PER_LINK_TIMEOUT_MS (40s) oleh FallbackPipeline,
             // sehingga wait-all tidak menggantung tanpa batas.
             // B4: scope dibuat per-run dan job run sebelumnya di-cancel saat
             // loadLinks baru dimulai (ekstraksi basi tidak membuang resource).
