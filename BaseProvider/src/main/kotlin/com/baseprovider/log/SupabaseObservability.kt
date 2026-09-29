@@ -561,14 +561,35 @@ object SupabaseObservability {
     // ATAU endRun. Queue bounded — bila melampaui cap, step tertua di-drop
     // (degradasi observability, bukan block).
 
-    private val stepQueue =
-        ConcurrentLinkedQueue<Pair<String, org.json.JSONObject>>()
+    /** Satu step di antrian flush + jumlah percobaan kirim (untuk requeue). */
+    internal data class StepEntry(
+        val runId: String,
+        val body: org.json.JSONObject,
+        val attempts: Int = 0
+    )
+
+    /**
+     * Apakah step masih boleh dicoba kirim pada flush berikutnya?
+     *
+     * Run row bisa dibuat lebih lambat dari `RUN_WAIT_TIMEOUT_MS` (POST lambat
+     * saat banyak run paralel), dan step milik run itu TIDAK boleh dibuang
+     * permanen hanya karena belum ada row-nya. Batas percobaan mencegah
+     * antrian tumbuh tanpa henti untuk run yang memang tidak pernah dibuat.
+     */
+    internal fun shouldRetryStep(attempts: Int): Boolean =
+        attempts < MAX_STEP_ATTEMPTS
+
+    private val stepQueue = ConcurrentLinkedQueue<StepEntry>()
     private val flushWake = Channel<Unit>(Channel.CONFLATED)
     private val flusherJob = AtomicReference<Job?>(null)
 
     private fun enqueueStep(runId: String, body: org.json.JSONObject) {
-        while (stepQueue.size > MAX_STEP_QUEUE) stepQueue.poll()
-        stepQueue.offer(runId to body)
+        var dropped = 0
+        while (stepQueue.size > MAX_STEP_QUEUE && stepQueue.poll() != null)
+            dropped++
+        if (dropped > 0) Log.w("OCE", "Observability: $dropped step di-drop " +
+            "(antrian > $MAX_STEP_QUEUE)")
+        stepQueue.offer(StepEntry(runId, body))
         ensureFlusher()
         if (stepQueue.size >= STEP_BATCH_SIZE) flushWake.trySend(Unit)
     }
@@ -592,7 +613,7 @@ object SupabaseObservability {
     }
 
     private suspend fun flushSteps() {
-        val batch = mutableListOf<Pair<String, org.json.JSONObject>>()
+        val batch = mutableListOf<StepEntry>()
         var drained = 0
         while (drained < STEP_BATCH_SIZE) {
             stepQueue.poll()?.let { batch.add(it) } ?: break
@@ -600,39 +621,66 @@ object SupabaseObservability {
         }
         if (batch.isEmpty()) return
 
-        // Group per run, tunggu (bounded) run row dibuat, drop step milik run
-        // yang gagal dibuat (hindari FK violation — degradasi, sama seperti
-        // perilaku single-insert sebelumnya).
-        val byRun = batch.groupBy { it.first }
+        // Group per run, tunggu (bounded) run row dibuat. Step milik run yang
+        // row-nya belum ada TIDAK dibuang: dikembalikan ke antrian untuk dicoba
+        // lagi di flush berikutnya. Sebelumnya `continue` di sini menghapus
+        // PERMANEN semua step run tersebut — beginRun bisa lebih lambat dari
+        // RUN_WAIT_TIMEOUT_MS, sehingga mayoritas step hilang tanpa jejak.
+        val byRun = batch.groupBy { it.runId }
         val steps = org.json.JSONArray()
+        var requeued = 0
         for ((runId, entries) in byRun) {
-            if (!awaitRunCreated(runId)) continue
-            entries.forEach { (_, body) -> steps.put(body) }
+            if (awaitRunCreated(runId)) {
+                entries.forEach { steps.put(it.body) }
+            } else {
+                entries.forEach { entry ->
+                    if (shouldRetryStep(entry.attempts)) {
+                        stepQueue.offer(
+                            entry.copy(attempts = entry.attempts + 1))
+                        requeued++
+                    }
+                }
+            }
         }
+        if (requeued > 0) Log.w("OCE", "Observability: $requeued step di-requeue " +
+            "(run row belum ada)")
         if (steps.length() == 0) return
-        if (attemptWrite("scrape_steps") { postArray("/rest/v1/scrape_steps", steps) })
-            return
-        // Sama seperti postOrStrip: kolom plugin_version belum ada di DB
-        // (migration 0005). Tanpa retry ini, SEMUA step hilang — bukan cuma
-        // kolom versinya — karena PostgREST menolak seluruh array.
-        if (!pluginVersionSupported) {
-            Log.w("OCE", "Observability: batch logStep gagal "
-                + "(plugin_version tidak didukung DB)")
-            return
+        if (writeStepsWithRetry(steps)) return
+        Log.e("OCE", "Observability: ${steps.length()} step hilang — " +
+            "batch ditolak ${STEP_WRITE_RETRIES + 1}x (periksa key, RLS, atau jaringan)")
+    }
+
+    /**
+     * Tulis batch step dengan retry bounded.
+     *
+     * Percobaan pertama gagal → kolom `plugin_version` dibuang dan dikirim
+     * ulang (DB lama belum punya kolom itu). PostgREST menolak SELURUH array
+     * kalau satu kolom tidak dikenal, jadi tanpa fallback ini semua step hilang,
+     * bukan cuma kolom versinya. Retry lanjutan menutup kegagalan sesaat
+     * (timeout/network), yang sebelumnya langsung membuang seluruh batch.
+     */
+    private suspend fun writeStepsWithRetry(
+        steps: org.json.JSONArray
+    ): Boolean {
+        var stripped = false
+        var attempt = 0
+        while (attempt <= STEP_WRITE_RETRIES) {
+            if (attemptWrite("scrape_steps") { postArray("/rest/v1/scrape_steps",
+                    steps) }) return true
+            if (!stripped && pluginVersionSupported) {
+                stripped = true
+                pluginVersionSupported = false
+                for (i in 0 until steps.length()) {
+                    (steps.get(i) as org.json.JSONObject)
+                        .remove("plugin_version")
+                }
+                Log.w("OCE", "Observability: batch logStep gagal " +
+                    "(plugin_version tidak didukung DB) — kirim ulang tanpa kolom")
+            }
+            attempt++
+            delay(STEP_RETRY_DELAY_MS * attempt)
         }
-        pluginVersionSupported = false
-        val stripped = org.json.JSONArray()
-        for (i in 0 until steps.length()) {
-            stripped.put((steps.get(i) as org.json.JSONObject)
-                .remove("plugin_version"))
-        }
-        if (attemptWrite("scrape_steps") { postArray("/rest/v1/scrape_steps", stripped) }) {
-            Log.w("OCE", "Observability: step ok tanpa plugin_version — "
-                + "jalankan supabase/migrations/0005_logs_plugin_version.sql")
-        } else {
-            Log.e("OCE", "Observability: ${steps.length()} step hilang — "
-                + "batch ditolak 2x (periksa key, RLS, atau jaringan)")
-        }
+        return false
     }
 
     private suspend fun postArray(
@@ -645,13 +693,21 @@ object SupabaseObservability {
         timeout = OBS_TIMEOUT_SECONDS
     ).code
 
-    private const val OBS_TIMEOUT_SECONDS = 4L
+    // 4s terlalu pendek untuk bulk insert puluhan baris + trigger redaksi di
+    // proyek free-tier: batch gagal timeout lalu dibuang utuh (67% step hilang
+    // di produksi). Semua request observability jalan di scope IO, jadi
+    // menaikkan timeout tidak menahan pipeline.
+    private const val OBS_TIMEOUT_SECONDS = 12L
     private const val RUN_WAIT_TIMEOUT_MS = 5_000L
     private const val END_RUN_MAX_RETRIES = 4
     private const val END_RUN_RETRY_DELAY_MS = 2_000L
-    private const val STEP_BATCH_SIZE = 50
+    private const val STEP_BATCH_SIZE = 25
     private const val STEP_FLUSH_INTERVAL_MS = 3_000L
     private const val MAX_STEP_QUEUE = 200
+    // Batas percobaan kirim per step: run row belum ada ATAU POST gagal sesaat.
+    internal const val MAX_STEP_ATTEMPTS = 3
+    private const val STEP_WRITE_RETRIES = 2
+    private const val STEP_RETRY_DELAY_MS = 500L
     private const val MAX_TRACKED_RUNS = 128
     private const val EVICT_TRACKED_RUNS = 32
 }

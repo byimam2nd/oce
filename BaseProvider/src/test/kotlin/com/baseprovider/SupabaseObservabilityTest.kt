@@ -2,7 +2,10 @@ package com.baseprovider
 
 import com.baseprovider.log.SupabaseObservability
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SupabaseObservabilityTest {
@@ -63,5 +66,36 @@ class SupabaseObservabilityTest {
         assertEquals("partial", r.status)
         assertEquals(
             "COLLECT=3 EXTRACT=3 (ok=1 fail=2 timeout=0)", r.summary)
+    }
+
+    @Test
+    fun `fresh step may be retried`() {
+        assertTrue(SupabaseObservability.shouldRetryStep(0))
+    }
+
+    @Test
+    fun `step is retried until attempt bound then dropped`() {
+        // Run row yang belum dibuat (atau POST gagal sesaat) boleh dicoba
+        // lagi, tapi tidak tanpa batas — kalau tidak, antrian tumbuh forever
+        // untuk run yang memang tidak pernah dibuat.
+        for (attempts in 0 until SupabaseObservability.MAX_STEP_ATTEMPTS) {
+            assertTrue("attempts=$attempts harus masih dicoba",
+                SupabaseObservability.shouldRetryStep(attempts))
+        }
+        assertFalse(SupabaseObservability
+            .shouldRetryStep(SupabaseObservability.MAX_STEP_ATTEMPTS))
+        assertFalse(SupabaseObservability
+            .shouldRetryStep(SupabaseObservability.MAX_STEP_ATTEMPTS + 1))
+    }
+
+    @Test
+    fun `requeue increments attempts and keeps run and body`() {
+        val body = org.json.JSONObject().put("kind", "EXTRACT")
+        val first = SupabaseObservability.StepEntry("run-1", body)
+        val second = first.copy(attempts = first.attempts + 1)
+        assertEquals(0, first.attempts)
+        assertEquals(1, second.attempts)
+        assertEquals("run-1", second.runId)
+        assertSame(body, second.body)
     }
 }
