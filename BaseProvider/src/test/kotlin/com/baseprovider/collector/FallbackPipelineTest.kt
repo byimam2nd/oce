@@ -157,7 +157,7 @@ class FallbackPipelineTest {
         )
         for (url in cases) {
             val raw = b64("""<iframe src="$url" width="100%"></iframe>""")
-            val resolved = pipeline.decodeRawLink(raw)
+            val resolved = runBlocking { pipeline.decodeRawLink(raw) }
             assertEquals(url, resolved)
             assertFalse("harus lolos guard: $url",
                 pipeline.isUnusableCandidate(raw, resolved, page))
@@ -167,7 +167,7 @@ class FallbackPipelineTest {
     @Test
     fun `base64 yang decode ke halaman sama tetap ditolak`() {
         val raw = b64("""<iframe src="${page}"></iframe>""")
-        val resolved = pipeline.decodeRawLink(raw)
+        val resolved = runBlocking { pipeline.decodeRawLink(raw) }
         assertTrue(pipeline.isUnusableCandidate(raw, resolved, page))
     }
 
@@ -175,7 +175,7 @@ class FallbackPipelineTest {
     fun `base64 yang tidak menghasilkan URL tetap ditolak`() {
         // Tidak ada URL absolut hasil decode, jadi guard harus tetap menyaring.
         val raw = b64("dnd+fxdp5037wmt=")
-        val resolved = pipeline.decodeRawLink(raw)
+        val resolved = runBlocking { pipeline.decodeRawLink(raw) }
         assertEquals("", resolved)
         assertTrue(pipeline.isUnusableCandidate(raw, resolved, page))
     }
