@@ -42,31 +42,11 @@ class FallbackPipeline(private val config: ProviderConfig) {
             wrappedCallback(link)
         }
         val ok = runCatching {
-                val decodeStart = System.currentTimeMillis()
                 val decodedRaw = decodeRawLink(raw)
-                val decodeMs = System.currentTimeMillis() - decodeStart
                 val fixedUrl = fixUrlSmart(decodedRaw, currentUrl)
                     .safeHttpsify().substringBefore("#").fixKnownDomainAliases()
                 if (fixedUrl.isNotBlank()) resolvedUrl = fixedUrl
-                val guardHit = isUnusableCandidate(raw, fixedUrl, currentUrl)
-                if (guardHit) {
-                    // DIAG (TEMPORARY): hapus setelah investigasi guard selesai.
-                    // Ditulis ke tabel `logs` (bukan scrape_steps) karena
-                    // batch step sering hilang, sedangkan baris `logs` terbukti
-                    // konsisten tersimpan.
-                    logFail(
-                        config.id,
-                        "DIAG-GUARD unusable rawHttp=${raw
-                            .startsWith("http")} rawB64=${raw
-                            .safeIsBase64()} rawLen=${raw.length} " +
-                            "decodeMs=$decodeMs decLen=${decodedRaw
-                            .length} decHead=${decodedRaw.take(50)} " +
-                            "fixed=${fixedUrl.take(70)} cur=${currentUrl.take(60)}",
-                        url = resolvedUrl, method = "processLink",
-                        type = FailureType.INVALID_URL, stage = "EXTRACT",
-                        extractor = config.id, runId = runId,
-                        durationMs = System.currentTimeMillis() - stepStartedAt
-                    )
+                if (isUnusableCandidate(raw, fixedUrl, currentUrl)) {
                     logDebug(config.id, "Skipping unusable candidate: $raw")
                     SupabaseObservability.logStep(
                         runId, kind = "EXTRACT", status = "failed",
@@ -148,11 +128,21 @@ class FallbackPipeline(private val config: ProviderConfig) {
     internal fun isUnusableCandidate(raw: String, resolved: String, currentUrl: String): Boolean {
         val r = raw.trim()
         if (r.isEmpty() || resolved.isBlank()) return true
-        // Token sampah hasil scraper (mis. "all_comment") tidak punya scheme,
-        // host, path, maupun query — pasti bukan link.
-        if (!r.startsWith("http") && !r.startsWith("//") && !r.startsWith("/") &&
-            !r.contains(".") && !r.contains("/") && !r.contains("?") && !r.contains("#")
-        ) return true
+        // Embed code base64 yang SUDAH berhasil didecode jadi URL absolut harus
+        // dipercaya: bentuk raw-nya TIDAK boleh jadi alasan membuangnya.
+        // Base64 ASCII nyaris tidak memuat '/', '.', '?', atau '#', sehingga
+        // cek token sampah di bawah salah mengklasifikasi embed code —
+        // itulah penyebab embed hidup (abyssplayer, ok.ru, morencius, rubyvidhub,
+        // turbovidhls) hilang sebagai INVALID_URL padahal URL-nya sudah benar.
+        val decodedToUrl = r.safeIsBase64() && resolved.startsWith("http",
+            ignoreCase = true)
+        if (!decodedToUrl) {
+            // Token sampah hasil scraper (mis. "all_comment") tidak punya scheme,
+            // host, path, maupun query — pasti bukan link.
+            if (!r.startsWith("http") && !r.startsWith("//") && !r.startsWith("/") &&
+                !r.contains(".") && !r.contains("/") && !r.contains("?") && !r.contains("#")
+            ) return true
+        }
         // Kandidat yang menunjuk halaman yang sedang diproses (path identik,
         // query diabaikan) tidak bisa menghasilkan link baru.
         return isSamePage(resolved, currentUrl)
@@ -178,15 +168,23 @@ class FallbackPipeline(private val config: ProviderConfig) {
         }
         if (raw.startsWith("http") || raw.startsWith("//") || raw
             .startsWith("/") || !raw.safeIsBase64()) return raw
-        val lk21 = decryptLk21PlayerUrl(raw)
-        if (lk21 != null) return lk21
+        // Base64 biasa dulu (instan, tanpa jaringan): sebagian besar embed code
+        // sudah menghasilkan iframe/URL dari sini. decryptLk21PlayerUrl hanya
+        // JALAN FALLBACK — ia memuat player.js lewat jaringan dengan
+        // withTimeout 10s, jadi memanggilnya lebih dulu membakar ~10s per
+        // kandidat yang sama sekali bukan Lk21 (Anichin: 6 kandidat = 60s).
         val dec = raw.safeDecode()
         // Sebagian embed code memakai kapital (<IFRAME SRC=...>); pemeriksaan
         // harus case-insensitive agar Morencius/StreamRuby tetap terpanggil.
-        if (dec.contains("iframe", ignoreCase = true)) return Jsoup
-            .parse(dec).selectFirst("iframe")?.attr("src") ?: ""
-        if (dec.startsWith("http") || dec.startsWith("//") || dec
-            .startsWith("/")) return dec
+        if (dec.contains("iframe", ignoreCase = true)) {
+            val src = Jsoup.parse(dec).selectFirst("iframe")?.attr("src")?.trim()
+            if (!src.isNullOrBlank()) return src
+        }
+        if (dec.startsWith("http") || dec.startsWith("//")) return dec
+        // Tidak absolute & tidak iframe: barulah coba jalur Lk21 (js + jaringan).
+        val lk21 = decryptLk21PlayerUrl(raw)
+        if (lk21 != null) return lk21
+        if (dec.startsWith("/")) return dec
         return ""
     }
 

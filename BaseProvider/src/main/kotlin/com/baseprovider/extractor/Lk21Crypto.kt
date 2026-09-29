@@ -14,7 +14,13 @@ private val lk21Lock = Any()
 private var cachedLk21Scope: Scriptable? = null
 private var cachedPlayerJsText: String? = null
 private var cachedPlayerJsTime: Long = 0L
+private var lk21FetchBlockedUntil: Long = 0L
+private const val LK21_PLAYER_JS_URL = "https://assets.lk21.party/js/player.js?v=4"
 private const val PLAYER_JS_REFRESH_MS = 30 * 60 * 1000L
+// Host lk21.party bisa mati/diblokir. Tanpa cooldown, SETIAP kandidat base64
+// yang tidak bercabang ke iframe/URL absolut akan menembak timeout 10s lagi
+// dan lagi. Setelah satu kegagalan, lewati jalur ini untuk sementara.
+private const val LK21_FETCH_COOLDOWN_MS = 15 * 60 * 1000L
 
 private suspend fun ensureLk21Scope(ctx: Context): Scriptable {
     val now = System.currentTimeMillis()
@@ -29,11 +35,20 @@ private suspend fun ensureLk21Scope(ctx: Context): Scriptable {
         && now - cachedPlayerJsTime < PLAYER_JS_REFRESH_MS) {
         cachedPlayerJsText ?: error("Text null after null check")
     } else {
+        if (now < lk21FetchBlockedUntil) {
+            throw IllegalStateException("player.js fetch cooldown aktif")
+        }
         // M6: fetch player.js dengan timeout — tanpa batas bisa memblokir
         // decrypt semua link Lk21 saat jaringan lambat.
-        withTimeout(10_000L) {
-            app.get("https://assets.lk21.party/js/player.js?v=4").text
-        }.also { cachedPlayerJsText = it }
+        val fetched = try {
+            withTimeout(10_000L) { app.get(LK21_PLAYER_JS_URL).text }
+        } catch (e: Exception) {
+            lk21FetchBlockedUntil = System.currentTimeMillis() +
+                LK21_FETCH_COOLDOWN_MS
+            throw e
+        }
+        cachedPlayerJsText = fetched
+        fetched
     }
 
     synchronized(lk21Lock) {
