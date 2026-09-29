@@ -45,16 +45,15 @@ class TrackedRunBoundTest {
     }
 
     @Test
-    fun `run yang sedang diproses tidak ikut ter-evict saat masih ada yang lebih tua`() {
-        // run yang baru disentuh (witness tinggi) harus selamat supaya
-        // endRun-nya tidak kehilangan statistik.
+    fun `run yang baru disentuh disisakan, evict cukup untuk turun ke batas`() {
+        // 3 entry, cap 2: cukup 1 evict untuk kembali ke batas, jadi run yang
+        // baru disentuh (9999) tidak boleh ikut ter-evict meski count besar.
         val touched = linkedMapOf(
-            "run1" to 100L, "run2" to 100L, "aktif" to 9999L
+            "run1" to 100L, "run2" to 200L, "aktif" to 9999L
         )
-        val victims = SupabaseObservability.evictVictims(touched, cap = 2, count = 2)
-        assertTrue(victims.contains("run1"))
-        assertTrue(victims.contains("run2"))
-        assertTrue(!victims.contains("aktif"))
+        val victims = SupabaseObservability.evictVictims(
+            touched, cap = 2, count = 9)
+        assertEquals(listOf("run1"), victims)
     }
 
     @Test
