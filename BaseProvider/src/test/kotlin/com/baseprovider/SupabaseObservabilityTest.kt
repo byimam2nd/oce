@@ -98,4 +98,40 @@ class SupabaseObservabilityTest {
         assertEquals("run-1", second.runId)
         assertSame(body, second.body)
     }
+
+    @Test
+    fun `batch yang gagal ditulis dikembalikan ke antrian dengan attempts naik`() {
+        // Kegagalan POST dulu membuang SELURUH batch apa pun isinya — 25 baris
+        // hilang sekaligus. Entry yang masih punya budget harus balik antrian.
+        val body = org.json.JSONObject().put("kind", "EXTRACT")
+        val fresh = SupabaseObservability.StepEntry("run-1", body)
+        val exhausted = fresh.copy(
+            attempts = SupabaseObservability.MAX_STEP_ATTEMPTS)
+        val retry = SupabaseObservability
+            .retryAfterWriteFailure(listOf(fresh, exhausted))
+        assertEquals(1, retry.size)
+        assertEquals("run-1", retry[0].runId)
+        assertEquals(1, retry[0].attempts)
+        assertSame(body, retry[0].body)
+    }
+
+    @Test
+    fun `seluruh isi batch yang gagal ditulis tidak hilang`() {
+        val body = org.json.JSONObject().put("kind", "EXTRACT")
+        val batch = (0 until 25).map {
+            SupabaseObservability.StepEntry("run-1", body)
+        }
+        assertEquals(25,
+            SupabaseObservability.retryAfterWriteFailure(batch).size)
+    }
+
+    @Test
+    fun `batch yang sudah habis budget dibuang`() {
+        val body = org.json.JSONObject().put("kind", "EXTRACT")
+        val batch = (0 until 5).map {
+            SupabaseObservability.StepEntry("run-1", body).copy(
+                attempts = SupabaseObservability.MAX_STEP_ATTEMPTS)
+        }
+        assertTrue(SupabaseObservability.retryAfterWriteFailure(batch).isEmpty())
+    }
 }

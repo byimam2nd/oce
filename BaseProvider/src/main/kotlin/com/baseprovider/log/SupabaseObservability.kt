@@ -579,6 +579,20 @@ object SupabaseObservability {
     internal fun shouldRetryStep(attempts: Int): Boolean =
         attempts < MAX_STEP_ATTEMPTS
 
+    /**
+     * Entry yang layak dicoba lagi setelah batch write ditolak.
+     *
+     * Kegagalan POST (`writeStepsWithRetry` habis retry) sebelumnya langsung
+     * MEMBUANG seluruh batch — tanpa batasnya 25 baris hilang sekaligus, dan
+     * inilah sumber kehilangan step terbesar di produksi: run dengan 70 step
+     * hanya menyisakan 7. Batas percobaan yang sama dipakai supaya antrian
+     * tidak tumbuh forever saat PostgREST memang tidak bisa ditulis.
+     */
+    internal fun retryAfterWriteFailure(
+        entries: List<StepEntry>
+    ): List<StepEntry> = entries.filter { shouldRetryStep(it.attempts) }
+        .map { it.copy(attempts = it.attempts + 1) }
+
     private val stepQueue = ConcurrentLinkedQueue<StepEntry>()
     private val flushWake = Channel<Unit>(Channel.CONFLATED)
     private val flusherJob = AtomicReference<Job?>(null)
@@ -628,10 +642,14 @@ object SupabaseObservability {
         // RUN_WAIT_TIMEOUT_MS, sehingga mayoritas step hilang tanpa jejak.
         val byRun = batch.groupBy { it.runId }
         val steps = org.json.JSONArray()
+        val sending = mutableListOf<StepEntry>()
         var requeued = 0
         for ((runId, entries) in byRun) {
             if (awaitRunCreated(runId)) {
-                entries.forEach { steps.put(it.body) }
+                entries.forEach {
+                    steps.put(it.body)
+                    sending.add(it)
+                }
             } else {
                 entries.forEach { entry ->
                     if (shouldRetryStep(entry.attempts)) {
@@ -646,8 +664,11 @@ object SupabaseObservability {
             "(run row belum ada)")
         if (steps.length() == 0) return
         if (writeStepsWithRetry(steps)) return
-        Log.e("OCE", "Observability: ${steps.length()} step hilang — " +
-            "batch ditolak ${STEP_WRITE_RETRIES + 1}x (periksa key, RLS, atau jaringan)")
+        val retry = retryAfterWriteFailure(sending)
+        retry.forEach { stepQueue.offer(it) }
+        Log.e("OCE", "Observability: ${steps.length()} step gagal ditulis — " +
+            "${retry.size} di-requeue, ${sending.size - retry.size} habis " +
+            "budget ${MAX_STEP_ATTEMPTS}x (periksa key, RLS, atau jaringan)")
     }
 
     /**
