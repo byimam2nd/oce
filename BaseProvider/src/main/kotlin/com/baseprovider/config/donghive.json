@@ -1,0 +1,40 @@
+{
+  "id": "Donghive",
+  "name": "Donghive",
+  "mainUrl": "https://donghive.vip",
+  "lang": "id",
+  "supportedTypes": ["Anime", "AnimeMovie", "TvSeries"],
+  "searchPathPattern": "{baseUrl}/page/{page}/?s={query}",
+  "moviePathSegment": "-movie-",
+  "tvPathSegment": "/anime/",
+  "globalHeaders": {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept-Language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7"
+  },
+  "mainPageLists": [
+    ["anime/?status=&type=&order=popular&page=", "Popular Donghua"],
+    ["anime/?status=&type=&order=update&page=", "Recently Updated"],
+    ["anime/?sub=&order=latest&page=", "Latest Added"],
+    ["anime/?status=ongoing&type=&order=update&page=", "Ongoing"],
+    ["anime/?status=completed&type=&order=update&page=", "Completed"]
+  ],
+  "searchItems": "div.listupd article.bs",
+  "bloatRegex": "(?i)(\\bONA\\b|\\bOngoing\\b|\\bCompleted\\b|\\bSpecial\\b|\\bTAMAT\\b|\\bIndo\\b|\\bFull\\b|\\bSeason\\b|\\bEpisode\\s*\\d*|Subtitle\\s*Indonesia|\\bDonghua\\b|\\bSub\\b|Nonton|Anime|Movie|TV|Series|Lengkap|HD|Free|\\d{3,4}p|Dual\\s*Audio|\\s*–\\s*|\\s*\\|\\s*)",
+  "searchTitle": "h2",
+  "searchHref": "a",
+  "searchPoster": "div.bsx img, .ts-post-image, .wp-post-image",
+  "searchRating": ".rtng, .score, .rating, .numscore",
+  "searchEpText": ".epx, .bt span.epx",
+  "loadTitle": "h1.entry-title, h1.title, .entry-title h1",
+  "loadPoster": "div.thumb img, .ts-post-image, .wp-post-image",
+  "loadDesc": "div.bixbox.synp div.entry-content",
+  "loadInfoBox": ".spe",
+  "loadRecommend": ".listupd article.bs, .listupd .bsx, .related-post article, .relat article",
+  "episodeItems": ".episodelist li, .eplister li",
+  "episodeHref": ".episodelist li > a, .eplister li > a",
+  "episodeTitle": ".episodelist .playinfo h3, .epl-title",
+  "episodeNum": ".episodelist .playinfo span, .epl-num",
+  "linkOptions": "option[data-index], option[value]",
+  "skipHosts": ["short.icu"],
+  "watchButtons": ".episodelist li > a, .eplister li > a, .play-button, .watch-now, .btn-watch"
+}
