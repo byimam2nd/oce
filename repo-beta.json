@@ -1,0 +1,9 @@
+{
+    "name": "byimam2nd Repo (Beta)",
+    "iconUrl": "https://avatars.githubusercontent.com/u/52017796?v=4&size=64",
+    "description": "byimam2nd Repository - CloudStream Extensions (Testing/Beta)",
+    "manifestVersion": 1,
+    "pluginLists": [
+      "https://raw.githubusercontent.com/byimam2nd/oce/builds/plugins.json"
+    ]
+}
