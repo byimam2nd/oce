@@ -1,10 +1,10 @@
 [
     {
         "iconUrl": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjD5KTf3taknWZ6YLFfkHAvDCoeC79LCjfh1T5VsBajkI0hFV4afH6WBwDeiHrGtkYKaRMX4pAWa_M2kG8LXefpk8g6Ug35PnJyXpiro5lPw8tcXMPA_6RFcRw3dYQkoZgXDdjiMdHde2k8ZfwTlazvlVerXAhdrLDNAeo5NysoU-CScOAcVmsosVl_cA/s1600/NewLogo.png",
-        "fileHash": "sha256-8d134a7ee8a3da5568b461f648786b444bb4b429db5206f2df3ef3c067693b5a",
+        "fileHash": "sha256-76359924b0ae49c41cfa1e86fc89b3a21322887433c55196daeccdd2a2936b89",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 477562,
+        "fileSize": 477661,
         "status": 1,
         "language": "id",
         "authors": [
@@ -15,18 +15,18 @@
             "AnimeMovie",
             "TvSeries"
         ],
-        "version": 30000713,
+        "version": 30000722,
         "internalName": "ProviderAnichin",
-        "description": "[Build #713 | 2026-11-21 10:10 WIB] \ud83c\udfac Anichin - Streaming Anime China Subtitle Indonesia dengan kualitas tinggi dan update tercepat!",
+        "description": "[Build #722 | 2026-11-21 17:15 WIB] \ud83c\udfac Anichin - Streaming Anime China Subtitle Indonesia dengan kualitas tinggi dan update tercepat!",
         "url": "https://raw.githubusercontent.com/byimam2nd/oce/builds/ProviderAnichin.cs3",
         "name": "ProviderAnichin"
     },
     {
         "iconUrl": "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://v1.animasu.top&size=%size%",
-        "fileHash": "sha256-390d91853ff3d32d7ddb28de4d68082b855ad823b6c8cec3483a132ba90bc98d",
+        "fileHash": "sha256-468facba91b6ef14ae6fd0b2c287d07b3f65a4b044f2193fe318038d502d8bba",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 477586,
+        "fileSize": 477668,
         "status": 1,
         "language": "id",
         "authors": [
@@ -38,18 +38,18 @@
             "AnimeMovie",
             "OVA"
         ],
-        "version": 30000713,
+        "version": 30000722,
         "internalName": "ProviderAnimasu",
-        "description": "[Build #713 | 2026-11-21 10:10 WIB] \ud83d\udc30 Animasu - Streaming Anime Subtitle Indonesia dengan kualitas tinggi dan update tercepat!",
+        "description": "[Build #722 | 2026-11-21 17:15 WIB] \ud83d\udc30 Animasu - Streaming Anime Subtitle Indonesia dengan kualitas tinggi dan update tercepat!",
         "url": "https://raw.githubusercontent.com/byimam2nd/oce/builds/ProviderAnimasu.cs3",
         "name": "ProviderAnimasu"
     },
     {
         "iconUrl": "https://animexin.dev/wp-content/uploads/2026/01/cropped-New-Logo-e1768365053967-192x192.png",
-        "fileHash": "sha256-5b93216a7009efe398bd64c4f946760adc00a0d96ce1f3fb91e373a295762e5e",
+        "fileHash": "sha256-33c8de076aa82179de680d495d76e22dfcb5d99bcacf05536f99ef2984116c0c",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 477618,
+        "fileSize": 477669,
         "status": 1,
         "language": "id",
         "authors": [
@@ -60,18 +60,18 @@
             "AnimeMovie",
             "TvSeries"
         ],
-        "version": 30000713,
+        "version": 30000722,
         "internalName": "ProviderAnimexin",
-        "description": "[Build #713 | 2026-11-21 10:10 WIB] \ud83c\udfac AnimexinDev - Streaming Anime Subtitle Indonesia dengan multi-server player!",
+        "description": "[Build #722 | 2026-11-21 17:15 WIB] \ud83c\udfac AnimexinDev - Streaming Anime Subtitle Indonesia dengan multi-server player!",
         "url": "https://raw.githubusercontent.com/byimam2nd/oce/builds/ProviderAnimexin.cs3",
         "name": "ProviderAnimexin"
     },
     {
         "iconUrl": "https://www.google.com/s2/favicons?domain=donghive.vip&sz=128",
-        "fileHash": "sha256-ac60dd9894ba59aceaa141884490ffaf74802fb62b434e4ef25f59fded5458af",
+        "fileHash": "sha256-8a159167f16ec0fa5dd9d5ad400ceafdc05a63c104f7d5f5e5939835cdc62efd",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 477589,
+        "fileSize": 477672,
         "status": 1,
         "language": "id",
         "authors": [
@@ -82,18 +82,18 @@
             "AnimeMovie",
             "TvSeries"
         ],
-        "version": 30000713,
+        "version": 30000722,
         "internalName": "ProviderDonghive",
-        "description": "[Build #713 | 2026-11-21 10:10 WIB] \ud83d\udc1d Donghive - Platform streaming donghua China dengan subtitle Indonesia, dari jaringan Auratail!",
+        "description": "[Build #722 | 2026-11-21 17:15 WIB] \ud83d\udc1d Donghive - Platform streaming donghua China dengan subtitle Indonesia, dari jaringan Auratail!",
         "url": "https://raw.githubusercontent.com/byimam2nd/oce/builds/ProviderDonghive.cs3",
         "name": "ProviderDonghive"
     },
     {
         "iconUrl": "https://raw.githubusercontent.com/Kohi-den/extensions-source/927f9c68fd64ce52f6212ae633d0f0585eca3545/src/en/donghuastream/res/mipmap-xxxhdpi/ic_launcher.png",
-        "fileHash": "sha256-4b99e75cfa22609d0cffc9065d4243fbf4d48c67eccdedd179068a213d0a5267",
+        "fileHash": "sha256-29c2cb4a67c5422fbd0cf07efe4fb735a2ab48dcc95053420b9144cb9c0b20eb",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 477644,
+        "fileSize": 477694,
         "status": 1,
         "language": "id",
         "authors": [
@@ -102,18 +102,18 @@
         "tvTypes": [
             "Anime"
         ],
-        "version": 30000713,
+        "version": 30000722,
         "internalName": "ProviderDonghuastream",
-        "description": "[Build #713 | 2026-11-21 10:10 WIB] \ud83d\udc09 Donghuastream - Platform streaming anime Donghua China dengan subtitle Indonesia terlengkap!",
+        "description": "[Build #722 | 2026-11-21 17:15 WIB] \ud83d\udc09 Donghuastream - Platform streaming anime Donghua China dengan subtitle Indonesia terlengkap!",
         "url": "https://raw.githubusercontent.com/byimam2nd/oce/builds/ProviderDonghuastream.cs3",
         "name": "ProviderDonghuastream"
     },
     {
         "iconUrl": "https://www.google.com/s2/favicons?domain=simplycufflinks.com&sz=%size%",
-        "fileHash": "sha256-2d6b2ed701070dc92d7e2316964d2462479b9ccf47c335f70bf9549df2ceb517",
+        "fileHash": "sha256-451994b61c15cdacd10c2f84002becf33f58c809761b1c505bd8f38f27afb5e1",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 477596,
+        "fileSize": 477634,
         "status": 1,
         "language": "id",
         "authors": [
@@ -125,18 +125,18 @@
             "AsianDrama",
             "Anime"
         ],
-        "version": 30000713,
+        "version": 30000722,
         "internalName": "ProviderDutamovie21",
-        "description": "[Build #713 | 2026-11-21 10:10 WIB] Dutamovie21 - Nonton film box office, series, dan serial TV subtitle Indonesia",
+        "description": "[Build #722 | 2026-11-21 17:15 WIB] Dutamovie21 - Nonton film box office, series, dan serial TV subtitle Indonesia",
         "url": "https://raw.githubusercontent.com/byimam2nd/oce/builds/ProviderDutamovie21.cs3",
         "name": "ProviderDutamovie21"
     },
     {
         "iconUrl": "https://www.google.com/s2/favicons?domain=indodr21.putar.in&sz=%size%",
-        "fileHash": "sha256-018f3a0c0fe8cea1b0bcacede691e7e446192b53311d5205743da1c73548ea23",
+        "fileHash": "sha256-de31d6d097e368278b4ec5c04d27da8fcdbba5e934f2cc244b1203608415c84f",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 477587,
+        "fileSize": 477637,
         "status": 1,
         "language": "id",
         "authors": [
@@ -147,18 +147,18 @@
             "TvSeries",
             "Movie"
         ],
-        "version": 30000713,
+        "version": 30000722,
         "internalName": "ProviderIndoDrama21",
-        "description": "[Build #713 | 2026-11-21 10:10 WIB] \ud83c\udfac IndoDrama21 - Nonton film box office, series, dan Asian drama dengan subtitle Indonesia gratis!",
+        "description": "[Build #722 | 2026-11-21 17:15 WIB] \ud83c\udfac IndoDrama21 - Nonton film box office, series, dan Asian drama dengan subtitle Indonesia gratis!",
         "url": "https://raw.githubusercontent.com/byimam2nd/oce/builds/ProviderIndoDrama21.cs3",
         "name": "ProviderIndoDrama21"
     },
     {
         "iconUrl": "https://www.google.com/s2/favicons?domain=d21.team&sz=%size%",
-        "fileHash": "sha256-f296f7163a555c66b67df7d76ccbf1c9837cd06a06eec6a823add31cb9be9338",
+        "fileHash": "sha256-27e57a086737c01617a8dbecbe11856f1200b46e12ab6ac6baa0c636e56cf4f0",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 477638,
+        "fileSize": 477719,
         "status": 1,
         "language": "id",
         "authors": [
@@ -169,18 +169,18 @@
             "TvSeries",
             "Movie"
         ],
-        "version": 30000713,
+        "version": 30000722,
         "internalName": "ProviderLayarKaca21",
-        "description": "[Build #713 | 2026-11-21 10:10 WIB] \ud83c\udfac LayarKaca21 - Nonton film box office, series, dan Asian drama dengan subtitle Indonesia gratis!",
+        "description": "[Build #722 | 2026-11-21 17:15 WIB] \ud83c\udfac LayarKaca21 - Nonton film box office, series, dan Asian drama dengan subtitle Indonesia gratis!",
         "url": "https://raw.githubusercontent.com/byimam2nd/oce/builds/ProviderLayarKaca21.cs3",
         "name": "ProviderLayarKaca21"
     },
     {
         "iconUrl": "https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://v1.samehadaku.how&size=%size%",
-        "fileHash": "sha256-0bc08d4655c44a84bba00eef3509c97ebf5e6eeb80d32e25d01e567247554f09",
+        "fileHash": "sha256-0a4586e688178bb2dac17393ba6be248e8f831428cbeb3c5a38ef8896fbcde16",
         "apiVersion": 1,
         "repositoryUrl": "https://github.com/byimam2nd/oce",
-        "fileSize": 477582,
+        "fileSize": 477679,
         "status": 1,
         "language": "id",
         "authors": [
@@ -193,9 +193,9 @@
             "AnimeMovie",
             "OVA"
         ],
-        "version": 30000713,
+        "version": 30000722,
         "internalName": "ProviderSamehadaku",
-        "description": "[Build #713 | 2026-11-21 10:10 WIB] \u26e9\ufe0f Samehadaku - Streaming Anime Subtitle Indonesia dengan kualitas tinggi dan update tercepat!",
+        "description": "[Build #722 | 2026-11-21 17:15 WIB] \u26e9\ufe0f Samehadaku - Streaming Anime Subtitle Indonesia dengan kualitas tinggi dan update tercepat!",
         "url": "https://raw.githubusercontent.com/byimam2nd/oce/builds/ProviderSamehadaku.cs3",
         "name": "ProviderSamehadaku"
     }
